@@ -1,12 +1,15 @@
 // DualView Translator — Popup Script
 
-const uiLangSel     = document.getElementById('uiLang');
-const targetLangSel = document.getElementById('targetLang');
-const btnPage       = document.getElementById('btnPage');
-const btnRegion     = document.getElementById('btnRegion');
-const btnUndo       = document.getElementById('btnUndo');
-const statusDot     = document.getElementById('statusDot');
-const statusText    = document.getElementById('statusText');
+const uiLangSel       = document.getElementById('uiLang');
+const targetLangSel   = document.getElementById('targetLang');
+const engineSel       = document.getElementById('translateEngine');
+const deeplSettings   = document.getElementById('deeplSettings');
+const deeplApiKeyInput = document.getElementById('deeplApiKey');
+const btnPage         = document.getElementById('btnPage');
+const btnRegion       = document.getElementById('btnRegion');
+const btnUndo         = document.getElementById('btnUndo');
+const statusDot       = document.getElementById('statusDot');
+const statusText      = document.getElementById('statusText');
 
 // ── SVGアイコン定数 ──────────────────────────────────────────────────
 const SVG_PAGE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>';
@@ -18,9 +21,12 @@ DVT_I18N.loadLang((lang) => {
   DVT_I18N.applyToDOM();
 });
 
-// ── Load saved target language ───────────────────────────────────────
-chrome.storage.local.get('targetLang', (data) => {
+// ── Load saved settings ──────────────────────────────────────────────
+chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey'], (data) => {
   if (data.targetLang) targetLangSel.value = data.targetLang;
+  if (data.translateEngine) engineSel.value = data.translateEngine;
+  if (data.deeplApiKey) deeplApiKeyInput.value = data.deeplApiKey;
+  toggleDeepLSettings();
 });
 
 // ── UI言語変更 ───────────────────────────────────────────────────────
@@ -39,6 +45,20 @@ uiLangSel.addEventListener('change', () => {
   // content scriptにも通知
   sendToContent({ action: 'setUILang', lang });
 });
+
+// ── 翻訳エンジン変更 ─────────────────────────────────────────────────
+engineSel.addEventListener('change', () => {
+  chrome.storage.local.set({ translateEngine: engineSel.value });
+  toggleDeepLSettings();
+});
+
+deeplApiKeyInput.addEventListener('input', () => {
+  chrome.storage.local.set({ deeplApiKey: deeplApiKeyInput.value.trim() });
+});
+
+function toggleDeepLSettings() {
+  deeplSettings.style.display = engineSel.value === 'deepl' ? 'block' : 'none';
+}
 
 // ── Sync target language change to content script ────────────────────
 targetLangSel.addEventListener('change', () => {

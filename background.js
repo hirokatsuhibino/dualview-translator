@@ -1,7 +1,7 @@
 // DualView Translator - Background Service Worker
-// Handles translation API calls (avoids CORS issues in content scripts on some browsers)
+// 翻訳API呼び出し（CORS回避）+ コンテキストメニュー管理
 
-// ─── コンテキストメニュー用の翻訳辞書（background.jsはi18n.jsを読めないため） ─
+// ─── コンテキストメニュー用の翻訳辞書 ────────────────────────────────
 const CONTEXT_MENU_TITLES = {
   ja:      { selection: 'DualView: 「%s」を翻訳',              element: 'DualView: この要素を翻訳' },
   en:      { selection: 'DualView: Translate "%s"',            element: 'DualView: Translate this element' },
@@ -22,7 +22,6 @@ function getMenuTitles(lang) {
 
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
-  // 保存済みUI言語を読んでメニュータイトルを設定
   chrome.storage.local.get('uiLang', (data) => {
     const titles = getMenuTitles(data.uiLang || 'ja');
     chrome.contextMenus.create({
@@ -63,15 +62,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+// ─── メッセージハンドラ ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'translate') {
-    fetchTranslation(msg.text, msg.tl, msg.sl || 'auto')
+    getEngineConfig().then(config => {
+      return fetchTranslation(msg.text, msg.tl, msg.sl || 'auto', config);
+    })
       .then(result => sendResponse({ ok: true, result }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
   if (msg.action === 'detectLang') {
-    // 言語検出のみ: 短いテキストをAPIに送り、検出言語を返す
     detectLanguage(msg.text)
       .then(lang => sendResponse({ ok: true, detectedLang: lang }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
@@ -79,10 +80,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-async function fetchTranslation(text, tl, sl) {
+// ─── エンジン設定をstorageから取得 ────────────────────────────────────
+function getEngineConfig() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['translateEngine', 'deeplApiKey'], (data) => {
+      resolve({
+        engine: data.translateEngine || 'google',
+        deeplApiKey: data.deeplApiKey || '',
+      });
+    });
+  });
+}
+
+// ─── 翻訳ディスパッチャー ────────────────────────────────────────────
+async function fetchTranslation(text, tl, sl, config) {
   if (!text || !text.trim()) return { text: '', detectedLang: null };
 
-  // Split long texts into chunks (API limit ~5000 chars)
+  if (config.engine === 'deepl' && config.deeplApiKey) {
+    return fetchDeepL(text, tl, sl, config.deeplApiKey);
+  }
+  return fetchGoogle(text, tl, sl);
+}
+
+// ─── Google Translate ────────────────────────────────────────────────
+async function fetchGoogle(text, tl, sl) {
   const chunks = splitIntoChunks(text, 4500);
   const results = [];
   let detectedLang = null;
@@ -90,19 +111,80 @@ async function fetchTranslation(text, tl, sl) {
   for (const chunk of chunks) {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(chunk)}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
     const data = await res.json();
-    // Google returns [[["translated","original",...],...], null, detectedLang, ...]
     const translated = data[0].map(item => item[0]).filter(Boolean).join('');
     results.push(translated);
-    // data[2] is the detected source language (only reliable on first chunk)
     if (!detectedLang && data[2]) detectedLang = data[2];
   }
 
   return { text: results.join(' '), detectedLang };
 }
 
-// テキストから言語を検出する（翻訳は不要、検出結果のみ返す）
+// ─── DeepL API ───────────────────────────────────────────────────────
+// DualView言語コード → DeepL言語コード変換
+const DEEPL_LANG_MAP = {
+  'ja': 'JA', 'en': 'EN', 'zh-CN': 'ZH-HANS', 'zh-TW': 'ZH-HANT',
+  'ko': 'KO', 'fr': 'FR', 'de': 'DE', 'es': 'ES',
+  'pt': 'PT-BR', 'ru': 'RU', 'ar': 'AR',
+};
+
+function toDeepLLang(code) {
+  return DEEPL_LANG_MAP[code] || code.toUpperCase();
+}
+
+function getDeepLEndpoint(apiKey) {
+  // Freeキーは `:fx` で終わる
+  return apiKey.endsWith(':fx')
+    ? 'https://api-free.deepl.com/v2/translate'
+    : 'https://api.deepl.com/v2/translate';
+}
+
+async function fetchDeepL(text, tl, sl, apiKey) {
+  const chunks = splitIntoChunks(text, 4500);
+  const results = [];
+  let detectedLang = null;
+  const endpoint = getDeepLEndpoint(apiKey);
+
+  for (const chunk of chunks) {
+    const body = {
+      text: [chunk],
+      target_lang: toDeepLLang(tl),
+    };
+    // DeepLは source_lang が 'auto' の場合は省略する（自動検出）
+    if (sl && sl !== 'auto') {
+      body.source_lang = toDeepLLang(sl);
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `DeepL-Auth-Key ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const status = res.status;
+      if (status === 403) throw new Error('DeepL: APIキーが無効です');
+      if (status === 456) throw new Error('DeepL: 翻訳上限に達しました');
+      throw new Error(`DeepL HTTP ${status}`);
+    }
+
+    const data = await res.json();
+    if (data.translations && data.translations.length > 0) {
+      results.push(data.translations[0].text);
+      if (!detectedLang && data.translations[0].detected_source_language) {
+        detectedLang = data.translations[0].detected_source_language.toLowerCase();
+      }
+    }
+  }
+
+  return { text: results.join(' '), detectedLang };
+}
+
+// ─── 言語検出（常にGoogle APIを使用 — 無料で高速） ───────────────────
 async function detectLanguage(text) {
   if (!text || !text.trim()) return null;
   const sample = text.trim().slice(0, 200);
@@ -113,6 +195,7 @@ async function detectLanguage(text) {
   return data[2] || null;
 }
 
+// ─── ユーティリティ ──────────────────────────────────────────────────
 function splitIntoChunks(text, maxLen) {
   if (text.length <= maxLen) return [text];
   const chunks = [];
@@ -120,7 +203,6 @@ function splitIntoChunks(text, maxLen) {
   while (i < text.length) {
     let end = i + maxLen;
     if (end < text.length) {
-      // Try to break at sentence boundary
       const breakAt = text.lastIndexOf('. ', end);
       if (breakAt > i + maxLen / 2) end = breakAt + 1;
     }

@@ -156,6 +156,7 @@
     }
 
     select:focus { border-color: var(--accent); }
+    input:focus { border-color: var(--accent) !important; }
 
     /* ── Buttons ── */
     .btn {
@@ -305,6 +306,23 @@
         <option value="ru">🇷🇺 Русский</option>
         <option value="ar">🇸🇦 العربية</option>
       </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label" data-i18n="engineLabel">翻訳エンジン</div>
+    <div class="lang-row">
+      <span class="lang-label">⚙</span>
+      <select id="translateEngine">
+        <option value="google" data-i18n="engineGoogle">Google 翻訳（無料）</option>
+        <option value="deepl" data-i18n="engineDeepL">DeepL（APIキー必要）</option>
+      </select>
+    </div>
+    <div id="deeplSettings" style="display:none; margin-top: 8px;">
+      <div class="lang-row">
+        <span class="lang-label" data-i18n="deeplApiKeyLabel">APIキー</span>
+        <input type="password" id="deeplApiKey" data-i18n-placeholder="deeplApiKeyPlaceholder" placeholder="APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+      </div>
     </div>
   </div>
 
