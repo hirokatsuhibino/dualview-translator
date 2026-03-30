@@ -25,6 +25,17 @@
     return LANG_NAMES[lower] || LANG_NAMES[lower.split('-')[0]] || code;
   }
 
+  // テーマ検出: Webページコンテキストで検出しstorageに保存（ポップアップ用）
+  (function detectTheme() {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    function apply(light) {
+      document.documentElement.classList.toggle('dvt-light', light);
+      chrome.storage.local.set({ dvtTheme: light ? 'light' : 'dark' });
+    }
+    apply(mq.matches);
+    mq.addEventListener('change', function(e) { apply(e.matches); });
+  })();
+
   // UI言語をロードしてからターゲット言語をロード、最後に言語検出
   DVT_I18N.loadLang(() => {
     chrome.storage.local.get(['targetLang', 'dismissedDomains'], (data) => {

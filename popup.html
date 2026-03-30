@@ -10,6 +10,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
+      color-scheme: light dark;
       --bg: #0c0c18;
       --bg2: #14141f;
       --bg3: #1c1c2e;
@@ -42,6 +43,23 @@
         --btn-sec-hover-border: rgba(0,0,0,0.18);
         --dot-idle: rgba(0,0,0,0.15);
       }
+    }
+
+    /* JSフォールバック: Firefox等でメディアクエリが効かない場合 */
+    :root.dvt-light {
+      --bg: #ffffff;
+      --bg2: #f5f5f7;
+      --bg3: #ecedf0;
+      --border: rgba(0,0,0,0.1);
+      --accent: #d4870a;
+      --accent-dim: rgba(212,135,10,0.12);
+      --accent-text: #ffffff;
+      --text: #1a1a2e;
+      --muted: rgba(26,26,46,0.5);
+      --btn-hover: #e8950e;
+      --btn-sec-hover-bg: rgba(0,0,0,0.04);
+      --btn-sec-hover-border: rgba(0,0,0,0.18);
+      --dot-idle: rgba(0,0,0,0.15);
     }
 
     body {
@@ -319,6 +337,23 @@
   </div>
 
   <script src="i18n.js"></script>
+  <script>
+    // テーマ適用: content scriptがWebページコンテキストで検出した値をstorageから読む
+    // （Firefox拡張ポップアップではprefers-color-schemeがOS設定を反映しないため）
+    (function() {
+      function apply(light) {
+        document.documentElement.classList.toggle('dvt-light', light);
+      }
+      chrome.storage.local.get('dvtTheme', function(data) {
+        if (data.dvtTheme) {
+          apply(data.dvtTheme === 'light');
+        }
+      });
+      chrome.storage.onChanged.addListener(function(changes) {
+        if (changes.dvtTheme) apply(changes.dvtTheme.newValue === 'light');
+      });
+    })();
+  </script>
   <script src="popup.js"></script>
 </body>
 </html>
