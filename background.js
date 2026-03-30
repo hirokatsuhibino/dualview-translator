@@ -1,21 +1,64 @@
 // DualView Translator - Background Service Worker
 // Handles translation API calls (avoids CORS issues in content scripts on some browsers)
 
+// ─── コンテキストメニュー用の翻訳辞書（background.jsはi18n.jsを読めないため） ─
+const CONTEXT_MENU_TITLES = {
+  ja:      { selection: 'DualView: 「%s」を翻訳',              element: 'DualView: この要素を翻訳' },
+  en:      { selection: 'DualView: Translate "%s"',            element: 'DualView: Translate this element' },
+  'zh-CN': { selection: 'DualView: 翻译「%s」',               element: 'DualView: 翻译此元素' },
+  'zh-TW': { selection: 'DualView: 翻譯「%s」',               element: 'DualView: 翻譯此元素' },
+  ko:      { selection: 'DualView: "%s" 번역',                element: 'DualView: 이 요소 번역' },
+  fr:      { selection: 'DualView : Traduire « %s »',         element: 'DualView : Traduire cet élément' },
+  de:      { selection: 'DualView: „%s" übersetzen',           element: 'DualView: Dieses Element übersetzen' },
+  es:      { selection: 'DualView: Traducir "%s"',             element: 'DualView: Traducir este elemento' },
+  pt:      { selection: 'DualView: Traduzir "%s"',             element: 'DualView: Traduzir este elemento' },
+  ru:      { selection: 'DualView: Перевести «%s»',            element: 'DualView: Перевести этот элемент' },
+  ar:      { selection: 'DualView: ترجمة "%s"',               element: 'DualView: ترجمة هذا العنصر' },
+};
+
+function getMenuTitles(lang) {
+  return CONTEXT_MENU_TITLES[lang] || CONTEXT_MENU_TITLES['en'];
+}
+
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'dvt-translate-selection',
-    title: 'DualView: 「%s」を翻訳',
-    contexts: ['selection'],
+  // 保存済みUI言語を読んでメニュータイトルを設定
+  chrome.storage.local.get('uiLang', (data) => {
+    const titles = getMenuTitles(data.uiLang || 'ja');
+    chrome.contextMenus.create({
+      id: 'dvt-translate-selection',
+      title: titles.selection,
+      contexts: ['selection'],
+    });
+    chrome.contextMenus.create({
+      id: 'dvt-translate-element',
+      title: titles.element,
+      contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
+    });
   });
+});
+
+// ─── UI言語変更時にメニュータイトルを更新 ─────────────────────────────
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.uiLang) {
+    const titles = getMenuTitles(changes.uiLang.newValue);
+    chrome.contextMenus.update('dvt-translate-selection', { title: titles.selection });
+    chrome.contextMenus.update('dvt-translate-element', { title: titles.element });
+  }
 });
 
 // ─── コンテキストメニュークリック ─────────────────────────────────────
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'dvt-translate-selection' && info.selectionText && tab?.id) {
+  if (!tab?.id) return;
+  if (info.menuItemId === 'dvt-translate-selection' && info.selectionText) {
     chrome.tabs.sendMessage(tab.id, {
       action: 'contextMenuTranslate',
       text: info.selectionText,
+    });
+  }
+  if (info.menuItemId === 'dvt-translate-element') {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'contextMenuTranslateElement',
     });
   }
 });

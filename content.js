@@ -69,6 +69,12 @@
     return d === tgt;
   }
 
+  // ─── 右クリック位置の要素を記録 ──────────────────────────────────────
+  let lastContextMenuTarget = null;
+  document.addEventListener('contextmenu', (e) => {
+    lastContextMenuTarget = e.target;
+  });
+
   // ─── Selection Toolbar ───────────────────────────────────────────────────
   document.addEventListener('mouseup', (e) => {
     const sel = window.getSelection();
@@ -490,6 +496,91 @@
     runSelectionTranslate(panel, text, targetLang);
   }
 
+  // ─── Context Menu Element Translation (要素翻訳) ─────────────────────
+  async function translateElement() {
+    if (!lastContextMenuTarget) return;
+
+    // 右クリック位置からブロック要素を特定
+    const BLOCK_TAGS = ['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'NAV',
+      'HEADER', 'FOOTER', 'BLOCKQUOTE', 'FIGURE', 'DETAILS', 'TD', 'TH', 'LI'];
+    let container = lastContextMenuTarget;
+    // インライン要素やdata-dvt要素なら親を辿る
+    while (container && container !== document.body) {
+      if (container.closest('[data-dvt]')) { container = container.parentElement; continue; }
+      if (BLOCK_TAGS.includes(container.tagName) || container.tagName === 'P') break;
+      container = container.parentElement;
+    }
+    if (!container || container === document.body) return;
+
+    // 翻訳可能な子要素を収集（既存ページ翻訳と同じセレクタ）
+    const SELECTORS = 'p, h1, h2, h3, h4, h5, h6, li, td, th, figcaption, blockquote, dt, dd';
+    let elements = Array.from(container.querySelectorAll(SELECTORS)).filter(el => {
+      if (el.closest('[data-dvt]')) return false;
+      if (el.dataset.dvtId) return false;
+      const text = el.innerText?.trim();
+      return text && text.length >= 4;
+    });
+
+    // 子要素が見つからない場合はコンテナ自体を翻訳対象にする
+    if (elements.length === 0) {
+      if (container.dataset.dvtId || container.closest('[data-dvt]')) return;
+      const text = container.innerText?.trim();
+      if (!text || text.length < 4) {
+        showToast(t('toastNoText'), false, 2500);
+        return;
+      }
+      elements = [container];
+    }
+
+    const tl = targetLang;
+    const toast = showToast(t('toastTranslating', { done: 0, total: elements.length }), true);
+    let done = 0;
+
+    // 並列翻訳（ページ翻訳と同じロジック）
+    const CONCURRENCY = 6;
+    const queue = [...elements];
+
+    async function worker() {
+      while (queue.length > 0) {
+        const el = queue.shift();
+        if (!el) break;
+
+        const originalText = el.innerText.trim();
+        const originalHTML = el.innerHTML;
+        const id = 'dvt-ctx-' + Math.random().toString(36).slice(2);
+        el.dataset.dvtId = id;
+
+        const wrapper = document.createElement('span');
+        wrapper.setAttribute('data-dvt', 'true');
+        wrapper.innerHTML = `
+          <span class="dvt-orig" data-dvt="true">${originalHTML}</span>
+          <span class="dvt-trans" data-dvt="true"><span class="dvt-spinner"></span></span>
+        `;
+        el.innerHTML = '';
+        el.appendChild(wrapper);
+
+        const { text: result, detectedLang } = await translate(originalText, tl);
+        const transEl = el.querySelector('.dvt-trans');
+
+        if (langMatches(detectedLang, tl)) {
+          if (transEl) transEl.remove();
+        } else {
+          if (transEl) transEl.textContent = result;
+        }
+
+        done++;
+        updateToast(toast, t('toastTranslating', { done, total: elements.length }));
+        if (done >= elements.length) {
+          updateToast(toast, t('toastDone', { count: done }));
+          setTimeout(() => toast.remove(), 2500);
+        }
+      }
+    }
+
+    const workers = Array.from({ length: CONCURRENCY }, () => worker());
+    await Promise.all(workers);
+  }
+
   // ─── Page Language Detection & Translate Bar ─────────────────────────────
   async function detectPageLanguage() {
     const htmlLang = document.documentElement.lang;
@@ -581,6 +672,10 @@
     }
     if (msg.action === 'contextMenuTranslate') {
       showContextMenuPanel(msg.text);
+      sendResponse({ ok: true });
+    }
+    if (msg.action === 'contextMenuTranslateElement') {
+      translateElement();
       sendResponse({ ok: true });
     }
     if (msg.action === 'getState') {
