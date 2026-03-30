@@ -8,7 +8,6 @@
   let targetLang = 'ja';
   let selectionPanel = null;
   let pageTranslateActive = false;
-  let pendingTranslations = 0;
 
   let translateBar = null;
 
@@ -21,30 +20,31 @@
   };
 
   function getLangDisplayName(code) {
-    if (!code) return '不明';
+    if (!code) return 'Unknown';
     const lower = code.toLowerCase();
     return LANG_NAMES[lower] || LANG_NAMES[lower.split('-')[0]] || code;
   }
 
-  // Load saved lang preference, then detect page language
-  chrome.storage.local.get(['targetLang', 'dismissedDomains'], (data) => {
-    if (data.targetLang) targetLang = data.targetLang;
-    const dismissed = data.dismissedDomains || [];
-    if (!dismissed.includes(location.hostname)) {
-      detectPageLanguage();
-    }
+  // UI言語をロードしてからターゲット言語をロード、最後に言語検出
+  DVT_I18N.loadLang(() => {
+    chrome.storage.local.get(['targetLang', 'dismissedDomains'], (data) => {
+      if (data.targetLang) targetLang = data.targetLang;
+      const dismissed = data.dismissedDomains || [];
+      if (!dismissed.includes(location.hostname)) {
+        detectPageLanguage();
+      }
+    });
   });
 
   // ─── Translation via background ──────────────────────────────────────────
-  // Returns { text, detectedLang } or { text: '[エラー]', detectedLang: null }
   function translate(text, tl, sl = 'auto') {
     return new Promise((resolve) => {
       chrome.runtime.sendMessage({ action: 'translate', text, tl, sl }, (res) => {
-        if (chrome.runtime.lastError) { resolve({ text: '[エラー]', detectedLang: null }); return; }
+        if (chrome.runtime.lastError) { resolve({ text: t('error'), detectedLang: null }); return; }
         if (res?.ok) {
-          resolve(res.result); // { text, detectedLang }
+          resolve(res.result);
         } else {
-          resolve({ text: '[翻訳失敗]', detectedLang: null });
+          resolve({ text: t('translateFailed'), detectedLang: null });
         }
       });
     });
@@ -54,8 +54,8 @@
   function langMatches(detected, target) {
     if (!detected) return false;
     const d = detected.toLowerCase().split('-')[0];
-    const t = target.toLowerCase().split('-')[0];
-    return d === t;
+    const tgt = target.toLowerCase().split('-')[0];
+    return d === tgt;
   }
 
   // ─── Selection Toolbar ───────────────────────────────────────────────────
@@ -112,15 +112,18 @@
     });
   }
 
+  const SVG_TRANSLATE = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 3l14 0M12 3v4M3 10h8m0 0-3 3m3-3-3-3M16 10h5M16 14l5 0M16 17l5 0"/></svg>';
+  const SVG_COPY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+
   function buildSelectionPanelHTML(text) {
     const preview = text.length > 60 ? text.slice(0, 60) + '…' : text;
     return `
       <div class="dvt-sel-header">
-        <span class="dvt-sel-label">DualView 翻訳</span>
-        <button class="dvt-sel-close" title="閉じる">✕</button>
+        <span class="dvt-sel-label">${escapeHtml(t('dualviewTitle'))}</span>
+        <button class="dvt-sel-close" title="${escapeHtml(t('close'))}">✕</button>
       </div>
       <div class="dvt-sel-original">
-        <span class="dvt-badge dvt-badge-orig">原文</span>
+        <span class="dvt-badge dvt-badge-orig">${escapeHtml(t('original'))}</span>
         <div class="dvt-sel-orig-text">${escapeHtml(preview)}</div>
       </div>
       <div class="dvt-sel-controls">
@@ -138,17 +141,17 @@
           <option value="ar">🇸🇦 العربية</option>
         </select>
         <button class="dvt-sel-btn">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 3l14 0M12 3v4M3 10h8m0 0-3 3m3-3-3-3M16 10h5M16 14l5 0M16 17l5 0"/></svg>
-          翻訳する
+          ${SVG_TRANSLATE}
+          ${escapeHtml(t('translateBtn'))}
         </button>
       </div>
       <div class="dvt-sel-result" style="display:none">
-        <span class="dvt-badge dvt-badge-trans">翻訳</span>
+        <span class="dvt-badge dvt-badge-trans">${escapeHtml(t('translated'))}</span>
         <div class="dvt-sel-trans-text"></div>
         <div class="dvt-sel-actions">
-          <button class="dvt-copy-btn" title="コピー">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            コピー
+          <button class="dvt-copy-btn" title="${escapeHtml(t('copyBtn'))}">
+            ${SVG_COPY}
+            ${escapeHtml(t('copyBtn'))}
           </button>
         </div>
       </div>
@@ -161,29 +164,27 @@
     const transText = panel.querySelector('.dvt-sel-trans-text');
 
     btn.disabled = true;
-    btn.textContent = '翻訳中…';
+    btn.textContent = t('translating');
     result.style.display = 'block';
     transText.innerHTML = '<span class="dvt-spinner"></span>';
 
     const { text: translated, detectedLang } = await translate(text, tl);
 
-    // Same language: show message instead of translation
     if (langMatches(detectedLang, tl)) {
-      transText.innerHTML = `<span class="dvt-same-lang">原文と翻訳先の言語が同じです（${detectedLang}）</span>`;
+      transText.innerHTML = `<span class="dvt-same-lang">${escapeHtml(t('sameLang', { lang: detectedLang }))}</span>`;
     } else {
       transText.textContent = translated;
     }
 
     btn.disabled = false;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 3l14 0M12 3v4M3 10h8m0 0-3 3m3-3-3-3M16 10h5M16 14l5 0M16 17l5 0"/></svg> 再翻訳`;
+    btn.innerHTML = `${SVG_TRANSLATE} ${escapeHtml(t('retranslateBtn'))}`;
 
-    // Copy button (only useful when translated)
     panel.querySelector('.dvt-copy-btn').addEventListener('click', () => {
       navigator.clipboard.writeText(translated).then(() => {
         const cb = panel.querySelector('.dvt-copy-btn');
-        cb.textContent = '✓ コピー済';
+        cb.textContent = t('copied');
         setTimeout(() => {
-          cb.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> コピー`;
+          cb.innerHTML = `${SVG_COPY} ${escapeHtml(t('copyBtn'))}`;
         }, 2000);
       });
     });
@@ -209,10 +210,9 @@
 
     if (elements.length === 0) return;
 
-    const toast = showToast(`0 / ${elements.length} 翻訳中…`, true);
+    const toast = showToast(t('toastTranslating', { done: 0, total: elements.length }), true);
     let done = 0;
 
-    // Batch translate with concurrency limit
     const CONCURRENCY = 6;
     const queue = [...elements];
 
@@ -226,7 +226,6 @@
         const id = 'dvt-' + Math.random().toString(36).slice(2);
         el.dataset.dvtId = id;
 
-        // Placeholder while translating
         const wrapper = document.createElement('span');
         wrapper.setAttribute('data-dvt', 'true');
         wrapper.innerHTML = `
@@ -240,22 +239,20 @@
         const transEl = el.querySelector('.dvt-trans');
 
         if (langMatches(detectedLang, tl)) {
-          // Same language: remove the translation row entirely, restore original only
           if (transEl) transEl.remove();
         } else {
           if (transEl) transEl.textContent = result;
         }
 
         done++;
-        updateToast(toast, `${done} / ${elements.length} 翻訳中…`);
+        updateToast(toast, t('toastTranslating', { done, total: elements.length }));
         if (done >= elements.length) {
-          updateToast(toast, `✓ ${done} 件翻訳完了`);
+          updateToast(toast, t('toastDone', { count: done }));
           setTimeout(() => toast.remove(), 2500);
         }
       }
     }
 
-    // Start concurrent workers
     const workers = Array.from({ length: CONCURRENCY }, () => worker());
     await Promise.all(workers);
   }
@@ -272,7 +269,7 @@
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
       delete el.dataset.dvtId;
     });
-    showToast('翻訳をリセットしました', false, 2000);
+    showToast(t('toastReset'), false, 2000);
   }
 
   // ─── Region Selection Mode ─────────────────────────────────────────────────
@@ -286,7 +283,7 @@
     const hint = document.createElement('div');
     hint.className = 'dvt-region-hint';
     hint.setAttribute('data-dvt', 'true');
-    hint.textContent = '翻訳したい領域をドラッグして選択してください  [Esc でキャンセル]';
+    hint.textContent = t('regionHint');
     document.body.appendChild(hint);
 
     function onMousedown(e) {
@@ -374,11 +371,11 @@
     );
 
     if (leafElements.length === 0) {
-      showToast('翻訳対象のテキストが見つかりませんでした', false, 2500);
+      showToast(t('toastNoText'), false, 2500);
       return;
     }
 
-    const toast = showToast(`0 / ${leafElements.length} 翻訳中…`, true);
+    const toast = showToast(t('toastTranslating', { done: 0, total: leafElements.length }), true);
     let done = 0;
 
     for (const el of leafElements) {
@@ -405,9 +402,9 @@
           if (transEl) transEl.textContent = result;
         }
         done++;
-        updateToast(toast, `${done} / ${leafElements.length} 翻訳中…`);
+        updateToast(toast, t('toastTranslating', { done, total: leafElements.length }));
         if (done >= leafElements.length) {
-          updateToast(toast, `✓ ${done} 件翻訳完了`);
+          updateToast(toast, t('toastDone', { count: done }));
           setTimeout(() => toast.remove(), 2500);
         }
       });
@@ -440,16 +437,13 @@
 
   // ─── Page Language Detection & Translate Bar ─────────────────────────────
   async function detectPageLanguage() {
-    // html lang属性から検出を試みる
     const htmlLang = document.documentElement.lang;
     if (htmlLang && !langMatches(htmlLang, targetLang)) {
       showTranslateBar(htmlLang);
       return;
     }
-    // lang属性がターゲットと一致、または未設定の場合はAPIで検出
     if (htmlLang && langMatches(htmlLang, targetLang)) return;
 
-    // ページ本文からサンプルテキストを抽出
     const bodyText = document.body?.innerText?.trim();
     if (!bodyText || bodyText.length < 20) return;
     const sample = bodyText.slice(0, 200);
@@ -478,24 +472,21 @@
     bar.setAttribute('data-dvt', 'true');
     bar.innerHTML = `
       <span class="dvt-translate-bar-text">
-        このページは <strong>${escapeHtml(langName)}</strong> で書かれています。翻訳しますか？
+        ${t('translateBarMsg', { lang: escapeHtml(langName) })}
       </span>
-      <button class="dvt-translate-bar-btn dvt-translate-bar-accept">翻訳する</button>
-      <button class="dvt-translate-bar-btn dvt-translate-bar-close" title="閉じる">✕</button>
+      <button class="dvt-translate-bar-btn dvt-translate-bar-accept">${escapeHtml(t('translateBarAccept'))}</button>
+      <button class="dvt-translate-bar-btn dvt-translate-bar-close" title="${escapeHtml(t('close'))}">✕</button>
     `;
     document.body.appendChild(bar);
     translateBar = bar;
 
-    // 翻訳ボタン
     bar.querySelector('.dvt-translate-bar-accept').addEventListener('click', () => {
       removeTranslateBar();
       translatePage(targetLang);
     });
 
-    // 閉じるボタン（ドメインを記憶）
     bar.querySelector('.dvt-translate-bar-close').addEventListener('click', () => {
       removeTranslateBar();
-      // このドメインをdismissリストに追加
       chrome.storage.local.get('dismissedDomains', (data) => {
         const list = data.dismissedDomains || [];
         if (!list.includes(location.hostname)) {
@@ -527,6 +518,10 @@
     if (msg.action === 'setLang') {
       targetLang = msg.lang;
       chrome.storage.local.set({ targetLang: msg.lang });
+      sendResponse({ ok: true });
+    }
+    if (msg.action === 'setUILang') {
+      DVT_I18N.setLang(msg.lang);
       sendResponse({ ok: true });
     }
     if (msg.action === 'getState') {
