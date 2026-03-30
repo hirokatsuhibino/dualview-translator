@@ -31,7 +31,10 @@
       ],
       "js": [
         "i18n.js",
-        "content.js"
+        "content-core.js",
+        "content-selection.js",
+        "content-page.js",
+        "content-bar.js"
       ],
       "css": [
         "content.css"
