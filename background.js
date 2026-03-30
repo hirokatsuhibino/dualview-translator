@@ -1,6 +1,25 @@
 // DualView Translator - Background Service Worker
 // Handles translation API calls (avoids CORS issues in content scripts on some browsers)
 
+// ─── コンテキストメニュー登録 ─────────────────────────────────────────
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'dvt-translate-selection',
+    title: 'DualView: 「%s」を翻訳',
+    contexts: ['selection'],
+  });
+});
+
+// ─── コンテキストメニュークリック ─────────────────────────────────────
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'dvt-translate-selection' && info.selectionText && tab?.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'contextMenuTranslate',
+      text: info.selectionText,
+    });
+  }
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'translate') {
     fetchTranslation(msg.text, msg.tl, msg.sl || 'auto')

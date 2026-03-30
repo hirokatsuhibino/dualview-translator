@@ -446,6 +446,50 @@
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // ─── Context Menu Translation ─────────────────────────────────────────
+  function showContextMenuPanel(text) {
+    removeSelectionPanel();
+
+    const panel = document.createElement('div');
+    panel.className = 'dvt-sel-panel';
+    panel.setAttribute('data-dvt', 'true');
+    panel.innerHTML = buildSelectionPanelHTML(text);
+
+    // 選択範囲の位置を取得（可能なら）
+    const sel = window.getSelection();
+    let top, left;
+    if (sel && sel.rangeCount > 0 && sel.toString().trim()) {
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      top = rect.bottom + window.scrollY + 10;
+      left = Math.min(Math.max(rect.left + window.scrollX, 8), window.innerWidth - 360 + window.scrollX);
+    } else {
+      // 選択範囲が取れない場合は画面上部中央
+      top = window.scrollY + 80;
+      left = Math.max((window.innerWidth - 340) / 2 + window.scrollX, 8);
+    }
+    panel.style.top = top + 'px';
+    panel.style.left = left + 'px';
+
+    document.body.appendChild(panel);
+    selectionPanel = panel;
+
+    // イベント登録
+    panel.querySelector('.dvt-sel-lang').value = targetLang;
+    panel.querySelector('.dvt-sel-btn').addEventListener('click', async () => {
+      const tl = panel.querySelector('.dvt-sel-lang').value;
+      targetLang = tl;
+      chrome.storage.local.set({ targetLang: tl });
+      await runSelectionTranslate(panel, text, tl);
+    });
+    panel.querySelector('.dvt-sel-close').addEventListener('click', removeSelectionPanel);
+    panel.querySelector('.dvt-sel-lang').addEventListener('change', (e) => {
+      targetLang = e.target.value;
+    });
+
+    // 即座に翻訳開始
+    runSelectionTranslate(panel, text, targetLang);
+  }
+
   // ─── Page Language Detection & Translate Bar ─────────────────────────────
   async function detectPageLanguage() {
     const htmlLang = document.documentElement.lang;
@@ -533,6 +577,10 @@
     }
     if (msg.action === 'setUILang') {
       DVT_I18N.setLang(msg.lang);
+      sendResponse({ ok: true });
+    }
+    if (msg.action === 'contextMenuTranslate') {
+      showContextMenuPanel(msg.text);
       sendResponse({ ok: true });
     }
     if (msg.action === 'getState') {
