@@ -309,7 +309,7 @@ var DVT_PAGE = (function () {
       <span class="dvt-badge dvt-badge-summary">${DVT.escapeHtml(t('summaryBadge'))}</span>
       <div class="dvt-summary-text"><span class="dvt-spinner"></span> ${DVT.escapeHtml(t('summarizing'))}</div>
     `;
-    container.appendChild(summaryBlock);
+    container.insertBefore(summaryBlock, container.firstChild);
 
     // LLM APIで要約
     try {
@@ -326,6 +326,7 @@ var DVT_PAGE = (function () {
       });
 
       summaryBlock.querySelector('.dvt-summary-text').textContent = summary;
+      summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) {
       summaryBlock.querySelector('.dvt-summary-text').innerHTML =
         `<span class="dvt-same-lang">${DVT.escapeHtml(e.message)}</span>`;
