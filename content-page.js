@@ -284,16 +284,22 @@ var DVT_PAGE = (function () {
     // ステップ1: 各文のデュアルビュー翻訳
     await runConcurrentTranslation(elements, DVT.state.targetLang, 'dvt-sum-');
 
-    // ステップ2: 全翻訳結果を結合してLLMで要約
-    const translatedTexts = [];
+    // ステップ2: 全テキストを結合してLLMで要約
+    // 翻訳結果があればそれを、同一言語で翻訳が省略された場合は原文を使用
+    const textsForSummary = [];
     elements.forEach(el => {
       const transEl = el.querySelector('.dvt-trans');
-      if (transEl) translatedTexts.push(transEl.textContent);
+      const origEl = el.querySelector('.dvt-orig');
+      if (transEl) {
+        textsForSummary.push(transEl.textContent);
+      } else if (origEl) {
+        textsForSummary.push(origEl.textContent);
+      }
     });
 
-    if (translatedTexts.length === 0) return;
+    if (textsForSummary.length === 0) return;
 
-    const fullText = translatedTexts.join('\n');
+    const fullText = textsForSummary.join('\n');
 
     // 要約ブロックを挿入（ローディング状態）
     const summaryBlock = document.createElement('div');
