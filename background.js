@@ -62,6 +62,22 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+// ─── キーボードショートカット ──────────────────────────────────────────
+chrome.commands.onCommand.addListener((command) => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!tabs[0]?.id) return;
+    const tabId = tabs[0].id;
+
+    if (command === 'toggle-page-translate') {
+      chrome.tabs.sendMessage(tabId, { action: 'shortcutTogglePageTranslate' });
+    } else if (command === 'translate-selection') {
+      chrome.tabs.sendMessage(tabId, { action: 'shortcutTranslateSelection' });
+    } else if (command === 'enter-region-mode') {
+      chrome.tabs.sendMessage(tabId, { action: 'enterRegionMode' });
+    }
+  });
+});
+
 // ─── メッセージハンドラ ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'translate') {

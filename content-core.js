@@ -126,6 +126,18 @@ var DVT = (function () {
       DVT_I18N.setLang(msg.lang);
       sendResponse({ ok: true });
     }
+    if (msg.action === 'shortcutTogglePageTranslate') {
+      if (state.pageTranslateActive) {
+        DVT_PAGE.undoPageTranslate();
+      } else {
+        DVT_PAGE.translatePage(state.targetLang);
+      }
+      sendResponse({ ok: true });
+    }
+    if (msg.action === 'shortcutTranslateSelection') {
+      DVT_SEL.translateCurrentSelection();
+      sendResponse({ ok: true });
+    }
     if (msg.action === 'contextMenuTranslate') {
       DVT_SEL.showContextMenuPanel(msg.text);
       sendResponse({ ok: true });

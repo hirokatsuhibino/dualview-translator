@@ -177,5 +177,16 @@ var DVT_SEL = (function () {
     });
   }
 
-  return { showContextMenuPanel, removeSelectionPanel };
+  // ─── キーボードショートカットからの選択テキスト翻訳 ────────────────
+  function translateCurrentSelection() {
+    const sel = window.getSelection();
+    const text = sel?.toString().trim();
+    if (!text || text.length <= 1) return;
+
+    removeSelectionPanel();
+    showSelectionPanel(sel, text);
+    runSelectionTranslate(DVT.state.selectionPanel, text, DVT.state.targetLang);
+  }
+
+  return { showContextMenuPanel, removeSelectionPanel, translateCurrentSelection };
 })();
