@@ -54,6 +54,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL（APIキー必要）',
       deeplApiKeyLabel: 'DeepL APIキー',
       deeplApiKeyPlaceholder: 'APIキーを入力',
+      shortcutInfo: '<strong>ショートカット：</strong>Ctrl+Shift+T（ページ翻訳）/ Ctrl+Shift+Y（選択翻訳）/ Ctrl+Shift+R（領域選択）',
     },
     en: {
       uiLangLabel: 'Display Language',
@@ -96,6 +97,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (API key required)',
       deeplApiKeyLabel: 'DeepL API Key',
       deeplApiKeyPlaceholder: 'Enter API key',
+      shortcutInfo: '<strong>Shortcuts:</strong> Ctrl+Shift+T (page) / Ctrl+Shift+Y (selection) / Ctrl+Shift+R (region)',
     },
     'zh-CN': {
       uiLangLabel: '显示语言',
@@ -138,6 +140,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL（需要API密钥）',
       deeplApiKeyLabel: 'DeepL API密钥',
       deeplApiKeyPlaceholder: '输入API密钥',
+      shortcutInfo: '<strong>快捷键：</strong>Ctrl+Shift+T（页面翻译）/ Ctrl+Shift+Y（选择翻译）/ Ctrl+Shift+R（区域选择）',
     },
     'zh-TW': {
       uiLangLabel: '顯示語言',
@@ -180,6 +183,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL（需要API金鑰）',
       deeplApiKeyLabel: 'DeepL API金鑰',
       deeplApiKeyPlaceholder: '輸入API金鑰',
+      shortcutInfo: '<strong>快捷鍵：</strong>Ctrl+Shift+T（頁面翻譯）/ Ctrl+Shift+Y（選擇翻譯）/ Ctrl+Shift+R（區域選擇）',
     },
     ko: {
       uiLangLabel: '표시 언어',
@@ -222,6 +226,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (API 키 필요)',
       deeplApiKeyLabel: 'DeepL API 키',
       deeplApiKeyPlaceholder: 'API 키 입력',
+      shortcutInfo: '<strong>단축키:</strong> Ctrl+Shift+T (페이지 번역) / Ctrl+Shift+Y (선택 번역) / Ctrl+Shift+R (영역 선택)',
     },
     fr: {
       uiLangLabel: "Langue d'affichage",
@@ -264,6 +269,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (clé API requise)',
       deeplApiKeyLabel: 'Clé API DeepL',
       deeplApiKeyPlaceholder: 'Entrez la clé API',
+      shortcutInfo: '<strong>Raccourcis :</strong> Ctrl+Shift+T (page) / Ctrl+Shift+Y (sélection) / Ctrl+Shift+R (région)',
     },
     de: {
       uiLangLabel: 'Anzeigesprache',
@@ -306,6 +312,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (API-Schlüssel erforderlich)',
       deeplApiKeyLabel: 'DeepL API-Schlüssel',
       deeplApiKeyPlaceholder: 'API-Schlüssel eingeben',
+      shortcutInfo: '<strong>Tastenkürzel:</strong> Ctrl+Shift+T (Seite) / Ctrl+Shift+Y (Auswahl) / Ctrl+Shift+R (Bereich)',
     },
     es: {
       uiLangLabel: 'Idioma de la interfaz',
@@ -348,6 +355,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (clave API requerida)',
       deeplApiKeyLabel: 'Clave API de DeepL',
       deeplApiKeyPlaceholder: 'Ingrese la clave API',
+      shortcutInfo: '<strong>Atajos:</strong> Ctrl+Shift+T (página) / Ctrl+Shift+Y (selección) / Ctrl+Shift+R (región)',
     },
     pt: {
       uiLangLabel: 'Idioma da interface',
@@ -390,6 +398,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (chave API necessária)',
       deeplApiKeyLabel: 'Chave API do DeepL',
       deeplApiKeyPlaceholder: 'Insira a chave API',
+      shortcutInfo: '<strong>Atalhos:</strong> Ctrl+Shift+T (página) / Ctrl+Shift+Y (seleção) / Ctrl+Shift+R (região)',
     },
     ru: {
       uiLangLabel: 'Язык интерфейса',
@@ -432,6 +441,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (требуется API-ключ)',
       deeplApiKeyLabel: 'API-ключ DeepL',
       deeplApiKeyPlaceholder: 'Введите API-ключ',
+      shortcutInfo: '<strong>Горячие клавиши:</strong> Ctrl+Shift+T (страница) / Ctrl+Shift+Y (выделение) / Ctrl+Shift+R (область)',
     },
     ar: {
       uiLangLabel: 'لغة العرض',
@@ -474,6 +484,7 @@ var DVT_I18N = (function () {
       engineDeepL: 'DeepL (مفتاح API مطلوب)',
       deeplApiKeyLabel: 'مفتاح API لـ DeepL',
       deeplApiKeyPlaceholder: 'أدخل مفتاح API',
+      shortcutInfo: '<strong>اختصارات:</strong> Ctrl+Shift+T (الصفحة) / Ctrl+Shift+Y (التحديد) / Ctrl+Shift+R (المنطقة)',
     },
   };
 
