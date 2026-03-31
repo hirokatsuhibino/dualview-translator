@@ -237,15 +237,30 @@ function getLLMConfig() {
   });
 }
 
+// ─── 言語コード→言語名変換（LLMプロンプト用） ────────────────────────
+const LANG_NAMES_FOR_PROMPT = {
+  ja: '日本語', en: 'English', 'zh-CN': '中文（简体）', 'zh-TW': '中文（繁體）',
+  ko: '한국어', fr: 'Français', de: 'Deutsch', es: 'Español',
+  pt: 'Português', ru: 'Русский', ar: 'العربية',
+};
+
+function getLangNameForPrompt(code) {
+  return LANG_NAMES_FOR_PROMPT[code] || code;
+}
+
 // ─── LLM要約ディスパッチャー ─────────────────────────────────────────
 async function fetchSummary(text, targetLang, config) {
   if (!text || !text.trim()) return '';
 
-  if (config.engine === 'gemini' && config.geminiApiKey) {
-    return fetchGeminiSummary(text, targetLang, config.geminiApiKey);
-  }
-  if (config.claudeApiKey) {
-    return fetchClaudeSummary(text, targetLang, config.claudeApiKey);
+  const langName = getLangNameForPrompt(targetLang);
+
+  // 選択されたエンジンを優先、APIキーがなければもう一方にフォールバック
+  if (config.engine === 'gemini') {
+    if (config.geminiApiKey) return fetchGeminiSummary(text, langName, config.geminiApiKey);
+    if (config.claudeApiKey) return fetchClaudeSummary(text, langName, config.claudeApiKey);
+  } else {
+    if (config.claudeApiKey) return fetchClaudeSummary(text, langName, config.claudeApiKey);
+    if (config.geminiApiKey) return fetchGeminiSummary(text, langName, config.geminiApiKey);
   }
   throw new Error('要約エンジンのAPIキーが設定されていません');
 }
