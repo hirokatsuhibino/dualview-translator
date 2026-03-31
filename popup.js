@@ -5,6 +5,11 @@ const targetLangSel   = document.getElementById('targetLang');
 const engineSel       = document.getElementById('translateEngine');
 const deeplSettings   = document.getElementById('deeplSettings');
 const deeplApiKeyInput = document.getElementById('deeplApiKey');
+const llmSel           = document.getElementById('llmEngine');
+const claudeSettings   = document.getElementById('claudeSettings');
+const claudeApiKeyInput = document.getElementById('claudeApiKey');
+const geminiSettings   = document.getElementById('geminiSettings');
+const geminiApiKeyInput = document.getElementById('geminiApiKey');
 const btnPage         = document.getElementById('btnPage');
 const btnRegion       = document.getElementById('btnRegion');
 const btnUndo         = document.getElementById('btnUndo');
@@ -22,11 +27,15 @@ DVT_I18N.loadLang((lang) => {
 });
 
 // ── Load saved settings ──────────────────────────────────────────────
-chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey'], (data) => {
+chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey', 'llmEngine', 'claudeApiKey', 'geminiApiKey'], (data) => {
   if (data.targetLang) targetLangSel.value = data.targetLang;
   if (data.translateEngine) engineSel.value = data.translateEngine;
   if (data.deeplApiKey) deeplApiKeyInput.value = data.deeplApiKey;
+  if (data.llmEngine) llmSel.value = data.llmEngine;
+  if (data.claudeApiKey) claudeApiKeyInput.value = data.claudeApiKey;
+  if (data.geminiApiKey) geminiApiKeyInput.value = data.geminiApiKey;
   toggleDeepLSettings();
+  toggleLLMSettings();
 });
 
 // ── UI言語変更 ───────────────────────────────────────────────────────
@@ -58,6 +67,25 @@ deeplApiKeyInput.addEventListener('input', () => {
 
 function toggleDeepLSettings() {
   deeplSettings.style.display = engineSel.value === 'deepl' ? 'block' : 'none';
+}
+
+// ── 要約エンジン変更 ─────────────────────────────────────────────────
+llmSel.addEventListener('change', () => {
+  chrome.storage.local.set({ llmEngine: llmSel.value });
+  toggleLLMSettings();
+});
+
+claudeApiKeyInput.addEventListener('input', () => {
+  chrome.storage.local.set({ claudeApiKey: claudeApiKeyInput.value.trim() });
+});
+
+geminiApiKeyInput.addEventListener('input', () => {
+  chrome.storage.local.set({ geminiApiKey: geminiApiKeyInput.value.trim() });
+});
+
+function toggleLLMSettings() {
+  claudeSettings.style.display = llmSel.value === 'claude' ? 'block' : 'none';
+  geminiSettings.style.display = llmSel.value === 'gemini' ? 'block' : 'none';
 }
 
 // ── Sync target language change to content script ────────────────────

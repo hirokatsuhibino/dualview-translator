@@ -150,6 +150,10 @@ var DVT = (function () {
       DVT_PAGE.translateElement();
       sendResponse({ ok: true });
     }
+    if (msg.action === 'contextMenuTranslateAndSummarize') {
+      DVT_PAGE.translateAndSummarizeElement();
+      sendResponse({ ok: true });
+    }
     if (msg.action === 'getState') {
       sendResponse({ pageTranslateActive: state.pageTranslateActive, targetLang: state.targetLang });
     }

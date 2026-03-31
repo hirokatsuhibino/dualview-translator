@@ -253,5 +253,78 @@ var DVT_PAGE = (function () {
     await runConcurrentTranslation(elements, DVT.state.targetLang, 'dvt-ctx-');
   }
 
-  return { translatePage, undoPageTranslate, enterRegionMode, translateElement };
+  // ─── 要素翻訳＆要約（右クリックメニュー） ──────────────────────────
+  async function translateAndSummarizeElement() {
+    if (!DVT.state.lastContextMenuTarget) return;
+
+    // ブロック要素を特定（translateElementと同じロジック）
+    const BLOCK_TAGS = ['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'NAV',
+      'HEADER', 'FOOTER', 'BLOCKQUOTE', 'FIGURE', 'DETAILS', 'TD', 'TH', 'LI'];
+    let container = DVT.state.lastContextMenuTarget;
+
+    while (container && container !== document.body) {
+      if (container.closest('[data-dvt]')) { container = container.parentElement; continue; }
+      if (BLOCK_TAGS.includes(container.tagName) || container.tagName === 'P') break;
+      container = container.parentElement;
+    }
+    if (!container || container === document.body) return;
+
+    let elements = filterTranslatableElements(container);
+
+    if (elements.length === 0) {
+      if (container.dataset.dvtId || container.closest('[data-dvt]')) return;
+      const text = container.innerText?.trim();
+      if (!text || text.length < 4) {
+        DVT.showToast(t('toastNoText'), false, 2500);
+        return;
+      }
+      elements = [container];
+    }
+
+    // ステップ1: 各文のデュアルビュー翻訳
+    await runConcurrentTranslation(elements, DVT.state.targetLang, 'dvt-sum-');
+
+    // ステップ2: 全翻訳結果を結合してLLMで要約
+    const translatedTexts = [];
+    elements.forEach(el => {
+      const transEl = el.querySelector('.dvt-trans');
+      if (transEl) translatedTexts.push(transEl.textContent);
+    });
+
+    if (translatedTexts.length === 0) return;
+
+    const fullText = translatedTexts.join('\n');
+
+    // 要約ブロックを挿入（ローディング状態）
+    const summaryBlock = document.createElement('div');
+    summaryBlock.className = 'dvt-summary';
+    summaryBlock.setAttribute('data-dvt', 'true');
+    summaryBlock.innerHTML = `
+      <span class="dvt-badge dvt-badge-summary">${DVT.escapeHtml(t('summaryBadge'))}</span>
+      <div class="dvt-summary-text"><span class="dvt-spinner"></span> ${DVT.escapeHtml(t('summarizing'))}</div>
+    `;
+    container.appendChild(summaryBlock);
+
+    // LLM APIで要約
+    try {
+      const summary = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          action: 'summarize',
+          text: fullText,
+          targetLang: DVT.state.targetLang,
+        }, (res) => {
+          if (chrome.runtime.lastError) { reject(new Error(t('error'))); return; }
+          if (res?.ok) resolve(res.summary);
+          else reject(new Error(res?.error || t('translateFailed')));
+        });
+      });
+
+      summaryBlock.querySelector('.dvt-summary-text').textContent = summary;
+    } catch (e) {
+      summaryBlock.querySelector('.dvt-summary-text').innerHTML =
+        `<span class="dvt-same-lang">${DVT.escapeHtml(e.message)}</span>`;
+    }
+  }
+
+  return { translatePage, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement };
 })();

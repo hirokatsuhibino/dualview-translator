@@ -3,17 +3,17 @@
 
 // ─── コンテキストメニュー用の翻訳辞書 ────────────────────────────────
 const CONTEXT_MENU_TITLES = {
-  ja:      { selection: 'DualView: 「%s」を翻訳',              element: 'DualView: この要素を翻訳' },
-  en:      { selection: 'DualView: Translate "%s"',            element: 'DualView: Translate this element' },
-  'zh-CN': { selection: 'DualView: 翻译「%s」',               element: 'DualView: 翻译此元素' },
-  'zh-TW': { selection: 'DualView: 翻譯「%s」',               element: 'DualView: 翻譯此元素' },
-  ko:      { selection: 'DualView: "%s" 번역',                element: 'DualView: 이 요소 번역' },
-  fr:      { selection: 'DualView : Traduire « %s »',         element: 'DualView : Traduire cet élément' },
-  de:      { selection: 'DualView: „%s" übersetzen',           element: 'DualView: Dieses Element übersetzen' },
-  es:      { selection: 'DualView: Traducir "%s"',             element: 'DualView: Traducir este elemento' },
-  pt:      { selection: 'DualView: Traduzir "%s"',             element: 'DualView: Traduzir este elemento' },
-  ru:      { selection: 'DualView: Перевести «%s»',            element: 'DualView: Перевести этот элемент' },
-  ar:      { selection: 'DualView: ترجمة "%s"',               element: 'DualView: ترجمة هذا العنصر' },
+  ja:      { selection: 'DualView: 「%s」を翻訳',              element: 'DualView: この要素を翻訳',           elementSummary: 'DualView: この要素を翻訳＆要約' },
+  en:      { selection: 'DualView: Translate "%s"',            element: 'DualView: Translate this element',  elementSummary: 'DualView: Translate & summarize this element' },
+  'zh-CN': { selection: 'DualView: 翻译「%s」',               element: 'DualView: 翻译此元素',              elementSummary: 'DualView: 翻译并摘要此元素' },
+  'zh-TW': { selection: 'DualView: 翻譯「%s」',               element: 'DualView: 翻譯此元素',              elementSummary: 'DualView: 翻譯並摘要此元素' },
+  ko:      { selection: 'DualView: "%s" 번역',                element: 'DualView: 이 요소 번역',            elementSummary: 'DualView: 이 요소 번역 및 요약' },
+  fr:      { selection: 'DualView : Traduire « %s »',         element: 'DualView : Traduire cet élément',   elementSummary: 'DualView : Traduire et résumer cet élément' },
+  de:      { selection: 'DualView: „%s" übersetzen',           element: 'DualView: Dieses Element übersetzen', elementSummary: 'DualView: Dieses Element übersetzen & zusammenfassen' },
+  es:      { selection: 'DualView: Traducir "%s"',             element: 'DualView: Traducir este elemento',  elementSummary: 'DualView: Traducir y resumir este elemento' },
+  pt:      { selection: 'DualView: Traduzir "%s"',             element: 'DualView: Traduzir este elemento',  elementSummary: 'DualView: Traduzir e resumir este elemento' },
+  ru:      { selection: 'DualView: Перевести «%s»',            element: 'DualView: Перевести этот элемент',  elementSummary: 'DualView: Перевести и обобщить этот элемент' },
+  ar:      { selection: 'DualView: ترجمة "%s"',               element: 'DualView: ترجمة هذا العنصر',        elementSummary: 'DualView: ترجمة وتلخيص هذا العنصر' },
 };
 
 function getMenuTitles(lang) {
@@ -34,6 +34,11 @@ chrome.runtime.onInstalled.addListener(() => {
       title: titles.element,
       contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
     });
+    chrome.contextMenus.create({
+      id: 'dvt-translate-summarize-element',
+      title: titles.elementSummary,
+      contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
+    });
   });
 });
 
@@ -43,6 +48,7 @@ chrome.storage.onChanged.addListener((changes) => {
     const titles = getMenuTitles(changes.uiLang.newValue);
     chrome.contextMenus.update('dvt-translate-selection', { title: titles.selection });
     chrome.contextMenus.update('dvt-translate-element', { title: titles.element });
+    chrome.contextMenus.update('dvt-translate-summarize-element', { title: titles.elementSummary });
   }
 });
 
@@ -58,6 +64,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'dvt-translate-element') {
     chrome.tabs.sendMessage(tab.id, {
       action: 'contextMenuTranslateElement',
+    });
+  }
+  if (info.menuItemId === 'dvt-translate-summarize-element') {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'contextMenuTranslateAndSummarize',
     });
   }
 });
@@ -96,6 +107,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'detectLang') {
     detectLanguage(msg.text)
       .then(lang => sendResponse({ ok: true, detectedLang: lang }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+  if (msg.action === 'summarize') {
+    getLLMConfig().then(config => {
+      return fetchSummary(msg.text, msg.targetLang, config);
+    })
+      .then(summary => sendResponse({ ok: true, summary }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
@@ -203,6 +222,89 @@ async function fetchDeepL(text, tl, sl, apiKey) {
   }
 
   return { text: results.join(' '), detectedLang };
+}
+
+// ─── LLM設定をstorageから取得 ─────────────────────────────────────────
+function getLLMConfig() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['llmEngine', 'claudeApiKey', 'geminiApiKey'], (data) => {
+      resolve({
+        engine: data.llmEngine || 'claude',
+        claudeApiKey: data.claudeApiKey || '',
+        geminiApiKey: data.geminiApiKey || '',
+      });
+    });
+  });
+}
+
+// ─── LLM要約ディスパッチャー ─────────────────────────────────────────
+async function fetchSummary(text, targetLang, config) {
+  if (!text || !text.trim()) return '';
+
+  if (config.engine === 'gemini' && config.geminiApiKey) {
+    return fetchGeminiSummary(text, targetLang, config.geminiApiKey);
+  }
+  if (config.claudeApiKey) {
+    return fetchClaudeSummary(text, targetLang, config.claudeApiKey);
+  }
+  throw new Error('要約エンジンのAPIキーが設定されていません');
+}
+
+// ─── Claude API 要約 ─────────────────────────────────────────────────
+async function fetchClaudeSummary(text, targetLang, apiKey) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 512,
+      messages: [{
+        role: 'user',
+        content: `以下のテキストを${targetLang}で3〜5行に要約してください。要約のみを出力してください。\n\n${text}`,
+      }],
+    }),
+  });
+
+  if (!res.ok) {
+    const status = res.status;
+    if (status === 401) throw new Error('Claude: APIキーが無効です');
+    if (status === 429) throw new Error('Claude: レート制限に達しました');
+    throw new Error(`Claude HTTP ${status}`);
+  }
+
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+// ─── Gemini API 要約 ─────────────────────────────────────────────────
+async function fetchGeminiSummary(text, targetLang, apiKey) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: `以下のテキストを${targetLang}で3〜5行に要約してください。要約のみを出力してください。\n\n${text}`,
+        }],
+      }],
+    }),
+  });
+
+  if (!res.ok) {
+    const status = res.status;
+    if (status === 400) throw new Error('Gemini: APIキーが無効です');
+    if (status === 429) throw new Error('Gemini: レート制限に達しました');
+    throw new Error(`Gemini HTTP ${status}`);
+  }
+
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 // ─── 言語検出（常にGoogle APIを使用 — 無料で高速） ───────────────────
