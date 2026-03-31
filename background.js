@@ -286,10 +286,12 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
   });
 
   if (!res.ok) {
+    let detail = '';
+    try { const err = await res.json(); detail = err.error?.message || JSON.stringify(err); } catch(e) {}
     const status = res.status;
     if (status === 401) throw new Error('Claude: APIキーが無効です');
     if (status === 429) throw new Error('Claude: レート制限に達しました');
-    throw new Error(`Claude HTTP ${status}`);
+    throw new Error(`Claude HTTP ${status}: ${detail}`);
   }
 
   const data = await res.json();
