@@ -72,6 +72,10 @@
       "description": "Translate selected text / 選択テキストを翻訳"
     },
     "enter-region-mode": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+R",
+        "mac": "Command+Shift+R"
+      },
       "description": "Enter region selection mode / 領域選択モード"
     }
   },
