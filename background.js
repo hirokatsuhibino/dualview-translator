@@ -276,7 +276,7 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 512,
       messages: [{
         role: 'user',
