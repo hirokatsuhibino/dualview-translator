@@ -300,7 +300,7 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
 
 // ─── Gemini API 要約 ─────────────────────────────────────────────────
 async function fetchGeminiSummary(text, targetLang, apiKey) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -314,10 +314,12 @@ async function fetchGeminiSummary(text, targetLang, apiKey) {
   });
 
   if (!res.ok) {
+    let detail = '';
+    try { const err = await res.json(); detail = err.error?.message || JSON.stringify(err); } catch(e) {}
     const status = res.status;
-    if (status === 400) throw new Error('Gemini: APIキーが無効です');
+    if (status === 400) throw new Error(`Gemini: APIキーが無効です: ${detail}`);
     if (status === 429) throw new Error('Gemini: レート制限に達しました');
-    throw new Error(`Gemini HTTP ${status}`);
+    throw new Error(`Gemini HTTP ${status}: ${detail}`);
   }
 
   const data = await res.json();
