@@ -373,7 +373,7 @@
   padding: 10px 14px !important;
   border-left: 3px solid #4caf50 !important;
   background: rgba(76, 175, 80, 0.07) !important;
-  color: #e8e8f0 !important;
+  color: inherit !important;
   font-size: 0.93em !important;
   line-height: 1.65 !important;
   border-radius: 0 8px 8px 0 !important;
