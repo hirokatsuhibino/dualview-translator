@@ -126,6 +126,22 @@ var DVT = (function () {
       DVT_I18N.setLang(msg.lang);
       sendResponse({ ok: true });
     }
+    if (msg.action === 'togglePageTranslate') {
+      if (state.pageTranslateActive) {
+        DVT_PAGE.undoPageTranslate();
+      } else {
+        DVT_PAGE.translatePage(msg.lang);
+      }
+      sendResponse({ ok: true, active: state.pageTranslateActive });
+    }
+    if (msg.action === 'keyboardTranslateSelection') {
+      const sel = window.getSelection();
+      const text = sel?.toString().trim();
+      if (text && text.length > 1) {
+        DVT_SEL.showContextMenuPanel(text);
+      }
+      sendResponse({ ok: true });
+    }
     if (msg.action === 'contextMenuTranslate') {
       DVT_SEL.showContextMenuPanel(msg.text);
       sendResponse({ ok: true });
