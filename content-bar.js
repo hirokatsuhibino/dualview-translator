@@ -46,6 +46,7 @@ var DVT_BAR = (function () {
         ${t('translateBarMsg', { lang: DVT.escapeHtml(langName) })}
       </span>
       <button class="dvt-translate-bar-btn dvt-translate-bar-accept">${DVT.escapeHtml(t('translateBarAccept'))}</button>
+      <button class="dvt-translate-bar-btn dvt-translate-bar-summarize">${DVT.escapeHtml(t('translateBarSummarize'))}</button>
       <button class="dvt-translate-bar-btn dvt-translate-bar-close" title="${DVT.escapeHtml(t('close'))}">✕</button>
     `;
     document.body.appendChild(bar);
@@ -54,6 +55,11 @@ var DVT_BAR = (function () {
     bar.querySelector('.dvt-translate-bar-accept').addEventListener('click', () => {
       removeTranslateBar();
       DVT_PAGE.translatePage(DVT.state.targetLang);
+    });
+
+    bar.querySelector('.dvt-translate-bar-summarize').addEventListener('click', () => {
+      removeTranslateBar();
+      DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
     });
 
     bar.querySelector('.dvt-translate-bar-close').addEventListener('click', () => {
