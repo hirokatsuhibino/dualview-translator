@@ -91,8 +91,77 @@ var DVT_PAGE = (function () {
     await runConcurrentTranslation(elements, tl, 'dvt-');
   }
 
+  // ─── ページ全体翻訳＆要約 ────────────────────────────────────────────
+  async function translatePageAndSummarize(tl) {
+    if (DVT.state.pageTranslateActive) {
+      undoPageTranslate();
+      return;
+    }
+
+    DVT.state.pageTranslateActive = true;
+    DVT.state.targetLang = tl;
+
+    const elements = filterTranslatableElements(document);
+    if (elements.length === 0) return;
+
+    // ステップ1: 各文のデュアルビュー翻訳
+    await runConcurrentTranslation(elements, tl, 'dvt-');
+
+    // ステップ2: 全翻訳テキストを結合してLLMで要約
+    const textsForSummary = [];
+    elements.forEach(el => {
+      const transEl = el.querySelector('.dvt-trans');
+      const origEl = el.querySelector('.dvt-orig');
+      if (transEl) {
+        textsForSummary.push(transEl.textContent);
+      } else if (origEl) {
+        textsForSummary.push(origEl.textContent);
+      }
+    });
+
+    if (textsForSummary.length === 0) return;
+
+    const fullText = textsForSummary.join('\n');
+
+    // 要約ブロックをページ先頭に挿入（ローディング状態）
+    const summaryBlock = document.createElement('div');
+    summaryBlock.className = 'dvt-summary';
+    summaryBlock.setAttribute('data-dvt', 'true');
+    summaryBlock.id = 'dvt-page-summary';
+    summaryBlock.innerHTML = `
+      <span class="dvt-badge dvt-badge-summary">${DVT.escapeHtml(t('summaryBadge'))}</span>
+      <div class="dvt-summary-text"><span class="dvt-spinner"></span> ${DVT.escapeHtml(t('summarizing'))}</div>
+    `;
+    document.body.insertBefore(summaryBlock, document.body.firstChild);
+    summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // LLM APIで要約
+    try {
+      const summary = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          action: 'summarize',
+          text: fullText,
+          targetLang: DVT.state.targetLang,
+        }, (res) => {
+          if (chrome.runtime.lastError) { reject(new Error(t('error'))); return; }
+          if (res?.ok) resolve(res.summary);
+          else reject(new Error(res?.error || t('translateFailed')));
+        });
+      });
+
+      summaryBlock.querySelector('.dvt-summary-text').textContent = summary;
+      summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      summaryBlock.querySelector('.dvt-summary-text').innerHTML =
+        `<span class="dvt-same-lang">${DVT.escapeHtml(e.message)}</span>`;
+    }
+  }
+
   function undoPageTranslate() {
     DVT.state.pageTranslateActive = false;
+    // ページ要約ブロックを削除
+    const pageSummary = document.getElementById('dvt-page-summary');
+    if (pageSummary) pageSummary.remove();
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
       const origEl = el.querySelector('.dvt-orig');
       if (origEl) {
@@ -333,5 +402,5 @@ var DVT_PAGE = (function () {
     }
   }
 
-  return { translatePage, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement };
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement };
 })();

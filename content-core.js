@@ -109,6 +109,10 @@ var DVT = (function () {
       DVT_PAGE.translatePage(msg.lang);
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
+    if (msg.action === 'translatePageAndSummarize') {
+      DVT_PAGE.translatePageAndSummarize(msg.lang);
+      sendResponse({ ok: true, active: state.pageTranslateActive });
+    }
     if (msg.action === 'undoPage') {
       DVT_PAGE.undoPageTranslate();
       sendResponse({ ok: true });

@@ -65,6 +65,7 @@ var DVT_I18N = (function () {
       geminiApiKeyPlaceholder: 'Gemini APIキーを入力',
       summarizing: '要約中…',
       summaryBadge: '要約',
+      translateAndSummarize: 'ページ全体を翻訳＆要約',
     },
     en: {
       uiLangLabel: 'Display Language',
@@ -117,6 +118,7 @@ var DVT_I18N = (function () {
       geminiApiKeyPlaceholder: 'Enter Gemini API key',
       summarizing: 'Summarizing…',
       summaryBadge: 'Summary',
+      translateAndSummarize: 'Translate & Summarize Page',
     },
     'zh-CN': {
       uiLangLabel: '显示语言',
@@ -164,6 +166,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Claude API密钥', claudeApiKeyPlaceholder: '输入Claude API密钥',
       geminiApiKeyLabel: 'Gemini API密钥', geminiApiKeyPlaceholder: '输入Gemini API密钥',
       summarizing: '摘要中…', summaryBadge: '摘要',
+      translateAndSummarize: '翻译并摘要整个页面',
     },
     'zh-TW': {
       uiLangLabel: '顯示語言',
@@ -211,6 +214,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Claude API金鑰', claudeApiKeyPlaceholder: '輸入Claude API金鑰',
       geminiApiKeyLabel: 'Gemini API金鑰', geminiApiKeyPlaceholder: '輸入Gemini API金鑰',
       summarizing: '摘要中…', summaryBadge: '摘要',
+      translateAndSummarize: '翻譯並摘要整個頁面',
     },
     ko: {
       uiLangLabel: '표시 언어',
@@ -258,6 +262,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Claude API 키', claudeApiKeyPlaceholder: 'Claude API 키 입력',
       geminiApiKeyLabel: 'Gemini API 키', geminiApiKeyPlaceholder: 'Gemini API 키 입력',
       summarizing: '요약 중…', summaryBadge: '요약',
+      translateAndSummarize: '전체 페이지 번역 및 요약',
     },
     fr: {
       uiLangLabel: "Langue d'affichage",
@@ -305,6 +310,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Clé API Claude', claudeApiKeyPlaceholder: 'Entrez la clé API Claude',
       geminiApiKeyLabel: 'Clé API Gemini', geminiApiKeyPlaceholder: 'Entrez la clé API Gemini',
       summarizing: 'Résumé en cours…', summaryBadge: 'Résumé',
+      translateAndSummarize: 'Traduire et résumer la page',
     },
     de: {
       uiLangLabel: 'Anzeigesprache',
@@ -352,6 +358,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Claude API-Schlüssel', claudeApiKeyPlaceholder: 'Claude API-Schlüssel eingeben',
       geminiApiKeyLabel: 'Gemini API-Schlüssel', geminiApiKeyPlaceholder: 'Gemini API-Schlüssel eingeben',
       summarizing: 'Zusammenfassung…', summaryBadge: 'Zusammenfassung',
+      translateAndSummarize: 'Gesamte Seite übersetzen & zusammenfassen',
     },
     es: {
       uiLangLabel: 'Idioma de la interfaz',
@@ -399,6 +406,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Clave API Claude', claudeApiKeyPlaceholder: 'Ingrese la clave API Claude',
       geminiApiKeyLabel: 'Clave API Gemini', geminiApiKeyPlaceholder: 'Ingrese la clave API Gemini',
       summarizing: 'Resumiendo…', summaryBadge: 'Resumen',
+      translateAndSummarize: 'Traducir y resumir toda la página',
     },
     pt: {
       uiLangLabel: 'Idioma da interface',
@@ -446,6 +454,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'Chave API Claude', claudeApiKeyPlaceholder: 'Insira a chave API Claude',
       geminiApiKeyLabel: 'Chave API Gemini', geminiApiKeyPlaceholder: 'Insira a chave API Gemini',
       summarizing: 'Resumindo…', summaryBadge: 'Resumo',
+      translateAndSummarize: 'Traduzir e resumir página inteira',
     },
     ru: {
       uiLangLabel: 'Язык интерфейса',
@@ -493,6 +502,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'API-ключ Claude', claudeApiKeyPlaceholder: 'Введите API-ключ Claude',
       geminiApiKeyLabel: 'API-ключ Gemini', geminiApiKeyPlaceholder: 'Введите API-ключ Gemini',
       summarizing: 'Резюме…', summaryBadge: 'Резюме',
+      translateAndSummarize: 'Перевести и обобщить всю страницу',
     },
     ar: {
       uiLangLabel: 'لغة العرض',
@@ -540,6 +550,7 @@ var DVT_I18N = (function () {
       claudeApiKeyLabel: 'مفتاح API لـ Claude', claudeApiKeyPlaceholder: 'أدخل مفتاح API لـ Claude',
       geminiApiKeyLabel: 'مفتاح API لـ Gemini', geminiApiKeyPlaceholder: 'أدخل مفتاح API لـ Gemini',
       summarizing: 'جارٍ التلخيص…', summaryBadge: 'ملخص',
+      translateAndSummarize: 'ترجمة وتلخيص الصفحة بالكامل',
     },
   };
 

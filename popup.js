@@ -11,6 +11,7 @@ const claudeApiKeyInput = document.getElementById('claudeApiKey');
 const geminiSettings   = document.getElementById('geminiSettings');
 const geminiApiKeyInput = document.getElementById('geminiApiKey');
 const btnPage         = document.getElementById('btnPage');
+const btnPageSummary  = document.getElementById('btnPageSummary');
 const btnRegion       = document.getElementById('btnRegion');
 const btnUndo         = document.getElementById('btnUndo');
 const statusDot       = document.getElementById('statusDot');
@@ -158,6 +159,32 @@ function setPageActive(active) {
     setStatus('idle', t('statusDefault'));
   }
 }
+
+// ── Page translate & summarize ─────────────────────────────────────────
+btnPageSummary.addEventListener('click', async () => {
+  const lang = targetLangSel.value;
+
+  if (pageActive) {
+    await sendToContent({ action: 'undoPage' });
+    setPageActive(false);
+    return;
+  }
+
+  setStatus('translating', t('statusTranslating'));
+  btnPage.disabled = true;
+  btnPageSummary.disabled = true;
+  btnRegion.disabled = true;
+
+  const res = await sendToContent({ action: 'translatePageAndSummarize', lang });
+  if (res?.ok) {
+    setPageActive(true);
+    setStatus('active', t('statusPageActive'));
+  }
+
+  btnPage.disabled = false;
+  btnPageSummary.disabled = false;
+  btnRegion.disabled = false;
+});
 
 // ── Undo ──────────────────────────────────────────────────────────────
 btnUndo.addEventListener('click', async () => {
