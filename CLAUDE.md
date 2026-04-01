@@ -13,15 +13,28 @@ LLM（Claude / Gemini）による要約機能も搭載。
 ├── background.js          # Service Worker: 翻訳/要約API呼び出し・コンテキストメニュー管理
 ├── content-core.js        # 共有状態(DVT)・ユーティリティ・初期化・メッセージリスナー
 ├── content-selection.js   # テキスト選択翻訳パネル(DVT_SEL)・コンテキストメニュー翻訳
-├── content-page.js        # ページ全体/範囲選択/要素翻訳/要約(DVT_PAGE)
+├── content-page.js        # ページ全体/要素選択翻訳/要約/MutationObserver(DVT_PAGE)
 ├── content-bar.js         # ページ読み込み時の翻訳バー・言語検出(DVT_BAR)
 ├── content.css            # 注入スタイル（ダーク/ライト対応）
 ├── i18n.js                # 多言語辞書(DVT_I18N) + t()ヘルパー（11言語対応）
-├── popup.html             # ポップアップUI（設定・翻訳モード選択）
-├── popup.js               # ポップアップのイベント処理
+├── popup.html             # ポップアップUI（タブ式: 翻訳/設定）
+├── popup.js               # ポップアップのイベント処理・タブ切り替え
 ├── icons/                 # 拡張アイコン（16/32/48/128px）
 ├── LICENSE                # MIT License
-└── README.md              # ユーザー向けドキュメント
+├── README.md              # ユーザー向けドキュメント
+├── package.json           # npm設定（テスト用）
+├── vitest.config.js       # Vitest設定
+├── tests/                 # 自動テスト
+│   ├── setup.js           #   Chrome APIモック・jsdomモック
+│   ├── helpers.js          #   IIFEスクリプトのロードヘルパー
+│   ├── i18n.test.js       #   i18n テスト（86件）
+│   ├── content-core.test.js #  content-core テスト（20件）
+│   ├── content-page.test.js #  content-page テスト（7件）
+│   └── background.test.js  #  background テスト（13件）
+└── docs/                  # 公開資料
+    ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
+    ├── RELEASE_NOTES.md   #   リリースノート
+    └── test-plan.md       #   テストプラン（74項目）
 ```
 
 ## アーキテクチャ
@@ -32,7 +45,7 @@ LLM（Claude / Gemini）による要約機能も搭載。
 
 - **DVT** (`content-core.js`): グローバル名前空間。共有状態 `DVT.state` とユーティリティ関数を公開
 - **DVT_SEL** (`content-selection.js`): 選択パネルUI。DVTに依存
-- **DVT_PAGE** (`content-page.js`): ページ/範囲/要素翻訳・要約。DVTに依存
+- **DVT_PAGE** (`content-page.js`): ページ/要素選択翻訳・要約・MutationObserver。DVTに依存
 - **DVT_BAR** (`content-bar.js`): 翻訳バー。DVT, DVT_PAGEに依存
 
 ### データフロー
@@ -61,6 +74,27 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - `background.js` の `chrome.commands.onCommand` で受信し content script に転送
 - デフォルトキー: `Ctrl+Shift+T`（ページ翻訳）/ `Ctrl+Shift+Y`（選択翻訳）/ `Ctrl+Shift+R`（領域選択）
 
+### ポップアップUI
+
+- 2タブ構成: 「翻訳」タブ（デフォルト）と「設定」タブ
+- 翻訳タブ: 翻訳先言語セレクタ + 翻訳モードボタン群 + ステータスバー
+- 設定タブ: 表示言語・翻訳エンジン・要約エンジン・ヒント情報
+- タブ切り替えは `.dvt-tab` / `.dvt-tab-content` クラスで制御
+
+### 要素選択翻訳
+
+- `enterRegionMode(mode)`: mode='translate'（翻訳のみ）/ mode='summarize'（翻訳＆要約）
+- マウスホバーで `.dvt-region-highlight` クラスを付与してハイライト表示
+- クリックで要素を確定 → `translateClickedElement()` or `translateAndSummarizeClickedElement()`
+- 子要素の葉要素のみを翻訳対象として抽出（親子重複を除外）
+
+### 動的コンテンツ監視
+
+- ページ全体翻訳がアクティブな間、`MutationObserver` でDOMの `childList` + `subtree` を監視
+- 500msデバウンスで短時間の大量DOM変更を1回の翻訳処理にまとめる
+- `filterTranslatableElements()` が `data-dvt-id` 付きの既翻訳要素を除外するため二重翻訳なし
+- `undoPageTranslate()` 時に `stopPageObserver()` で監視を停止
+
 ## コーディングルール
 
 - コメントは日本語で書く（コードは英語可）
@@ -86,8 +120,18 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - 要約ブロック(`.dvt-summary`): 緑系の左枠線で翻訳と視覚的に区別
 - 既知の問題: Firefoxポップアップでテーマが反映されない場合がある
 
+## テスト
+
+- Vitest + jsdom で自動テストを実行: `npm test`
+- テストファイルは `tests/` ディレクトリに配置
+- Chrome拡張APIは `tests/setup.js` でモック（chrome.storage, chrome.runtime等）
+- IIFEパターンのスクリプトは `tests/helpers.js` の `loadScript()` でグローバルにロード
+- `window.matchMedia` 等のjsdom未サポートAPIも `setup.js` でモック済み
+- 新規メッセージやユーティリティ関数を追加した場合は対応するテストも追加すること
+
 ## 既知の問題
 
 - Google Translate非公式エンドポイントはレート制限・ブロックのリスクあり
 - Firefoxポップアップのライトテーマ切り替えが動作しない場合がある
 - `<all_urls>` のhost_permissionsはChrome Web Store審査で指摘される可能性あり
+- 要素単位の翻訳モード（要素選択翻訳、右クリック翻訳）では、翻訳後に要素内で動的にロードされるコンテンツは自動翻訳されない（#16）
