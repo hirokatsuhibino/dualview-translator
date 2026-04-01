@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DualView Translator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "原文と翻訳を並べて表示するブラウザ翻訳拡張。選択翻訳・ページ全体翻訳に対応。",
   "permissions": [
     "activeTab",
