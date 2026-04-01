@@ -75,6 +75,44 @@ var DVT_PAGE = (function () {
     await Promise.all(workers);
   }
 
+  // ─── 動的コンテンツ監視（MutationObserver） ────────────────────────
+  let pageObserver = null;
+  let observerDebounceTimer = null;
+
+  function startPageObserver(tl) {
+    if (pageObserver) return;
+    pageObserver = new MutationObserver(() => {
+      // デバウンス: 短時間に大量のDOM変更があっても1回だけ処理
+      if (observerDebounceTimer) clearTimeout(observerDebounceTimer);
+      observerDebounceTimer = setTimeout(() => {
+        translateNewElements(tl);
+      }, 500);
+    });
+    pageObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  function stopPageObserver() {
+    if (pageObserver) {
+      pageObserver.disconnect();
+      pageObserver = null;
+    }
+    if (observerDebounceTimer) {
+      clearTimeout(observerDebounceTimer);
+      observerDebounceTimer = null;
+    }
+  }
+
+  // 未翻訳の新規要素のみ翻訳
+  async function translateNewElements(tl) {
+    if (!DVT.state.pageTranslateActive) return;
+    const elements = filterTranslatableElements(document);
+    if (elements.length === 0) return;
+    await runConcurrentTranslation(elements, tl, 'dvt-');
+  }
+
   // ─── ページ全体翻訳 ────────────────────────────────────────────────
   async function translatePage(tl) {
     if (DVT.state.pageTranslateActive) {
@@ -89,6 +127,9 @@ var DVT_PAGE = (function () {
     if (elements.length === 0) return;
 
     await runConcurrentTranslation(elements, tl, 'dvt-');
+
+    // 翻訳完了後、動的コンテンツの監視を開始
+    startPageObserver(tl);
   }
 
   // ─── ページ全体翻訳＆要約 ────────────────────────────────────────────
@@ -155,10 +196,15 @@ var DVT_PAGE = (function () {
       summaryBlock.querySelector('.dvt-summary-text').innerHTML =
         `<span class="dvt-same-lang">${DVT.escapeHtml(e.message)}</span>`;
     }
+
+    // 翻訳＆要約完了後、動的コンテンツの監視を開始
+    startPageObserver(tl);
   }
 
   function undoPageTranslate() {
     DVT.state.pageTranslateActive = false;
+    // 動的コンテンツ監視を停止
+    stopPageObserver();
     // ページ要約ブロックを削除
     const pageSummary = document.getElementById('dvt-page-summary');
     if (pageSummary) pageSummary.remove();
@@ -175,120 +221,171 @@ var DVT_PAGE = (function () {
     DVT.showToast(t('toastReset'), false, 2000);
   }
 
-  // ─── 範囲選択翻訳 ──────────────────────────────────────────────────
-  function enterRegionMode() {
+  // ─── 要素クリック選択翻訳 ────────────────────────────────────────────
+  // mode: 'translate' = 翻訳のみ, 'summarize' = 翻訳＆要約
+  function enterRegionMode(mode) {
+    const summarize = (mode === 'summarize');
     DVT.state.regionMode = true;
     document.body.style.cursor = 'crosshair';
+    let highlightedEl = null;
+
     const hint = document.createElement('div');
     hint.className = 'dvt-region-hint';
     hint.setAttribute('data-dvt', 'true');
-    hint.textContent = t('regionHint');
+    hint.textContent = t(summarize ? 'regionHintSummarize' : 'regionHint');
     document.body.appendChild(hint);
 
-    function onMousedown(e) {
+    // ホバー中の要素をハイライト
+    function onMousemove(e) {
+      const target = e.target;
+      if (target.closest('[data-dvt]')) return;
+      if (target === highlightedEl) return;
+      if (highlightedEl) highlightedEl.classList.remove('dvt-region-highlight');
+      highlightedEl = target;
+      highlightedEl.classList.add('dvt-region-highlight');
+    }
+
+    // クリックで要素を確定して翻訳（＆要約）
+    function onClick(e) {
       if (e.target.closest('[data-dvt]')) return;
-      DVT.state.regionStart = { x: e.clientX, y: e.clientY };
-
-      DVT.state.regionOverlay = document.createElement('div');
-      DVT.state.regionOverlay.className = 'dvt-region-overlay';
-      DVT.state.regionOverlay.setAttribute('data-dvt', 'true');
-      document.body.appendChild(DVT.state.regionOverlay);
-
-      function onMousemove(e) {
-        const x = Math.min(e.clientX, DVT.state.regionStart.x);
-        const y = Math.min(e.clientY, DVT.state.regionStart.y);
-        const w = Math.abs(e.clientX - DVT.state.regionStart.x);
-        const h = Math.abs(e.clientY - DVT.state.regionStart.y);
-        DVT.state.regionOverlay.style.left = x + window.scrollX + 'px';
-        DVT.state.regionOverlay.style.top = y + window.scrollY + 'px';
-        DVT.state.regionOverlay.style.width = w + 'px';
-        DVT.state.regionOverlay.style.height = h + 'px';
+      e.preventDefault();
+      e.stopPropagation();
+      const targetEl = e.target;
+      exitRegionMode();
+      if (summarize) {
+        translateAndSummarizeClickedElement(targetEl);
+      } else {
+        translateClickedElement(targetEl);
       }
-
-      function onMouseup(e) {
-        document.removeEventListener('mousemove', onMousemove);
-        document.removeEventListener('mouseup', onMouseup);
-
-        const rectData = {
-          left: Math.min(DVT.state.regionStart.x, e.clientX),
-          top: Math.min(DVT.state.regionStart.y, e.clientY),
-          right: Math.max(DVT.state.regionStart.x, e.clientX),
-          bottom: Math.max(DVT.state.regionStart.y, e.clientY),
-        };
-
-        if (rectData.right - rectData.left > 20 && rectData.bottom - rectData.top > 20) {
-          translateRegion(rectData);
-        }
-
-        exitRegionMode(hint, onMousedown, onKeydown);
-      }
-
-      document.addEventListener('mousemove', onMousemove);
-      document.addEventListener('mouseup', onMouseup);
     }
 
     function onKeydown(e) {
-      if (e.key === 'Escape') exitRegionMode(hint, onMousedown, onKeydown);
+      if (e.key === 'Escape') exitRegionMode();
     }
 
-    document.addEventListener('mousedown', onMousedown);
-    document.addEventListener('keydown', onKeydown);
-    hint._cleanup = () => {
-      document.removeEventListener('mousedown', onMousedown);
+    function exitRegionMode() {
+      DVT.state.regionMode = false;
+      document.body.style.cursor = '';
+      if (highlightedEl) {
+        highlightedEl.classList.remove('dvt-region-highlight');
+        highlightedEl = null;
+      }
+      hint.remove();
+      document.removeEventListener('mousemove', onMousemove);
+      document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKeydown);
-    };
+    }
+
+    document.addEventListener('mousemove', onMousemove);
+    document.addEventListener('click', onClick, true);
+    document.addEventListener('keydown', onKeydown);
   }
 
-  function exitRegionMode(hint) {
-    DVT.state.regionMode = false;
-    document.body.style.cursor = '';
-    if (hint) hint.remove();
-    if (DVT.state.regionOverlay) { DVT.state.regionOverlay.remove(); DVT.state.regionOverlay = null; }
-    if (hint?._cleanup) hint._cleanup();
-  }
+  // クリックされた要素とその子要素を翻訳
+  async function translateClickedElement(container) {
+    if (!container || container === document.body) return;
 
-  async function translateRegion(rect) {
     const REGION_SELECTORS = 'p, h1, h2, h3, h4, h5, h6, li, td, th, span, div';
-    const elements = Array.from(document.querySelectorAll(REGION_SELECTORS)).filter(el => {
+    let elements = Array.from(container.querySelectorAll(REGION_SELECTORS)).filter(el => {
       if (el.closest('[data-dvt]')) return false;
       if (el.dataset.dvtId) return false;
-      const elRect = el.getBoundingClientRect();
-      return (
-        elRect.left < rect.right &&
-        elRect.right > rect.left &&
-        elRect.top < rect.bottom &&
-        elRect.bottom > rect.top &&
-        el.innerText?.trim().length >= 4
-      );
+      return el.innerText?.trim().length >= 4;
     });
 
-    const leafElements = elements.filter(el =>
+    // 葉要素のみ抽出
+    elements = elements.filter(el =>
       !elements.some(other => other !== el && el.contains(other))
     );
 
-    if (leafElements.length === 0) {
-      DVT.showToast(t('toastNoText'), false, 2500);
-      return;
+    // 子要素がなければコンテナ自体を翻訳対象に
+    if (elements.length === 0) {
+      if (container.dataset.dvtId || container.closest('[data-dvt]')) return;
+      const text = container.innerText?.trim();
+      if (!text || text.length < 4) {
+        DVT.showToast(t('toastNoText'), false, 2500);
+        return;
+      }
+      elements = [container];
     }
 
-    // 範囲選択は逐次翻訳（表示順序を保つため）
-    const toast = DVT.showToast(t('toastTranslating', { done: 0, total: leafElements.length }), true);
-    let done = 0;
+    await runConcurrentTranslation(elements, DVT.state.targetLang, 'dvt-r-');
+  }
 
-    for (const el of leafElements) {
-      if (el.dataset.dvtId) continue;
-      const originalText = el.innerText.trim();
-      insertDualView(el, 'dvt-r-');
+  // クリックされた要素とその子要素を翻訳＆要約
+  async function translateAndSummarizeClickedElement(container) {
+    if (!container || container === document.body) return;
 
-      DVT.translate(originalText, DVT.state.targetLang).then(({ text: result, detectedLang }) => {
-        applyTranslation(el, result, detectedLang, DVT.state.targetLang);
-        done++;
-        DVT.updateToast(toast, t('toastTranslating', { done, total: leafElements.length }));
-        if (done >= leafElements.length) {
-          DVT.updateToast(toast, t('toastDone', { count: done }));
-          setTimeout(() => toast.remove(), 2500);
-        }
+    const REGION_SELECTORS = 'p, h1, h2, h3, h4, h5, h6, li, td, th, span, div';
+    let elements = Array.from(container.querySelectorAll(REGION_SELECTORS)).filter(el => {
+      if (el.closest('[data-dvt]')) return false;
+      if (el.dataset.dvtId) return false;
+      return el.innerText?.trim().length >= 4;
+    });
+
+    // 葉要素のみ抽出
+    elements = elements.filter(el =>
+      !elements.some(other => other !== el && el.contains(other))
+    );
+
+    // 子要素がなければコンテナ自体を翻訳対象に
+    if (elements.length === 0) {
+      if (container.dataset.dvtId || container.closest('[data-dvt]')) return;
+      const text = container.innerText?.trim();
+      if (!text || text.length < 4) {
+        DVT.showToast(t('toastNoText'), false, 2500);
+        return;
+      }
+      elements = [container];
+    }
+
+    // ステップ1: 翻訳
+    await runConcurrentTranslation(elements, DVT.state.targetLang, 'dvt-rs-');
+
+    // ステップ2: 翻訳結果を結合してLLMで要約
+    const textsForSummary = [];
+    elements.forEach(el => {
+      const transEl = el.querySelector('.dvt-trans');
+      const origEl = el.querySelector('.dvt-orig');
+      if (transEl) {
+        textsForSummary.push(transEl.textContent);
+      } else if (origEl) {
+        textsForSummary.push(origEl.textContent);
+      }
+    });
+
+    if (textsForSummary.length === 0) return;
+
+    const fullText = textsForSummary.join('\n');
+
+    // 要約ブロックを挿入（ローディング状態）
+    const summaryBlock = document.createElement('div');
+    summaryBlock.className = 'dvt-summary';
+    summaryBlock.setAttribute('data-dvt', 'true');
+    summaryBlock.innerHTML = `
+      <span class="dvt-badge dvt-badge-summary">${DVT.escapeHtml(t('summaryBadge'))}</span>
+      <div class="dvt-summary-text"><span class="dvt-spinner"></span> ${DVT.escapeHtml(t('summarizing'))}</div>
+    `;
+    container.insertBefore(summaryBlock, container.firstChild);
+
+    // LLM APIで要約
+    try {
+      const summary = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          action: 'summarize',
+          text: fullText,
+          targetLang: DVT.state.targetLang,
+        }, (res) => {
+          if (chrome.runtime.lastError) { reject(new Error(t('error'))); return; }
+          if (res?.ok) resolve(res.summary);
+          else reject(new Error(res?.error || t('translateFailed')));
+        });
       });
+
+      summaryBlock.querySelector('.dvt-summary-text').textContent = summary;
+      summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      summaryBlock.querySelector('.dvt-summary-text').innerHTML =
+        `<span class="dvt-same-lang">${DVT.escapeHtml(e.message)}</span>`;
     }
   }
 

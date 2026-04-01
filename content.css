@@ -277,13 +277,12 @@
   white-space: nowrap !important;
 }
 
-.dvt-region-overlay {
-  position: absolute !important;
-  z-index: 2147483646 !important;
-  background: rgba(245, 166, 35, 0.12) !important;
-  border: 2px solid #f5a623 !important;
+.dvt-region-highlight {
+  outline: 2px solid #f5a623 !important;
+  outline-offset: 2px !important;
+  background-color: rgba(245, 166, 35, 0.12) !important;
   border-radius: 4px !important;
-  pointer-events: none !important;
+  transition: outline-color 0.15s, background-color 0.15s !important;
 }
 
 /* ── Translate Bar (ページ読み込み時の翻訳問い合わせバー) ────────────── */
@@ -521,9 +520,9 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
   }
 
-  .dvt-region-overlay {
-    background: rgba(212,135,10,0.1) !important;
-    border-color: #d4870a !important;
+  .dvt-region-highlight {
+    outline-color: #d4870a !important;
+    background-color: rgba(212,135,10,0.1) !important;
   }
 
   /* ── Translate Bar ── */
@@ -630,7 +629,7 @@
   background: #ffffff !important; color: #1a1a2e !important;
   border-color: rgba(212,135,10,0.4) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
 }
-.dvt-light .dvt-region-overlay { background: rgba(212,135,10,0.1) !important; border-color: #d4870a !important; }
+.dvt-light .dvt-region-highlight { outline-color: #d4870a !important; background-color: rgba(212,135,10,0.1) !important; }
 
 .dvt-light .dvt-translate-bar {
   background: #ffffff !important; color: #1a1a2e !important;

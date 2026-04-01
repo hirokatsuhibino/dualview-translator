@@ -12,8 +12,6 @@ var DVT = (function () {
     translateBar: null,
     lastContextMenuTarget: null,
     regionMode: false,
-    regionOverlay: null,
-    regionStart: null,
   };
 
   // ─── 言語コード→表示名マップ ───────────────────────────────────────
@@ -118,7 +116,7 @@ var DVT = (function () {
       sendResponse({ ok: true });
     }
     if (msg.action === 'enterRegionMode') {
-      DVT_PAGE.enterRegionMode();
+      DVT_PAGE.enterRegionMode(msg.mode);
       sendResponse({ ok: true });
     }
     if (msg.action === 'setLang') {
