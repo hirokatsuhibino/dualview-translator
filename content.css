@@ -19,16 +19,6 @@
   animation: dvt-fade-in 0.3s ease;
 }
 
-.dvt-trans::before {
-  content: "▷ ";
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #f5a623;
-  opacity: 0.9;
-  margin-right: 2px;
-}
 
 @keyframes dvt-fade-in {
   from { opacity: 0; transform: translateY(4px); }
@@ -411,10 +401,6 @@
     background: rgba(212,135,10,0.08) !important;
   }
 
-  .dvt-trans::before {
-    color: #d4870a !important;
-  }
-
   /* ── Selection Floating Panel ── */
   .dvt-sel-panel {
     background: #ffffff !important;
@@ -593,8 +579,6 @@
   border-left-color: #d4870a !important;
   background: rgba(212,135,10,0.08) !important;
 }
-.dvt-light .dvt-trans::before { color: #d4870a !important; }
-
 .dvt-light .dvt-sel-panel {
   background: #ffffff !important;
   color: #1a1a2e !important;
