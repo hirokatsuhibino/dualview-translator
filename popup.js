@@ -1,5 +1,18 @@
 // DualView Translator — Popup Script
 
+// ── バージョン表示 ──────────────────────────────────────────────────────
+document.getElementById('appVersion').textContent = 'v' + chrome.runtime.getManifest().version;
+
+// ── タブ切り替え ────────────────────────────────────────────────────────
+document.querySelectorAll('.dvt-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.dvt-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.dvt-tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
 const uiLangSel       = document.getElementById('uiLang');
 const targetLangSel   = document.getElementById('targetLang');
 const engineSel       = document.getElementById('translateEngine');
@@ -13,6 +26,7 @@ const geminiApiKeyInput = document.getElementById('geminiApiKey');
 const btnPage         = document.getElementById('btnPage');
 const btnPageSummary  = document.getElementById('btnPageSummary');
 const btnRegion       = document.getElementById('btnRegion');
+const btnRegionSummary = document.getElementById('btnRegionSummary');
 const btnUndo         = document.getElementById('btnUndo');
 const statusDot       = document.getElementById('statusDot');
 const statusText      = document.getElementById('statusText');
@@ -197,7 +211,21 @@ btnRegion.addEventListener('click', async () => {
   setStatus('translating', t('statusSelectRegion'));
   const res = await sendToContent({
     action: 'enterRegionMode',
-    lang: targetLangSel.value
+    lang: targetLangSel.value,
+    mode: 'translate'
+  });
+  if (res?.ok) {
+    window.close();
+  }
+});
+
+// ── Region mode & summarize ───────────────────────────────────────────
+btnRegionSummary.addEventListener('click', async () => {
+  setStatus('translating', t('statusSelectRegion'));
+  const res = await sendToContent({
+    action: 'enterRegionMode',
+    lang: targetLangSel.value,
+    mode: 'summarize'
   });
   if (res?.ok) {
     window.close();

@@ -262,6 +262,53 @@
       background: var(--border);
       margin: 0;
     }
+
+    /* ── Tab Bar ── */
+    .dvt-tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dvt-tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .dvt-tab:hover {
+      color: var(--text);
+    }
+
+    .dvt-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .dvt-tab-content {
+      display: none;
+    }
+
+    .dvt-tab-content.active {
+      display: block;
+    }
+
+    /* ── Version ── */
+    .version {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      margin-left: 6px;
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -272,123 +319,139 @@
       </svg>
     </div>
     <div class="brand">
-      <div class="brand-name">DualView Translator</div>
+      <div class="brand-name">DualView Translator <span class="version" id="appVersion"></span></div>
       <div class="brand-sub" data-i18n="brandSub">原文と翻訳を並べて表示</div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-label" data-i18n="uiLangLabel">表示言語</div>
-    <div class="lang-row">
-      <span class="lang-label">🌐</span>
-      <select id="uiLang">
-        <option value="ja">🇯🇵 日本語</option>
-        <option value="en">🇺🇸 English</option>
-        <option value="zh-CN">🇨🇳 中文（简体）</option>
-        <option value="zh-TW">🇹🇼 中文（繁體）</option>
-        <option value="ko">🇰🇷 한국어</option>
-        <option value="fr">🇫🇷 Français</option>
-        <option value="de">🇩🇪 Deutsch</option>
-        <option value="es">🇪🇸 Español</option>
-        <option value="pt">🇵🇹 Português</option>
-        <option value="ru">🇷🇺 Русский</option>
-        <option value="ar">🇸🇦 العربية</option>
-      </select>
-    </div>
+  <!-- タブバー -->
+  <div class="dvt-tab-bar">
+    <button class="dvt-tab active" id="tabBtnTranslate" data-tab="tabTranslate" data-i18n="tabTranslate">翻訳</button>
+    <button class="dvt-tab" id="tabBtnSettings" data-tab="tabSettings" data-i18n="tabSettings">設定</button>
   </div>
 
-  <div class="section">
-    <div class="section-label" data-i18n="targetLangLabel">翻訳先の言語</div>
-    <div class="lang-row">
-      <span class="lang-label" data-i18n="targetLangTo">→ 翻訳先</span>
-      <select id="targetLang">
-        <option value="ja">🇯🇵 日本語</option>
-        <option value="en">🇺🇸 English</option>
-        <option value="zh-CN">🇨🇳 中文（簡体）</option>
-        <option value="zh-TW">🇹🇼 中文（繁体）</option>
-        <option value="ko">🇰🇷 한국어</option>
-        <option value="fr">🇫🇷 Français</option>
-        <option value="de">🇩🇪 Deutsch</option>
-        <option value="es">🇪🇸 Español</option>
-        <option value="pt">🇵🇹 Português</option>
-        <option value="ru">🇷🇺 Русский</option>
-        <option value="ar">🇸🇦 العربية</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-label" data-i18n="engineLabel">翻訳エンジン</div>
-    <div class="lang-row">
-      <span class="lang-label">⚙</span>
-      <select id="translateEngine">
-        <option value="google" data-i18n="engineGoogle">Google 翻訳（無料）</option>
-        <option value="deepl" data-i18n="engineDeepL">DeepL（APIキー必要）</option>
-      </select>
-    </div>
-    <div id="deeplSettings" style="display:none; margin-top: 8px;">
+  <!-- 翻訳タブ -->
+  <div class="dvt-tab-content active" id="tabTranslate">
+    <div class="section">
+      <div class="section-label" data-i18n="targetLangLabel">翻訳先の言語</div>
       <div class="lang-row">
-        <span class="lang-label" data-i18n="deeplApiKeyLabel">APIキー</span>
-        <input type="password" id="deeplApiKey" data-i18n-placeholder="deeplApiKeyPlaceholder" placeholder="APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        <span class="lang-label" data-i18n="targetLangTo">→ 翻訳先</span>
+        <select id="targetLang">
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="en">🇺🇸 English</option>
+          <option value="zh-CN">🇨🇳 中文（簡体）</option>
+          <option value="zh-TW">🇹🇼 中文（繁体）</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="pt">🇵🇹 Português</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="ar">🇸🇦 العربية</option>
+        </select>
       </div>
     </div>
+
+    <div class="section">
+      <div class="section-label" data-i18n="translateMode">翻訳モード</div>
+      <button class="btn btn-primary" id="btnPage">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+        <span data-i18n="translateFullPage">ページ全体を翻訳</span>
+        <span class="btn-shortcut">Ctrl+Shift+T</span>
+      </button>
+      <button class="btn btn-secondary" id="btnPageSummary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
+        <span data-i18n="translateAndSummarize">ページ全体を翻訳＆要約</span>
+      </button>
+      <button class="btn btn-secondary" id="btnRegion">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+        <span data-i18n="translateRegion">領域を選択して翻訳</span>
+        <span class="btn-shortcut">Ctrl+Shift+R</span>
+      </button>
+      <button class="btn btn-secondary" id="btnRegionSummary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8h10M7 12h6"/></svg>
+        <span data-i18n="translateRegionSummarize">領域を選択して翻訳＆要約</span>
+      </button>
+      <button class="btn btn-secondary" id="btnUndo" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 12a9 9 0 109-9H3"/><path d="M3 3v6h6"/></svg>
+        <span data-i18n="translateReset">翻訳をリセット</span>
+      </button>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText" data-i18n="statusDefault">テキストを選択して翻訳、またはモードを選択</span>
+    </div>
   </div>
 
-  <div class="section">
-    <div class="section-label" data-i18n="llmLabel">要約エンジン</div>
-    <div class="lang-row">
-      <span class="lang-label">🤖</span>
-      <select id="llmEngine">
-        <option value="claude" data-i18n="llmClaude">Claude（APIキー必要）</option>
-        <option value="gemini" data-i18n="llmGemini">Gemini（APIキー必要）</option>
-      </select>
-    </div>
-    <div id="claudeSettings" style="display:none; margin-top: 8px;">
+  <!-- 設定タブ -->
+  <div class="dvt-tab-content" id="tabSettings">
+    <div class="section">
+      <div class="section-label" data-i18n="uiLangLabel">表示言語</div>
       <div class="lang-row">
-        <span class="lang-label" data-i18n="claudeApiKeyLabel">APIキー</span>
-        <input type="password" id="claudeApiKey" data-i18n-placeholder="claudeApiKeyPlaceholder" placeholder="Claude APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        <span class="lang-label">🌐</span>
+        <select id="uiLang">
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="en">🇺🇸 English</option>
+          <option value="zh-CN">🇨🇳 中文（简体）</option>
+          <option value="zh-TW">🇹🇼 中文（繁體）</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="pt">🇵🇹 Português</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="ar">🇸🇦 العربية</option>
+        </select>
       </div>
     </div>
-    <div id="geminiSettings" style="display:none; margin-top: 8px;">
+
+    <div class="section">
+      <div class="section-label" data-i18n="engineLabel">翻訳エンジン</div>
       <div class="lang-row">
-        <span class="lang-label" data-i18n="geminiApiKeyLabel">APIキー</span>
-        <input type="password" id="geminiApiKey" data-i18n-placeholder="geminiApiKeyPlaceholder" placeholder="Gemini APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        <span class="lang-label">⚙</span>
+        <select id="translateEngine">
+          <option value="google" data-i18n="engineGoogle">Google 翻訳（無料）</option>
+          <option value="deepl" data-i18n="engineDeepL">DeepL（APIキー必要）</option>
+        </select>
+      </div>
+      <div id="deeplSettings" style="display:none; margin-top: 8px;">
+        <div class="lang-row">
+          <span class="lang-label" data-i18n="deeplApiKeyLabel">APIキー</span>
+          <input type="password" id="deeplApiKey" data-i18n-placeholder="deeplApiKeyPlaceholder" placeholder="APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-label" data-i18n="translateMode">翻訳モード</div>
-    <button class="btn btn-primary" id="btnPage">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
-      <span data-i18n="translateFullPage">ページ全体を翻訳</span>
-      <span class="btn-shortcut">Ctrl+Shift+T</span>
-    </button>
-    <button class="btn btn-secondary" id="btnPageSummary">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
-      <span data-i18n="translateAndSummarize">ページ全体を翻訳＆要約</span>
-    </button>
-    <button class="btn btn-secondary" id="btnRegion">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-      <span data-i18n="translateRegion">領域を選択して翻訳</span>
-      <span class="btn-shortcut">Ctrl+Shift+R</span>
-    </button>
-    <button class="btn btn-secondary" id="btnUndo" style="display:none">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 12a9 9 0 109-9H3"/><path d="M3 3v6h6"/></svg>
-      <span data-i18n="translateReset">翻訳をリセット</span>
-    </button>
-  </div>
+    <div class="section">
+      <div class="section-label" data-i18n="llmLabel">要約エンジン</div>
+      <div class="lang-row">
+        <span class="lang-label">🤖</span>
+        <select id="llmEngine">
+          <option value="claude" data-i18n="llmClaude">Claude（APIキー必要）</option>
+          <option value="gemini" data-i18n="llmGemini">Gemini（APIキー必要）</option>
+        </select>
+      </div>
+      <div id="claudeSettings" style="display:none; margin-top: 8px;">
+        <div class="lang-row">
+          <span class="lang-label" data-i18n="claudeApiKeyLabel">APIキー</span>
+          <input type="password" id="claudeApiKey" data-i18n-placeholder="claudeApiKeyPlaceholder" placeholder="Claude APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        </div>
+      </div>
+      <div id="geminiSettings" style="display:none; margin-top: 8px;">
+        <div class="lang-row">
+          <span class="lang-label" data-i18n="geminiApiKeyLabel">APIキー</span>
+          <input type="password" id="geminiApiKey" data-i18n-placeholder="geminiApiKeyPlaceholder" placeholder="Gemini APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        </div>
+      </div>
+    </div>
 
-  <div class="status-bar">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText" data-i18n="statusDefault">テキストを選択して翻訳、またはモードを選択</span>
-  </div>
-
-  <div class="section">
-    <div class="info-box">
-      <span data-i18n="selectionTip" data-i18n-html>選択翻訳：ページ上でテキストを選択すると、自動的に翻訳パネルが表示されます。</span><br>
-      <span data-i18n="engineInfo" data-i18n-html>翻訳エンジン：Google 翻訳（無料）</span><br>
-      <span data-i18n="shortcutInfo" data-i18n-html>ショートカット：Ctrl+Shift+T（ページ翻訳）/ Ctrl+Shift+Y（選択翻訳）/ Ctrl+Shift+R（領域選択）</span>
+    <div class="section">
+      <div class="info-box">
+        <span data-i18n="selectionTip" data-i18n-html>選択翻訳：ページ上でテキストを選択すると、自動的に翻訳パネルが表示されます。</span><br>
+        <span data-i18n="engineInfo" data-i18n-html>翻訳エンジン：Google 翻訳（無料）</span><br>
+        <span data-i18n="shortcutInfo" data-i18n-html>ショートカット：Ctrl+Shift+T（ページ翻訳）/ Ctrl+Shift+Y（選択翻訳）/ Ctrl+Shift+R（領域選択）</span>
+      </div>
     </div>
   </div>
 
