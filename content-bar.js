@@ -120,6 +120,40 @@ var DVT_BAR = (function () {
     });
   }
 
+  // ─── 要素の再翻訳監視 ────────────────────────────────────────────────
+  // 翻訳済み要素のコンテンツが外部から書き換えられたとき（webメール等）に再翻訳する。
+  // 翻訳中はObserverを一時切断して自分の変更を無視し、完了後に再接続する。
+  function startAutoRuleObserver(el, rule) {
+    let retranslateTimer = null;
+
+    async function retranslate() {
+      // 翻訳中はObserverを停止して自分の変更を無視
+      observer.disconnect();
+      try {
+        if (rule.mode === 'summarize') {
+          await DVT_PAGE.translateAndSummarizeClickedElement(el);
+        } else {
+          await DVT_PAGE.translateClickedElement(el);
+        }
+      } catch (e) {
+        // 再翻訳失敗は無視
+      } finally {
+        // 要素がまだDOM上にある場合のみ監視を再開
+        if (document.contains(el)) {
+          observer.observe(el, { childList: true });
+        }
+      }
+    }
+
+    // 直接の子ノード変更を監視（subtree不要: 中身全体の入れ替えを検出すれば十分）
+    const observer = new MutationObserver(() => {
+      clearTimeout(retranslateTimer);
+      retranslateTimer = setTimeout(retranslate, 500);
+    });
+
+    observer.observe(el, { childList: true });
+  }
+
   // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────
   async function checkAutoRules() {
     const data = await new Promise(resolve =>
@@ -135,11 +169,15 @@ var DVT_BAR = (function () {
         // 要素セレクタ指定: 即座に存在しない場合はDOMに追加されるまで待機
         const el = await waitForElement(rule.selector);
         if (!el) continue; // タイムアウト後も見つからなければスキップ
-        if (rule.mode === 'summarize') {
-          DVT_PAGE.translateAndSummarizeClickedElement(el);
-        } else {
-          DVT_PAGE.translateClickedElement(el);
-        }
+
+        // 翻訳完了後にコンテンツ変更監視を開始（webメール等の書き換えに対応）
+        // Promise.resolve()で同期・非同期どちらの戻り値にも対応
+        const fn = rule.mode === 'summarize'
+          ? DVT_PAGE.translateAndSummarizeClickedElement
+          : DVT_PAGE.translateClickedElement;
+        Promise.resolve(fn(el))
+          .then(() => startAutoRuleObserver(el, rule))
+          .catch(() => {});
       } else {
         // セレクタなしはページ全体翻訳
         if (rule.mode === 'summarize') {
@@ -183,5 +221,5 @@ var DVT_BAR = (function () {
     window.addEventListener('popstate', onUrlChange);
   })();
 
-  return { detectPageLanguage, checkAutoRules, matchesUrlPattern, waitForElement };
+  return { detectPageLanguage, checkAutoRules, matchesUrlPattern, waitForElement, startAutoRuleObserver };
 })();

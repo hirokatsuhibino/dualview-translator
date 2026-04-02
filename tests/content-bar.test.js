@@ -49,13 +49,17 @@ describe('DVT_BAR.matchesUrlPattern', () => {
 });
 
 describe('DVT_BAR.checkAutoRules', () => {
+  // querySelectorのモック管理（テスト間の汚染を防ぐためafterEachで復元）
+  const qs = { orig: null };
   beforeEach(() => {
+    qs.orig = document.querySelector.bind(document);
     loadScript('i18n.js');
     globalThis.DVT_PAGE = {
       translatePage: vi.fn(),
       translatePageAndSummarize: vi.fn(),
-      translateClickedElement: vi.fn(),
-      translateAndSummarizeClickedElement: vi.fn(),
+      // Promise を返すようにモック（fn(el).then() に対応）
+      translateClickedElement: vi.fn().mockResolvedValue(undefined),
+      translateAndSummarizeClickedElement: vi.fn().mockResolvedValue(undefined),
     };
     globalThis.DVT = {
       state: { targetLang: 'ja', pageTranslateActive: false },
@@ -67,6 +71,10 @@ describe('DVT_BAR.checkAutoRules', () => {
       configurable: true,
     });
     loadScript('content-bar.js');
+  });
+
+  afterEach(() => {
+    document.querySelector = qs.orig;
   });
 
   it('マッチするルールがない場合はfalseを返す', async () => {
@@ -104,20 +112,17 @@ describe('DVT_BAR.checkAutoRules', () => {
 
   it('セレクタが指定されている場合は要素翻訳を実行する', async () => {
     const mockEl = document.createElement('div');
-    const origQS = document.querySelector.bind(document);
     document.querySelector = vi.fn().mockReturnValue(mockEl);
     chrome.storage.local.get.mockImplementation((_keys, cb) => cb({
       autoRules: [{ id: '1', urlPattern: '*://example.com/*', selector: 'div.content', mode: 'translate', enabled: true }]
     }));
     const result = await DVT_BAR.checkAutoRules();
-    document.querySelector = origQS; // モックを復元
     expect(result).toBe(true);
     expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(mockEl);
   });
 
   it('セレクタが指定されているがDOM上に存在しない場合はタイムアウト後にfalseを返す', async () => {
     vi.useFakeTimers();
-    const origQS = document.querySelector.bind(document);
     document.querySelector = vi.fn().mockReturnValue(null);
     chrome.storage.local.get.mockImplementation((_keys, cb) => cb({
       autoRules: [{ id: '1', urlPattern: '*://example.com/*', selector: 'div.not-exist', mode: 'translate', enabled: true }]
@@ -126,7 +131,6 @@ describe('DVT_BAR.checkAutoRules', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
     expect(result).toBe(false);
-    document.querySelector = origQS;
     vi.useRealTimers();
   });
 });
@@ -170,6 +174,44 @@ describe('DVT_BAR.waitForElement', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
     expect(result).toBeNull();
+    vi.useRealTimers();
+  });
+});
+
+describe('DVT_BAR.startAutoRuleObserver', () => {
+  beforeEach(() => {
+    loadScript('i18n.js');
+    globalThis.DVT_PAGE = {
+      translatePage: vi.fn(),
+      translatePageAndSummarize: vi.fn(),
+      translateClickedElement: vi.fn().mockResolvedValue(undefined),
+      translateAndSummarizeClickedElement: vi.fn().mockResolvedValue(undefined),
+    };
+    globalThis.DVT = { state: { targetLang: 'ja' } };
+    loadScript('content-bar.js');
+  });
+
+  it('startAutoRuleObserverが存在する', () => {
+    expect(typeof DVT_BAR.startAutoRuleObserver).toBe('function');
+  });
+
+  it('コンテンツ変更時に再翻訳を呼び出す', async () => {
+    vi.useFakeTimers();
+    const el = document.createElement('div');
+    el.innerHTML = '<p>original</p>';
+    document.body.appendChild(el);
+    const rule = { mode: 'translate', selector: 'div' };
+
+    DVT_BAR.startAutoRuleObserver(el, rule);
+
+    // 外部からのコンテンツ書き換えをシミュレート
+    el.innerHTML = '<p>new content</p>';
+
+    // デバウンス（500ms）を経過させる
+    await vi.runAllTimersAsync();
+
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(el);
+    el.remove();
     vi.useRealTimers();
   });
 });
