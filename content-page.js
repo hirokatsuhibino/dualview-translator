@@ -583,5 +583,5 @@ var DVT_PAGE = (function () {
     document.addEventListener('keydown', onKeyDown);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, enterSelectorPickMode };
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode };
 })();
