@@ -4,6 +4,11 @@
 var DVT_BAR = (function () {
   'use strict';
 
+  // ─── 定数 ─────────────────────────────────────────────────────────────────
+  const WAIT_FOR_ELEMENT_TIMEOUT = 10000;  // 要素出現待機タイムアウト(ms)
+  const RETRANSLATE_DEBOUNCE_MS = 500;     // コンテンツ変更後の再翻訳デバウンス(ms)
+  const SPA_RECHECK_DELAY_MS = 300;        // SPA遷移後のルール再チェック遅延(ms)
+
   // ─── ページ言語検出 ────────────────────────────────────────────────
   async function detectPageLanguage() {
     const htmlLang = document.documentElement.lang;
@@ -94,7 +99,7 @@ var DVT_BAR = (function () {
 
   // ─── 要素が出現するまでMutationObserverで待機 ────────────────────────
   // 動的に追加されるDOM要素（AJAX・遅延ロード等）に対応するため
-  function waitForElement(selector, timeout = 10000) {
+  function waitForElement(selector, timeout = WAIT_FOR_ELEMENT_TIMEOUT) {
     return new Promise(resolve => {
       // 既に存在する場合はすぐに返す
       const existing = document.querySelector(selector);
@@ -155,7 +160,7 @@ var DVT_BAR = (function () {
     // 直接の子ノード変更を監視（subtree不要: 中身全体の入れ替えを検出すれば十分）
     const observer = new MutationObserver(() => {
       clearTimeout(retranslateTimer);
-      retranslateTimer = setTimeout(retranslate, 500);
+      retranslateTimer = setTimeout(retranslate, RETRANSLATE_DEBOUNCE_MS);
     });
 
     observer.observe(el, { childList: true });
@@ -219,7 +224,7 @@ var DVT_BAR = (function () {
       if (newUrl === lastUrl) return;
       lastUrl = newUrl;
       // URL変更後に少し待ってからルールをチェック（DOMの更新を待つ）
-      setTimeout(() => checkAutoRules(), 300);
+      setTimeout(() => checkAutoRules(), SPA_RECHECK_DELAY_MS);
     }
 
     // history API のラップ
