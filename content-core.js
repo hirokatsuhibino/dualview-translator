@@ -127,6 +127,10 @@ var DVT = (function () {
       DVT_PAGE.enterSelectorPickMode(msg.urlPattern);
       sendResponse({ ok: true });
     }
+    if (msg.action === 'stopAutoRuleObserver') {
+      if (typeof DVT_BAR !== 'undefined') DVT_BAR.stopAutoRuleObserver(msg.ruleId);
+      sendResponse({ ok: true });
+    }
     if (msg.action === 'setLang') {
       state.targetLang = msg.lang;
       chrome.storage.local.set({ targetLang: msg.lang });

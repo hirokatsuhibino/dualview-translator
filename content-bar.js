@@ -120,10 +120,17 @@ var DVT_BAR = (function () {
     });
   }
 
+  // ─── アクティブなルールObserverの管理 ──────────────────────────────
+  // ruleId → MutationObserver のマップ。削除・無効化時に切断するために保持する。
+  const activeRuleObservers = new Map();
+
   // ─── 要素の再翻訳監視 ────────────────────────────────────────────────
   // 翻訳済み要素のコンテンツが外部から書き換えられたとき（webメール等）に再翻訳する。
   // 翻訳中はObserverを一時切断して自分の変更を無視し、完了後に再接続する。
   function startAutoRuleObserver(el, rule) {
+    // 同じルールの既存Observerがあれば先に停止（重複防止）
+    stopAutoRuleObserver(rule.id);
+
     let retranslateTimer = null;
 
     async function retranslate() {
@@ -138,8 +145,8 @@ var DVT_BAR = (function () {
       } catch (e) {
         // 再翻訳失敗は無視
       } finally {
-        // 要素がまだDOM上にある場合のみ監視を再開
-        if (document.contains(el)) {
+        // ルールが削除・無効化されていなければ監視を再開
+        if (activeRuleObservers.has(rule.id) && document.contains(el)) {
           observer.observe(el, { childList: true });
         }
       }
@@ -152,6 +159,17 @@ var DVT_BAR = (function () {
     });
 
     observer.observe(el, { childList: true });
+    activeRuleObservers.set(rule.id, observer);
+  }
+
+  // ─── 自動ルールObserverの停止 ────────────────────────────────────────
+  // ルール削除・無効化時にpopup.jsから呼び出される
+  function stopAutoRuleObserver(ruleId) {
+    const observer = activeRuleObservers.get(ruleId);
+    if (observer) {
+      observer.disconnect();
+      activeRuleObservers.delete(ruleId);
+    }
   }
 
   // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────
@@ -221,5 +239,5 @@ var DVT_BAR = (function () {
     window.addEventListener('popstate', onUrlChange);
   })();
 
-  return { detectPageLanguage, checkAutoRules, matchesUrlPattern, waitForElement, startAutoRuleObserver };
+  return { detectPageLanguage, checkAutoRules, matchesUrlPattern, waitForElement, startAutoRuleObserver, stopAutoRuleObserver };
 })();

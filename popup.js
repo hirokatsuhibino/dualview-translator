@@ -306,20 +306,29 @@ function renderAutoRules() {
     list.appendChild(item);
   });
 
-  // チェックボックスのイベント設定
+  // チェックボックスのイベント設定（無効化時はObserverを停止）
   list.querySelectorAll('input[type=checkbox]').forEach(cb => {
     cb.addEventListener('change', () => {
-      autoRules[Number(cb.dataset.idx)].enabled = cb.checked;
+      const idx = Number(cb.dataset.idx);
+      autoRules[idx].enabled = cb.checked;
       saveAutoRules();
+      if (!cb.checked && autoRules[idx]?.id) {
+        sendToContent({ action: 'stopAutoRuleObserver', ruleId: autoRules[idx].id });
+      }
     });
   });
 
-  // 削除ボタンのイベント設定
+  // 削除ボタンのイベント設定（削除時はObserverを停止）
   list.querySelectorAll('.rule-del').forEach(btn => {
     btn.addEventListener('click', () => {
-      autoRules.splice(Number(btn.dataset.idx), 1);
+      const idx = Number(btn.dataset.idx);
+      const deletedId = autoRules[idx]?.id;
+      autoRules.splice(idx, 1);
       saveAutoRules();
       renderAutoRules();
+      if (deletedId) {
+        sendToContent({ action: 'stopAutoRuleObserver', ruleId: deletedId });
+      }
     });
   });
 }
