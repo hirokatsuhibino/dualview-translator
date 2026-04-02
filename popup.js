@@ -248,7 +248,13 @@ btnRegionSummary.addEventListener('click', async () => {
   const res = await sendToContent({ action: 'getState' });
   if (res) {
     if (res.targetLang) targetLangSel.value = res.targetLang;
-    if (res.pageTranslateActive) setPageActive(true);
+    if (res.pageTranslateActive) {
+      setPageActive(true);
+    } else if (res.hasTranslations) {
+      // 領域翻訳など、ページ全体翻訳以外の翻訳が存在する場合もリセットボタンを表示
+      btnUndo.style.display = 'flex';
+      setStatus('active', t('statusPageActive'));
+    }
   }
 })();
 

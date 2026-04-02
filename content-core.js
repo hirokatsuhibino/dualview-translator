@@ -169,7 +169,9 @@ var DVT = (function () {
       sendResponse({ ok: true });
     }
     if (msg.action === 'getState') {
-      sendResponse({ pageTranslateActive: state.pageTranslateActive, targetLang: state.targetLang });
+      // 翻訳済み要素の有無（領域・ページ両方）をチェック
+      const hasTranslations = document.querySelectorAll('[data-dvt-id]').length > 0;
+      sendResponse({ pageTranslateActive: state.pageTranslateActive, targetLang: state.targetLang, hasTranslations });
     }
     return true;
   });

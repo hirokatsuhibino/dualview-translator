@@ -25,6 +25,34 @@
   to   { opacity: 0.85; transform: translateY(0); }
 }
 
+/* 個別リセットボタン（翻訳テキスト末尾の × ） */
+.dvt-undo-btn {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85em;
+  opacity: 0;
+  vertical-align: middle;
+  line-height: 1;
+  border-radius: 3px;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+/* 翻訳ブロックにホバーしたとき × を表示 */
+.dvt-trans:hover .dvt-undo-btn {
+  opacity: 0.45;
+}
+
+.dvt-undo-btn:hover {
+  opacity: 1 !important;
+  background: rgba(229, 115, 115, 0.15);
+  color: #e57373;
+}
+
 /* ── Selection Floating Panel ─────────────────────────────────────────── */
 .dvt-sel-panel {
   position: absolute !important;

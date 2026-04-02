@@ -27,7 +27,26 @@ var DVT_PAGE = (function () {
     if (DVT.langMatches(detectedLang, tl)) {
       if (transEl) transEl.remove();
     } else {
-      if (transEl) transEl.textContent = result;
+      if (transEl) {
+        transEl.textContent = result;
+        // 個別リセットボタン（×）を翻訳テキストの末尾に追加
+        const undoBtn = document.createElement('button');
+        undoBtn.className = 'dvt-undo-btn';
+        undoBtn.setAttribute('data-dvt', 'true');
+        undoBtn.title = t('undoElement');
+        undoBtn.textContent = '×';
+        undoBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          // 元のHTMLを復元してdata-dvt-idを削除
+          const origEl = el.querySelector('.dvt-orig');
+          if (origEl) {
+            el.innerHTML = origEl.innerHTML;
+            delete el.dataset.dvtId;
+          }
+        });
+        transEl.appendChild(undoBtn);
+      }
     }
   }
 

@@ -86,6 +86,7 @@ var DVT_I18N = (function () {
       selectorPickHint: '自動翻訳に登録したい要素をクリックしてください  [Esc でキャンセル]',
       selectorPickDone: '要素を選択しました。ポップアップを開いて保存してください',
       btnSelectElement: '要素を選択',
+      undoElement: 'この翻訳を元に戻す',
     },
     en: {
       uiLangLabel: 'Display Language',
@@ -158,6 +159,7 @@ var DVT_I18N = (function () {
       selectorPickHint: 'Click an element to register for auto-translate  [Esc to cancel]',
       selectorPickDone: 'Element selected. Open the popup to save.',
       btnSelectElement: 'Pick element',
+      undoElement: 'Undo this translation',
     },
     'zh-CN': {
       uiLangLabel: '显示语言',
@@ -225,6 +227,7 @@ var DVT_I18N = (function () {
       selectorPickHint: '点击要自动翻译的元素  [Esc 取消]',
       selectorPickDone: '已选择元素，请打开弹出窗口保存',
       btnSelectElement: '选择元素',
+      undoElement: '撤销此翻译',
     },
     'zh-TW': {
       uiLangLabel: '顯示語言',
@@ -292,6 +295,7 @@ var DVT_I18N = (function () {
       selectorPickHint: '點擊要自動翻譯的元素  [Esc 取消]',
       selectorPickDone: '已選擇元素，請開啟彈出視窗儲存',
       btnSelectElement: '選擇元素',
+      undoElement: '復原此翻譯',
     },
     ko: {
       uiLangLabel: '표시 언어',
@@ -359,6 +363,7 @@ var DVT_I18N = (function () {
       selectorPickHint: '자동 번역에 등록할 요소를 클릭하세요  [Esc로 취소]',
       selectorPickDone: '요소를 선택했습니다. 팝업을 열어 저장하세요.',
       btnSelectElement: '요소 선택',
+      undoElement: '이 번역 되돌리기',
     },
     fr: {
       uiLangLabel: "Langue d'affichage",
@@ -426,6 +431,7 @@ var DVT_I18N = (function () {
       selectorPickHint: "Cliquez sur l'élément à enregistrer  [Échap pour annuler]",
       selectorPickDone: 'Élément sélectionné. Ouvrez le popup pour sauvegarder.',
       btnSelectElement: 'Choisir',
+      undoElement: 'Annuler cette traduction',
     },
     de: {
       uiLangLabel: 'Anzeigesprache',
@@ -493,6 +499,7 @@ var DVT_I18N = (function () {
       selectorPickHint: 'Klicken Sie auf das Element zum Registrieren  [Esc zum Abbrechen]',
       selectorPickDone: 'Element gewählt. Öffnen Sie das Popup zum Speichern.',
       btnSelectElement: 'Element wählen',
+      undoElement: 'Diese Übersetzung rückgängig machen',
     },
     es: {
       uiLangLabel: 'Idioma de la interfaz',
@@ -560,6 +567,7 @@ var DVT_I18N = (function () {
       selectorPickHint: 'Haga clic en el elemento para registrar  [Esc para cancelar]',
       selectorPickDone: 'Elemento seleccionado. Abra el popup para guardar.',
       btnSelectElement: 'Elegir',
+      undoElement: 'Deshacer esta traducción',
     },
     pt: {
       uiLangLabel: 'Idioma da interface',
@@ -627,6 +635,7 @@ var DVT_I18N = (function () {
       selectorPickHint: 'Clique no elemento para registrar  [Esc para cancelar]',
       selectorPickDone: 'Elemento selecionado. Abra o popup para salvar.',
       btnSelectElement: 'Escolher',
+      undoElement: 'Desfazer esta tradução',
     },
     ru: {
       uiLangLabel: 'Язык интерфейса',
@@ -694,6 +703,7 @@ var DVT_I18N = (function () {
       selectorPickHint: 'Нажмите на элемент для регистрации  [Esc для отмены]',
       selectorPickDone: 'Элемент выбран. Откройте всплывающее окно для сохранения.',
       btnSelectElement: 'Выбрать',
+      undoElement: 'Отменить этот перевод',
     },
     ar: {
       uiLangLabel: 'لغة العرض',
@@ -761,6 +771,7 @@ var DVT_I18N = (function () {
       selectorPickHint: 'انقر على العنصر للتسجيل  [Esc للإلغاء]',
       selectorPickDone: 'تم تحديد العنصر. افتح النافذة المنبثقة للحفظ.',
       btnSelectElement: 'اختر عنصرًا',
+      undoElement: 'التراجع عن هذه الترجمة',
     },
   };
 
