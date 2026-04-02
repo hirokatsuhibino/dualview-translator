@@ -92,6 +92,34 @@ var DVT_BAR = (function () {
     }
   }
 
+  // ─── 要素が出現するまでMutationObserverで待機 ────────────────────────
+  // 動的に追加されるDOM要素（AJAX・遅延ロード等）に対応するため
+  function waitForElement(selector, timeout = 10000) {
+    return new Promise(resolve => {
+      // 既に存在する場合はすぐに返す
+      const existing = document.querySelector(selector);
+      if (existing) { resolve(existing); return; }
+
+      const observer = new MutationObserver(() => {
+        const found = document.querySelector(selector);
+        if (found) {
+          observer.disconnect();
+          resolve(found);
+        }
+      });
+      observer.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true,
+      });
+
+      // タイムアウト（デフォルト10秒）後にnullで解決
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(null);
+      }, timeout);
+    });
+  }
+
   // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────
   async function checkAutoRules() {
     const data = await new Promise(resolve =>
@@ -104,9 +132,9 @@ var DVT_BAR = (function () {
       if (!matchesUrlPattern(url, rule.urlPattern)) continue;
 
       if (rule.selector) {
-        // 要素セレクタが指定されている場合は要素のみ翻訳
-        const el = document.querySelector(rule.selector);
-        if (!el) continue;
+        // 要素セレクタ指定: 即座に存在しない場合はDOMに追加されるまで待機
+        const el = await waitForElement(rule.selector);
+        if (!el) continue; // タイムアウト後も見つからなければスキップ
         if (rule.mode === 'summarize') {
           DVT_PAGE.translateAndSummarizeClickedElement(el);
         } else {
@@ -125,5 +153,35 @@ var DVT_BAR = (function () {
     return false; // マッチするルールなし
   }
 
-  return { detectPageLanguage, checkAutoRules, matchesUrlPattern };
+  // ─── SPA対応: URL変更を検知して自動翻訳ルールを再チェック ───────────
+  // history.pushState / replaceState と popstate イベントを監視
+  (function watchSpaNavigation() {
+    let lastUrl = location.href;
+
+    function onUrlChange() {
+      const newUrl = location.href;
+      if (newUrl === lastUrl) return;
+      lastUrl = newUrl;
+      // URL変更後に少し待ってからルールをチェック（DOMの更新を待つ）
+      setTimeout(() => checkAutoRules(), 300);
+    }
+
+    // history API のラップ
+    const origPush = history.pushState.bind(history);
+    const origReplace = history.replaceState.bind(history);
+
+    history.pushState = function (...args) {
+      origPush(...args);
+      onUrlChange();
+    };
+    history.replaceState = function (...args) {
+      origReplace(...args);
+      onUrlChange();
+    };
+
+    // ブラウザの戻る/進む
+    window.addEventListener('popstate', onUrlChange);
+  })();
+
+  return { detectPageLanguage, checkAutoRules, matchesUrlPattern, waitForElement };
 })();

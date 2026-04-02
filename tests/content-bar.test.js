@@ -104,21 +104,72 @@ describe('DVT_BAR.checkAutoRules', () => {
 
   it('セレクタが指定されている場合は要素翻訳を実行する', async () => {
     const mockEl = document.createElement('div');
+    const origQS = document.querySelector.bind(document);
     document.querySelector = vi.fn().mockReturnValue(mockEl);
     chrome.storage.local.get.mockImplementation((_keys, cb) => cb({
       autoRules: [{ id: '1', urlPattern: '*://example.com/*', selector: 'div.content', mode: 'translate', enabled: true }]
     }));
     const result = await DVT_BAR.checkAutoRules();
+    document.querySelector = origQS; // モックを復元
     expect(result).toBe(true);
     expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(mockEl);
   });
 
-  it('セレクタが指定されているがDOM上に存在しない場合はスキップしてfalseを返す', async () => {
+  it('セレクタが指定されているがDOM上に存在しない場合はタイムアウト後にfalseを返す', async () => {
+    vi.useFakeTimers();
+    const origQS = document.querySelector.bind(document);
     document.querySelector = vi.fn().mockReturnValue(null);
     chrome.storage.local.get.mockImplementation((_keys, cb) => cb({
       autoRules: [{ id: '1', urlPattern: '*://example.com/*', selector: 'div.not-exist', mode: 'translate', enabled: true }]
     }));
-    const result = await DVT_BAR.checkAutoRules();
+    const promise = DVT_BAR.checkAutoRules();
+    await vi.runAllTimersAsync();
+    const result = await promise;
     expect(result).toBe(false);
+    document.querySelector = origQS;
+    vi.useRealTimers();
+  });
+});
+
+describe('DVT_BAR.waitForElement', () => {
+  beforeEach(() => {
+    loadScript('i18n.js');
+    globalThis.DVT_PAGE = {
+      translatePage: vi.fn(),
+      translatePageAndSummarize: vi.fn(),
+      translateClickedElement: vi.fn(),
+      translateAndSummarizeClickedElement: vi.fn(),
+    };
+    globalThis.DVT = { state: { targetLang: 'ja' } };
+    loadScript('content-bar.js');
+  });
+
+  it('既に存在する要素はすぐに返す', async () => {
+    const el = document.createElement('div');
+    el.className = 'dvt-test-existing';
+    document.body.appendChild(el);
+    const result = await DVT_BAR.waitForElement('.dvt-test-existing');
+    expect(result).toBe(el);
+    el.remove();
+  });
+
+  it('後から追加された要素をMutationObserverで検出する', async () => {
+    const promise = DVT_BAR.waitForElement('.dvt-test-dynamic');
+    // MutationObserver が検出できるよう要素を追加
+    const el = document.createElement('div');
+    el.className = 'dvt-test-dynamic';
+    document.body.appendChild(el);
+    const result = await promise;
+    expect(result).not.toBeNull();
+    el.remove();
+  });
+
+  it('タイムアウト後にnullを返す', async () => {
+    vi.useFakeTimers();
+    const promise = DVT_BAR.waitForElement('.dvt-test-timeout', 500);
+    await vi.runAllTimersAsync();
+    const result = await promise;
+    expect(result).toBeNull();
+    vi.useRealTimers();
   });
 });
