@@ -1,3 +1,4 @@
+// Copyright (c) Orangesoft Inc
 // DualView Translator — Popup Script
 
 // ── バージョン表示 ──────────────────────────────────────────────────────

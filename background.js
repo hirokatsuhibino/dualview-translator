@@ -1,3 +1,4 @@
+// Copyright (c) Orangesoft Inc
 // DualView Translator - Background Service Worker
 // 翻訳API呼び出し（CORS回避）+ コンテキストメニュー管理
 

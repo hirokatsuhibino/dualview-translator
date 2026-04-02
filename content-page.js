@@ -1,3 +1,4 @@
+// Copyright (c) Orangesoft Inc
 // DualView Translator — ページ全体翻訳・範囲選択翻訳・要素翻訳
 
 // eslint-disable-next-line no-var

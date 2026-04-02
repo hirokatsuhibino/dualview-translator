@@ -204,3 +204,7 @@
 | 72 | Firefox動作 | Firefox最新で全機能テスト | 全機能が正常動作 |
 | 73 | Firefoxテーマ | Firefoxポップアップのテーマ確認 | ※既知問題: ライトテーマが反映されない場合がある |
 | 74 | Edge動作 | Edge最新で全機能テスト | 全機能が正常動作 |
+
+---
+
+Copyright (c) Orangesoft Inc

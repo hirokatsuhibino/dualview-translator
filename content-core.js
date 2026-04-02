@@ -1,3 +1,4 @@
+// Copyright (c) Orangesoft Inc
 // DualView Translator — 共有状態・ユーティリティ・初期化・メッセージリスナー
 
 // eslint-disable-next-line no-var

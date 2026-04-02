@@ -168,3 +168,7 @@ npm run test:watch # ファイル変更を監視して自動実行
 ## ライセンス
 
 MIT License
+
+---
+
+Copyright (c) Orangesoft Inc

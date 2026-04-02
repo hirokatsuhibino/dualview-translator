@@ -1,3 +1,4 @@
+// Copyright (c) Orangesoft Inc
 // DualView Translator — UI多言語対応モジュール
 // content.js / popup.js の両方から利用される
 

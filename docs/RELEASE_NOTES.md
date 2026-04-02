@@ -40,3 +40,7 @@
 - キーボードショートカット（Ctrl+Shift+T/Y/R）
 - 11言語UI対応
 - ダーク/ライトテーマ自動追従
+
+---
+
+Copyright (c) Orangesoft Inc
