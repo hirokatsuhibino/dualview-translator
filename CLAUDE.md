@@ -29,7 +29,8 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── helpers.js          #   IIFEスクリプトのロードヘルパー
 │   ├── i18n.test.js       #   i18n テスト（86件）
 │   ├── content-core.test.js #  content-core テスト（20件）
-│   ├── content-page.test.js #  content-page テスト（7件）
+│   ├── content-page.test.js #  content-page テスト（10件）
+│   ├── content-bar.test.js #   content-bar テスト（17件）
 │   └── background.test.js  #  background テスト（13件）
 └── docs/                  # 公開資料
     ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
