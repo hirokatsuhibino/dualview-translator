@@ -81,5 +81,49 @@ var DVT_BAR = (function () {
     }
   }
 
-  return { detectPageLanguage };
+  // ─── URLパターンマッチング（ワイルドカード対応） ─────────────────────
+  function matchesUrlPattern(url, pattern) {
+    // ワイルドカード(*)を正規表現に変換してURLと照合
+    const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    try {
+      return new RegExp('^' + escaped + '$').test(url);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────
+  async function checkAutoRules() {
+    const data = await new Promise(resolve =>
+      chrome.storage.local.get('autoRules', resolve)
+    );
+    const rules = (data.autoRules || []).filter(r => r.enabled);
+    const url = location.href;
+
+    for (const rule of rules) {
+      if (!matchesUrlPattern(url, rule.urlPattern)) continue;
+
+      if (rule.selector) {
+        // 要素セレクタが指定されている場合は要素のみ翻訳
+        const el = document.querySelector(rule.selector);
+        if (!el) continue;
+        if (rule.mode === 'summarize') {
+          DVT_PAGE.translateAndSummarizeClickedElement(el);
+        } else {
+          DVT_PAGE.translateClickedElement(el);
+        }
+      } else {
+        // セレクタなしはページ全体翻訳
+        if (rule.mode === 'summarize') {
+          DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
+        } else {
+          DVT_PAGE.translatePage(DVT.state.targetLang);
+        }
+      }
+      return true; // マッチしたルールで処理済み
+    }
+    return false; // マッチするルールなし
+  }
+
+  return { detectPageLanguage, checkAutoRules, matchesUrlPattern };
 })();

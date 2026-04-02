@@ -309,6 +309,154 @@
       margin-left: 6px;
       opacity: 0.7;
     }
+
+    /* ── Auto Rules ── */
+    .rule-list {
+      margin-bottom: 10px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .rule-empty {
+      font-size: 11.5px;
+      color: var(--muted);
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .rule-item {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 10px;
+      margin-bottom: 6px;
+    }
+
+    .rule-item-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .rule-toggle input[type=checkbox] {
+      flex-shrink: 0;
+      accent-color: var(--accent);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .rule-pattern {
+      font-size: 11.5px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .rule-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0 2px;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .rule-del:hover { color: #e57373; }
+
+    .rule-item-sub {
+      font-size: 10.5px;
+      color: var(--muted);
+      margin-top: 3px;
+      padding-left: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rule-form {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .rule-input {
+      flex: 1;
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .rule-input:focus { border-color: var(--accent); }
+
+    .rule-form-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .rule-mode-select {
+      flex: 1;
+    }
+
+    .rule-add-btn {
+      flex-shrink: 0;
+      width: auto;
+      padding: 8px 14px;
+      font-size: 12px;
+    }
+
+    /* ── Rule Input Row ── */
+    .rule-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .rule-input-row .rule-input {
+      flex: 1;
+      width: auto;
+    }
+
+    .btn-pick {
+      flex-shrink: 0;
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .btn-pick:hover {
+      background: var(--btn-sec-hover-bg);
+      border-color: var(--btn-sec-hover-border);
+    }
   </style>
 </head>
 <body>
@@ -442,6 +590,27 @@
         <div class="lang-row">
           <span class="lang-label" data-i18n="geminiApiKeyLabel">APIキー</span>
           <input type="password" id="geminiApiKey" data-i18n-placeholder="geminiApiKeyPlaceholder" placeholder="Gemini APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label" data-i18n="autoRulesLabel">自動翻訳ルール</div>
+      <!-- ルール一覧 -->
+      <div id="autoRuleList" class="rule-list"></div>
+      <!-- ルール追加フォーム -->
+      <div class="rule-form">
+        <input type="text" id="ruleUrlPattern" class="rule-input" data-i18n-placeholder="autoRuleUrlPlaceholder" placeholder="*://example.com/*">
+        <div class="rule-input-row">
+          <input type="text" id="ruleSelector" class="rule-input" data-i18n-placeholder="autoRuleSelectorPlaceholder" placeholder="div.content">
+          <button class="btn-pick" id="btnPickSelector" data-i18n="btnSelectElement">要素を選択</button>
+        </div>
+        <div class="rule-form-row">
+          <select id="ruleMode" class="rule-mode-select">
+            <option value="translate" data-i18n="autoRuleModeTranslate">翻訳のみ</option>
+            <option value="summarize" data-i18n="autoRuleModeSummarize">翻訳＆要約</option>
+          </select>
+          <button class="btn btn-primary rule-add-btn" id="btnAddRule" data-i18n="autoRuleAdd">追加</button>
         </div>
       </div>
     </div>

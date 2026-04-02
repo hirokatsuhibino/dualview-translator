@@ -94,15 +94,19 @@ var DVT = (function () {
     chrome.storage.local.get(['targetLang', 'dismissedDomains'], (data) => {
       if (data.targetLang) state.targetLang = data.targetLang;
       const dismissed = data.dismissedDomains || [];
-      if (!dismissed.includes(location.hostname)) {
-        // content-bar.jsが読み込まれた後に実行される
-        if (typeof DVT_BAR !== 'undefined') DVT_BAR.detectPageLanguage();
+      if (typeof DVT_BAR !== 'undefined') {
+        // 自動翻訳ルールを先にチェック。マッチしなければ翻訳バーを表示
+        DVT_BAR.checkAutoRules().then(matched => {
+          if (!matched && !dismissed.includes(location.hostname)) {
+            DVT_BAR.detectPageLanguage();
+          }
+        });
       }
     });
   });
 
   // ─── メッセージリスナー（popup / background からの指示） ─────────────
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === 'translatePage') {
       DVT_PAGE.translatePage(msg.lang);
       sendResponse({ ok: true, active: state.pageTranslateActive });
@@ -117,6 +121,10 @@ var DVT = (function () {
     }
     if (msg.action === 'enterRegionMode') {
       DVT_PAGE.enterRegionMode(msg.mode);
+      sendResponse({ ok: true });
+    }
+    if (msg.action === 'enterSelectorPickMode') {
+      DVT_PAGE.enterSelectorPickMode(msg.urlPattern);
       sendResponse({ ok: true });
     }
     if (msg.action === 'setLang') {

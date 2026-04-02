@@ -110,6 +110,17 @@ targetLangSel.addEventListener('change', () => {
   sendToContent({ action: 'setLang', lang });
 });
 
+// ── URLパターン自動生成（現在のタブURLから） ─────────────────────────
+function urlToWildcardPattern(url) {
+  try {
+    const u = new URL(url);
+    // *://hostname/* の形式で生成
+    return '*://' + u.hostname + '/*';
+  } catch (e) {
+    return url;
+  }
+}
+
 // ── Get current tab ───────────────────────────────────────────────────
 async function getTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -239,4 +250,146 @@ btnRegionSummary.addEventListener('click', async () => {
     if (res.targetLang) targetLangSel.value = res.targetLang;
     if (res.pageTranslateActive) setPageActive(true);
   }
+})();
+
+// ── 自動翻訳ルール管理 ─────────────────────────────────────────────
+let autoRules = [];
+
+// HTML特殊文字のエスケープ（content scriptのDVT.escapeHtmlは使えないため独自実装）
+function escHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function loadAutoRules() {
+  chrome.storage.local.get('autoRules', (data) => {
+    autoRules = data.autoRules || [];
+    renderAutoRules();
+  });
+}
+
+function saveAutoRules() {
+  chrome.storage.local.set({ autoRules });
+}
+
+function renderAutoRules() {
+  const list = document.getElementById('autoRuleList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (autoRules.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'rule-empty';
+    empty.textContent = t('autoRuleEmpty');
+    list.appendChild(empty);
+    return;
+  }
+
+  autoRules.forEach((rule, idx) => {
+    const item = document.createElement('div');
+    item.className = 'rule-item';
+
+    const modeLabelKey = rule.mode === 'summarize' ? 'autoRuleModeSummarize' : 'autoRuleModeTranslate';
+    const subText = rule.selector
+      ? `${escHtml(rule.selector)} · ${t(modeLabelKey)}`
+      : `${t('translateFullPage')} · ${t(modeLabelKey)}`;
+
+    item.innerHTML = `
+      <div class="rule-item-row">
+        <label class="rule-toggle">
+          <input type="checkbox" ${rule.enabled ? 'checked' : ''} data-idx="${idx}">
+          <span class="rule-pattern">${escHtml(rule.urlPattern)}</span>
+        </label>
+        <button class="rule-del" data-idx="${idx}" title="${t('autoRuleDelete')}">✕</button>
+      </div>
+      <div class="rule-item-sub">${subText}</div>
+    `;
+    list.appendChild(item);
+  });
+
+  // チェックボックスのイベント設定
+  list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      autoRules[Number(cb.dataset.idx)].enabled = cb.checked;
+      saveAutoRules();
+    });
+  });
+
+  // 削除ボタンのイベント設定
+  list.querySelectorAll('.rule-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      autoRules.splice(Number(btn.dataset.idx), 1);
+      saveAutoRules();
+      renderAutoRules();
+    });
+  });
+}
+
+document.getElementById('btnAddRule').addEventListener('click', () => {
+  const urlInput = document.getElementById('ruleUrlPattern');
+  const selectorInput = document.getElementById('ruleSelector');
+  const modeSelect = document.getElementById('ruleMode');
+
+  const urlPattern = urlInput.value.trim();
+  if (!urlPattern) {
+    urlInput.focus();
+    return;
+  }
+
+  const selector = selectorInput.value.trim();
+  const mode = modeSelect.value;
+
+  autoRules.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    urlPattern,
+    selector,
+    mode,
+    enabled: true,
+  });
+
+  saveAutoRules();
+  renderAutoRules();
+
+  // 入力フォームをリセット
+  urlInput.value = '';
+  selectorInput.value = '';
+});
+
+loadAutoRules();
+
+// ── 要素ピッカーボタン ─────────────────────────────────────────────
+document.getElementById('btnPickSelector').addEventListener('click', async () => {
+  const urlPattern = document.getElementById('ruleUrlPattern').value.trim();
+  const res = await sendToContent({
+    action: 'enterSelectorPickMode',
+    urlPattern,
+  });
+  if (res?.ok) {
+    window.close();
+  }
+});
+
+// ── 起動時の初期化: URL自動補完 + ピッカー結果の復元 ───────────────────
+(async () => {
+  // 現在のページURLからURLパターンを自動補完
+  const tab = await getTab();
+  if (tab?.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('about:')) {
+    const urlInput = document.getElementById('ruleUrlPattern');
+    if (urlInput && !urlInput.value) {
+      urlInput.value = urlToWildcardPattern(tab.url);
+    }
+  }
+
+  // 要素ピッカーで選択したセレクタが保存されていれば復元
+  chrome.storage.local.get(['pendingRuleSelector', 'pendingRuleUrlPattern'], (data) => {
+    if (data.pendingRuleSelector) {
+      document.getElementById('ruleSelector').value = data.pendingRuleSelector;
+      if (data.pendingRuleUrlPattern) {
+        document.getElementById('ruleUrlPattern').value = data.pendingRuleUrlPattern;
+      }
+      // storageから削除
+      chrome.storage.local.remove(['pendingRuleSelector', 'pendingRuleUrlPattern']);
+      // 設定タブに切り替え
+      document.getElementById('tabBtnSettings').click();
+    }
+  });
 })();

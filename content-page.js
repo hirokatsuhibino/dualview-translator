@@ -499,5 +499,89 @@ var DVT_PAGE = (function () {
     }
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement };
+  // ─── セレクタ選択モード ────────────────────────────────────────────
+  // 要素をクリックしてCSSセレクタを自動生成、storageに一時保存する
+  function enterSelectorPickMode(urlPattern) {
+    if (DVT.state.regionMode) return;
+    DVT.state.regionMode = true;
+
+    // ヒントバナーを表示
+    const hint = document.createElement('div');
+    hint.className = 'dvt-region-hint';
+    hint.setAttribute('data-dvt', 'true');
+    hint.textContent = t('selectorPickHint');
+    document.body.appendChild(hint);
+
+    let lastHighlighted = null;
+
+    function onMouseOver(e) {
+      const el = e.target.closest('[data-dvt]') ? null : e.target;
+      if (!el || el === document.body || el === document.documentElement) return;
+      if (lastHighlighted && lastHighlighted !== el) {
+        lastHighlighted.classList.remove('dvt-region-highlight');
+      }
+      lastHighlighted = el;
+      el.classList.add('dvt-region-highlight');
+    }
+
+    function cleanup() {
+      DVT.state.regionMode = false;
+      hint.remove();
+      if (lastHighlighted) lastHighlighted.classList.remove('dvt-region-highlight');
+      document.removeEventListener('mouseover', onMouseOver);
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('keydown', onKeyDown);
+    }
+
+    // ─── CSSセレクタを自動生成 ─────────────────────────────────────
+    function generateSelector(el) {
+      // IDが付いている場合は最優先
+      if (el.id) {
+        try { return '#' + CSS.escape(el.id); } catch(e) { return '#' + el.id; }
+      }
+      const tag = el.tagName.toLowerCase();
+      // 拡張自身のクラスを除外してクラスセレクタを生成
+      const classes = Array.from(el.classList)
+        .filter(c => !c.startsWith('dvt-'))
+        .slice(0, 2);
+      if (classes.length > 0) {
+        try {
+          return tag + classes.map(c => '.' + CSS.escape(c)).join('');
+        } catch(e) {
+          return tag + '.' + classes.join('.');
+        }
+      }
+      // 親要素と組み合わせてセレクタを生成（深さ上限2）
+      const parent = el.parentElement;
+      if (parent && parent !== document.body && parent !== document.documentElement) {
+        return generateSelector(parent) + ' > ' + tag;
+      }
+      return tag;
+    }
+
+    function onClick(e) {
+      const el = e.target.closest('[data-dvt]') ? null : e.target;
+      if (!el || el === document.body) return;
+      e.preventDefault();
+      e.stopPropagation();
+      cleanup();
+      const selector = generateSelector(el);
+      // セレクタとURLパターンをstorageに一時保存（ポップアップで復元するため）
+      chrome.storage.local.set({
+        pendingRuleSelector: selector,
+        pendingRuleUrlPattern: urlPattern || '',
+      });
+      DVT.showToast(t('selectorPickDone'), false, 4000);
+    }
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') cleanup();
+    }
+
+    document.addEventListener('mouseover', onMouseOver);
+    document.addEventListener('click', onClick, true);
+    document.addEventListener('keydown', onKeyDown);
+  }
+
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, enterSelectorPickMode };
 })();

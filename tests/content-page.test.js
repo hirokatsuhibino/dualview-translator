@@ -81,6 +81,28 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('DVT_PAGE.enterSelectorPickMode', () => {
+    it('enterSelectorPickModeが存在する', () => {
+      expect(typeof DVT_PAGE.enterSelectorPickMode).toBe('function');
+    });
+
+    it('呼び出し後にregionModeがtrueになる', () => {
+      DVT.state.regionMode = false;
+      DVT_PAGE.enterSelectorPickMode('*://example.com/*');
+      expect(DVT.state.regionMode).toBe(true);
+      // クリーンアップ: Escapeイベントで終了させる
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(DVT.state.regionMode).toBe(false);
+    });
+
+    it('regionModeが既にtrueの場合は何もしない', () => {
+      DVT.state.regionMode = true;
+      // 既存のヒントがない状態でも例外が起きないことを確認
+      expect(() => DVT_PAGE.enterSelectorPickMode('*://example.com/*')).not.toThrow();
+      DVT.state.regionMode = false;
+    });
+  });
+
   describe('showToast() / updateToast()', () => {
     it('トーストがDOMに追加される', () => {
       const toast = DVT.showToast('テスト', true);
@@ -98,7 +120,7 @@ describe('DVT_PAGE (content-page)', () => {
     });
 
     it('duration指定で自動削除される', async () => {
-      const toast = DVT.showToast('自動削除', false, 100);
+      DVT.showToast('自動削除', false, 100);
       expect(document.querySelector('.dvt-toast')).toBeTruthy();
       await new Promise(r => setTimeout(r, 200));
       expect(document.querySelector('.dvt-toast')).toBeFalsy();
