@@ -103,6 +103,34 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('runSummarize — LLM APIキー未設定時のフォールバック', () => {
+    it('content-page.js にAPIキーチェックのフォールバックロジックが含まれる', () => {
+      const { readFileSync } = require('fs');
+      const { resolve } = require('path');
+      const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+      // runSummarize内でAPIキーチェックが存在することを確認
+      expect(code).toContain('claudeApiKey');
+      expect(code).toContain('geminiApiKey');
+      expect(code).toContain('llmApiKeyMissing');
+      expect(code).toContain('showToast');
+    });
+
+    it('APIキー未設定でtranslatePageAndSummarizeを実行しても要約ブロックが挿入されない', async () => {
+      // storageにAPIキー未設定
+      chrome.storage.local.set({ claudeApiKey: '', geminiApiKey: '' });
+
+      // 翻訳対象テキストを用意（4文字以上）
+      document.body.innerHTML = '<p>This is a long enough text for translation testing purposes</p>';
+      DVT.state.targetLang = 'ja';
+      DVT.state.pageTranslateActive = false;
+
+      await DVT_PAGE.translatePageAndSummarize('ja');
+
+      // 要約ブロック（.dvt-summary）が挿入されていないことを確認
+      expect(document.querySelector('.dvt-summary')).toBeFalsy();
+    });
+  });
+
   describe('showToast() / updateToast()', () => {
     it('トーストがDOMに追加される', () => {
       const toast = DVT.showToast('テスト', true);

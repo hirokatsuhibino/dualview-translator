@@ -21,10 +21,16 @@ function getMenuTitles(lang) {
   return CONTEXT_MENU_TITLES[lang] || CONTEXT_MENU_TITLES['en'];
 }
 
+// ─── LLM APIキーの有無を判定 ─────────────────────────────────────────
+function hasLLMApiKey(data) {
+  return !!(data.claudeApiKey || data.geminiApiKey);
+}
+
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get('uiLang', (data) => {
+  chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey'], (data) => {
     const titles = getMenuTitles(data.uiLang || 'ja');
+    const llmEnabled = hasLLMApiKey(data);
     chrome.contextMenus.create({
       id: 'dvt-translate-selection',
       title: titles.selection,
@@ -39,17 +45,26 @@ chrome.runtime.onInstalled.addListener(() => {
       id: 'dvt-translate-summarize-element',
       title: titles.elementSummary,
       contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
+      enabled: llmEnabled,
     });
   });
 });
 
-// ─── UI言語変更時にメニュータイトルを更新 ─────────────────────────────
+// ─── UI言語変更・APIキー変更時にメニューを更新 ──────────────────────
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.uiLang) {
     const titles = getMenuTitles(changes.uiLang.newValue);
     chrome.contextMenus.update('dvt-translate-selection', { title: titles.selection });
     chrome.contextMenus.update('dvt-translate-element', { title: titles.element });
     chrome.contextMenus.update('dvt-translate-summarize-element', { title: titles.elementSummary });
+  }
+  // LLM APIキーの変更時に要約メニュー項目の有効/無効を切り替え
+  if (changes.claudeApiKey || changes.geminiApiKey) {
+    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey'], (data) => {
+      chrome.contextMenus.update('dvt-translate-summarize-element', {
+        enabled: hasLLMApiKey(data),
+      });
+    });
   }
 });
 

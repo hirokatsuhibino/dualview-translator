@@ -378,6 +378,15 @@ var DVT_PAGE = (function () {
   // insertTarget:  要約ブロックを挿入する親要素
   // isPageSummary: trueの場合は dvt-page-summary IDを付与（undo時に削除するため）
   async function runSummarize(elements, insertTarget, isPageSummary = false) {
+    // LLM APIキー未設定時はトーストで通知して早期リターン（フォールバック）
+    const llmConfig = await new Promise(resolve => {
+      chrome.storage.local.get(['claudeApiKey', 'geminiApiKey'], resolve);
+    });
+    if (!llmConfig.claudeApiKey && !llmConfig.geminiApiKey) {
+      DVT.showToast(t('llmApiKeyMissing'), false, 4000);
+      return;
+    }
+
     // 翻訳テキストを収集（翻訳があればそれを、同一言語でスキップされた場合は原文を使用）
     const texts = [];
     elements.forEach(el => {

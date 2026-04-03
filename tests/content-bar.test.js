@@ -215,3 +215,19 @@ describe('DVT_BAR.startAutoRuleObserver', () => {
     vi.useRealTimers();
   });
 });
+
+describe('翻訳バー — LLM APIキー未設定時の要約ボタン非表示', () => {
+  // showTranslateBar はIIFE内部関数で直接テストできないため、
+  // detectPageLanguage経由で翻訳バーが表示される際の挙動をテストする。
+  // ここではcontent-bar.jsのコードに対して、APIキーチェックの
+  // chrome.storage.local.get呼び出しが存在することを静的に検証する。
+  it('content-bar.js にAPIキーチェックのstorage.local.get呼び出しが含まれる', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const code = readFileSync(resolve(__dirname, '..', 'content-bar.js'), 'utf-8');
+    // showTranslateBar内でclaudeApiKeyとgeminiApiKeyをチェックしていることを確認
+    expect(code).toContain('claudeApiKey');
+    expect(code).toContain('geminiApiKey');
+    expect(code).toContain("style.display = 'none'");
+  });
+});

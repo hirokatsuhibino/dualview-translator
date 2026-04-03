@@ -52,6 +52,7 @@ chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey', 'llmEn
   if (data.geminiApiKey) geminiApiKeyInput.value = data.geminiApiKey;
   toggleDeepLSettings();
   toggleLLMSettings();
+  updateSummaryButtons();
 });
 
 // ── UI言語変更 ───────────────────────────────────────────────────────
@@ -93,11 +94,20 @@ llmSel.addEventListener('change', () => {
 
 claudeApiKeyInput.addEventListener('input', () => {
   chrome.storage.local.set({ claudeApiKey: claudeApiKeyInput.value.trim() });
+  updateSummaryButtons();
 });
 
 geminiApiKeyInput.addEventListener('input', () => {
   chrome.storage.local.set({ geminiApiKey: geminiApiKeyInput.value.trim() });
+  updateSummaryButtons();
 });
+
+// ── LLM APIキー未設定時は要約ボタンを無効化 ─────────────────────────
+function updateSummaryButtons() {
+  const hasLLMKey = !!claudeApiKeyInput.value.trim() || !!geminiApiKeyInput.value.trim();
+  btnPageSummary.disabled = !hasLLMKey;
+  btnRegionSummary.disabled = !hasLLMKey;
+}
 
 function toggleLLMSettings() {
   claudeSettings.style.display = llmSel.value === 'claude' ? 'block' : 'none';

@@ -58,6 +58,14 @@ var DVT_BAR = (function () {
     document.body.appendChild(bar);
     DVT.state.translateBar = bar;
 
+    // LLM APIキー未設定時は要約ボタンを非表示
+    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey'], (data) => {
+      if (!data.claudeApiKey && !data.geminiApiKey) {
+        const sumBtn = bar.querySelector('.dvt-translate-bar-summarize');
+        if (sumBtn) sumBtn.style.display = 'none';
+      }
+    });
+
     bar.querySelector('.dvt-translate-bar-accept').addEventListener('click', () => {
       removeTranslateBar();
       DVT_PAGE.translatePage(DVT.state.targetLang);

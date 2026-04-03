@@ -8,6 +8,7 @@ import { resolve } from 'path';
 let getDeepLEndpoint;
 let splitIntoChunks;
 let getMenuTitles;
+let hasLLMApiKey;
 
 beforeAll(() => {
   const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
@@ -26,6 +27,10 @@ beforeAll(() => {
     const fn = new Function(titlesMatch[0] + '\n return getMenuTitles;');
     getMenuTitles = fn();
   }
+
+  // hasLLMApiKey を抽出
+  const hasKeyMatch = code.match(/function hasLLMApiKey\(data\)\s*\{[\s\S]*?\n\}/);
+  if (hasKeyMatch) hasLLMApiKey = new Function('data', hasKeyMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 });
 
 describe('getDeepLEndpoint()', () => {
@@ -114,5 +119,27 @@ describe('getMenuTitles()', () => {
       expect(titles.element, `${lang}.element`).toBeTruthy();
       expect(titles.elementSummary, `${lang}.elementSummary`).toBeTruthy();
     }
+  });
+});
+
+describe('hasLLMApiKey()', () => {
+  it('claudeApiKeyのみ設定されている場合はtrue', () => {
+    expect(hasLLMApiKey({ claudeApiKey: 'sk-test', geminiApiKey: '' })).toBe(true);
+  });
+
+  it('geminiApiKeyのみ設定されている場合はtrue', () => {
+    expect(hasLLMApiKey({ claudeApiKey: '', geminiApiKey: 'ai-test' })).toBe(true);
+  });
+
+  it('両方設定されている場合はtrue', () => {
+    expect(hasLLMApiKey({ claudeApiKey: 'sk-test', geminiApiKey: 'ai-test' })).toBe(true);
+  });
+
+  it('両方未設定の場合はfalse', () => {
+    expect(hasLLMApiKey({ claudeApiKey: '', geminiApiKey: '' })).toBe(false);
+  });
+
+  it('undefinedの場合はfalse', () => {
+    expect(hasLLMApiKey({})).toBe(false);
   });
 });
