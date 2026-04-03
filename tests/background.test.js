@@ -9,6 +9,7 @@ let getDeepLEndpoint;
 let splitIntoChunks;
 let getMenuTitles;
 let hasLLMApiKey;
+let isTranslateAvailable;
 
 beforeAll(() => {
   const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
@@ -31,6 +32,10 @@ beforeAll(() => {
   // hasLLMApiKey を抽出
   const hasKeyMatch = code.match(/function hasLLMApiKey\(data\)\s*\{[\s\S]*?\n\}/);
   if (hasKeyMatch) hasLLMApiKey = new Function('data', hasKeyMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
+
+  // isTranslateAvailable を抽出
+  const translateMatch = code.match(/function isTranslateAvailable\(data\)\s*\{[\s\S]*?\n\}/);
+  if (translateMatch) isTranslateAvailable = new Function('data', translateMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 });
 
 describe('getDeepLEndpoint()', () => {
@@ -141,5 +146,27 @@ describe('hasLLMApiKey()', () => {
 
   it('undefinedの場合はfalse', () => {
     expect(hasLLMApiKey({})).toBe(false);
+  });
+});
+
+describe('isTranslateAvailable()', () => {
+  it('Google翻訳選択時はAPIキー不要でtrue', () => {
+    expect(isTranslateAvailable({ translateEngine: 'google' })).toBe(true);
+  });
+
+  it('エンジン未指定（デフォルト）はtrue', () => {
+    expect(isTranslateAvailable({})).toBe(true);
+  });
+
+  it('DeepL選択＋APIキーありはtrue', () => {
+    expect(isTranslateAvailable({ translateEngine: 'deepl', deeplApiKey: 'test-key' })).toBe(true);
+  });
+
+  it('DeepL選択＋APIキーなしはfalse', () => {
+    expect(isTranslateAvailable({ translateEngine: 'deepl', deeplApiKey: '' })).toBe(false);
+  });
+
+  it('DeepL選択＋APIキーundefinedはfalse', () => {
+    expect(isTranslateAvailable({ translateEngine: 'deepl' })).toBe(false);
   });
 });

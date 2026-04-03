@@ -80,6 +80,15 @@ var DVT_PAGE = (function () {
 
   // ─── 並列翻訳ワーカー ──────────────────────────────────────────────
   async function runConcurrentTranslation(elements, tl, idPrefix) {
+    // DeepL選択時にAPIキー未設定ならトーストで通知して中断（最終防衛ライン）
+    const engineConfig = await new Promise(resolve => {
+      chrome.storage.local.get(['translateEngine', 'deeplApiKey'], resolve);
+    });
+    if (engineConfig.translateEngine === 'deepl' && !engineConfig.deeplApiKey) {
+      DVT.showToast(t('deeplApiKeyMissing'), false, 4000);
+      return;
+    }
+
     const toast = DVT.showToast(t('toastTranslating', { done: 0, total: elements.length }), true);
     let done = 0;
 

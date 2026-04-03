@@ -58,8 +58,17 @@ var DVT_BAR = (function () {
     document.body.appendChild(bar);
     DVT.state.translateBar = bar;
 
-    // LLM APIキー未設定時は要約ボタンを非表示
-    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey'], (data) => {
+    // APIキー未設定時はボタンを無効化・非表示
+    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
+      // DeepL選択時にAPIキー未設定なら翻訳ボタンも非表示
+      if (data.translateEngine === 'deepl' && !data.deeplApiKey) {
+        const acceptBtn = bar.querySelector('.dvt-translate-bar-accept');
+        if (acceptBtn) acceptBtn.style.display = 'none';
+        const sumBtn = bar.querySelector('.dvt-translate-bar-summarize');
+        if (sumBtn) sumBtn.style.display = 'none';
+        return;
+      }
+      // LLM APIキー未設定時は要約ボタンを非表示
       if (!data.claudeApiKey && !data.geminiApiKey) {
         const sumBtn = bar.querySelector('.dvt-translate-bar-summarize');
         if (sumBtn) sumBtn.style.display = 'none';

@@ -103,6 +103,30 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('runConcurrentTranslation — DeepL APIキー未設定時のフォールバック', () => {
+    it('content-page.js にDeepL APIキーチェックのフォールバックロジックが含まれる', () => {
+      const { readFileSync } = require('fs');
+      const { resolve } = require('path');
+      const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+      expect(code).toContain('translateEngine');
+      expect(code).toContain('deeplApiKey');
+      expect(code).toContain('deeplApiKeyMissing');
+    });
+
+    it('DeepL選択＋APIキー未設定でtranslatePageを実行しても翻訳されない', async () => {
+      chrome.storage.local.set({ translateEngine: 'deepl', deeplApiKey: '' });
+
+      document.body.innerHTML = '<p>This is a long enough text for translation testing purposes</p>';
+      DVT.state.targetLang = 'ja';
+      DVT.state.pageTranslateActive = false;
+
+      await DVT_PAGE.translatePage('ja');
+
+      // デュアルビュー要素が挿入されていないことを確認
+      expect(document.querySelector('.dvt-trans')).toBeFalsy();
+    });
+  });
+
   describe('runSummarize — LLM APIキー未設定時のフォールバック', () => {
     it('content-page.js にAPIキーチェックのフォールバックロジックが含まれる', () => {
       const { readFileSync } = require('fs');

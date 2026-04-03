@@ -26,26 +26,34 @@ function hasLLMApiKey(data) {
   return !!(data.claudeApiKey || data.geminiApiKey);
 }
 
+// ─── DeepL選択時にAPIキーが設定されているか判定 ──────────────────────
+function isTranslateAvailable(data) {
+  return data.translateEngine !== 'deepl' || !!data.deeplApiKey;
+}
+
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey'], (data) => {
+  chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
     const titles = getMenuTitles(data.uiLang || 'ja');
     const llmEnabled = hasLLMApiKey(data);
+    const translateEnabled = isTranslateAvailable(data);
     chrome.contextMenus.create({
       id: 'dvt-translate-selection',
       title: titles.selection,
       contexts: ['selection'],
+      enabled: translateEnabled,
     });
     chrome.contextMenus.create({
       id: 'dvt-translate-element',
       title: titles.element,
       contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
+      enabled: translateEnabled,
     });
     chrome.contextMenus.create({
       id: 'dvt-translate-summarize-element',
       title: titles.elementSummary,
       contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
-      enabled: llmEnabled,
+      enabled: translateEnabled && llmEnabled,
     });
   });
 });
@@ -58,11 +66,22 @@ chrome.storage.onChanged.addListener((changes) => {
     chrome.contextMenus.update('dvt-translate-element', { title: titles.element });
     chrome.contextMenus.update('dvt-translate-summarize-element', { title: titles.elementSummary });
   }
+  // 翻訳エンジン・DeepL APIキーの変更時に翻訳メニュー項目の有効/無効を切り替え
+  if (changes.translateEngine || changes.deeplApiKey) {
+    chrome.storage.local.get(['translateEngine', 'deeplApiKey', 'claudeApiKey', 'geminiApiKey'], (data) => {
+      const translateEnabled = isTranslateAvailable(data);
+      chrome.contextMenus.update('dvt-translate-selection', { enabled: translateEnabled });
+      chrome.contextMenus.update('dvt-translate-element', { enabled: translateEnabled });
+      chrome.contextMenus.update('dvt-translate-summarize-element', {
+        enabled: translateEnabled && hasLLMApiKey(data),
+      });
+    });
+  }
   // LLM APIキーの変更時に要約メニュー項目の有効/無効を切り替え
   if (changes.claudeApiKey || changes.geminiApiKey) {
-    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey'], (data) => {
+    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
       chrome.contextMenus.update('dvt-translate-summarize-element', {
-        enabled: hasLLMApiKey(data),
+        enabled: isTranslateAvailable(data) && hasLLMApiKey(data),
       });
     });
   }

@@ -14,3 +14,7 @@ Issue対応の詳細ルールは `.claude/rules/issue.md` を参照。
 Copyright (c) Orangesoft Inc.
 ```
 
+# 作業時のgitブランチ作成
+
+作業を行うときは、直接mainを編集するのではなく、ブランチを作成して作業してください。
+作業が終わったらマージしてください。現状はPRは不要です。

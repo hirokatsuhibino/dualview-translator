@@ -52,6 +52,7 @@ chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey', 'llmEn
   if (data.geminiApiKey) geminiApiKeyInput.value = data.geminiApiKey;
   toggleDeepLSettings();
   toggleLLMSettings();
+  updateTranslateButtons();
   updateSummaryButtons();
 });
 
@@ -76,14 +77,28 @@ uiLangSel.addEventListener('change', () => {
 engineSel.addEventListener('change', () => {
   chrome.storage.local.set({ translateEngine: engineSel.value });
   toggleDeepLSettings();
+  updateTranslateButtons();
 });
 
 deeplApiKeyInput.addEventListener('input', () => {
   chrome.storage.local.set({ deeplApiKey: deeplApiKeyInput.value.trim() });
+  updateTranslateButtons();
 });
 
 function toggleDeepLSettings() {
   deeplSettings.style.display = engineSel.value === 'deepl' ? 'block' : 'none';
+}
+
+// ── DeepL APIキー未設定時は翻訳ボタンを無効化 ──────────────────────
+function updateTranslateButtons() {
+  const needsKey = engineSel.value === 'deepl' && !deeplApiKeyInput.value.trim();
+  btnPage.disabled = needsKey;
+  btnRegion.disabled = needsKey;
+  // 要約ボタンも翻訳できなければ無効化（LLMキー有無と合わせて判定）
+  if (needsKey) {
+    btnPageSummary.disabled = true;
+    btnRegionSummary.disabled = true;
+  }
 }
 
 // ── 要約エンジン変更 ─────────────────────────────────────────────────
@@ -103,10 +118,12 @@ geminiApiKeyInput.addEventListener('input', () => {
 });
 
 // ── LLM APIキー未設定時は要約ボタンを無効化 ─────────────────────────
+// DeepL APIキー未設定時も翻訳自体ができないため要約ボタンも無効化
 function updateSummaryButtons() {
+  const needsDeepLKey = engineSel.value === 'deepl' && !deeplApiKeyInput.value.trim();
   const hasLLMKey = !!claudeApiKeyInput.value.trim() || !!geminiApiKeyInput.value.trim();
-  btnPageSummary.disabled = !hasLLMKey;
-  btnRegionSummary.disabled = !hasLLMKey;
+  btnPageSummary.disabled = needsDeepLKey || !hasLLMKey;
+  btnRegionSummary.disabled = needsDeepLKey || !hasLLMKey;
 }
 
 function toggleLLMSettings() {
