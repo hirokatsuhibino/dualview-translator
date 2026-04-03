@@ -7,6 +7,10 @@ description: GitHub Issue対応時の必須ルール
 ## 実装前
 
 - 対応するIssueがない場合は、必ずIssueを発行してから着手する
+- Issueには内容に応じて適切なラベルを設定する
+  - `bug`: バグ修正
+  - `enhancement`: 新機能・改善
+  - `documentation`: ドキュメントのみの変更
 - 実装方針が決まったらIssueにコメントして記録する
 
 ## 実装後
