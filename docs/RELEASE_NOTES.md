@@ -15,10 +15,11 @@
 
 ### 改善
 
+- **選択翻訳パネルのドラッグ移動＆リサイズ**: ヘッダーをドラッグしてパネルを移動、右下ハンドルでリサイズ可能（#21）
 - **APIキー未設定時のUI無効化**: LLM APIキー未設定時に要約ボタン・メニューをdisabled（#19）
 - **DeepL APIキー未設定時のUI無効化**: DeepL選択時にAPIキー未入力なら翻訳ボタン・コンテキストメニューをdisabled（#20）
 - リファクタリング: マジックナンバーの定数化、重複コードの共通関数化（content-page.js 606行 → 511行）
-- テスト強化: 自動翻訳ルール・waitForElement・startAutoRuleObserver のテストを追加（合計162件）
+- テスト強化: 自動翻訳ルール・waitForElement・startAutoRuleObserver のテストを追加（合計171件）
 
 ---
 

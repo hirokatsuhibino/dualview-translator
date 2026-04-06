@@ -31,7 +31,8 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── content-core.test.js #  content-core テスト（20件）
 │   ├── content-page.test.js #  content-page テスト（10件）
 │   ├── content-bar.test.js #   content-bar テスト（17件）
-│   └── background.test.js  #  background テスト（13件）
+│   ├── content-selection.test.js # content-selection テスト（9件）
+│   └── background.test.js  #  background テスト（18件）
 └── docs/                  # 公開資料
     ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
     ├── RELEASE_NOTES.md   #   リリースノート

@@ -99,6 +99,67 @@ var DVT_SEL = (function () {
     panel.querySelector('.dvt-sel-lang').addEventListener('change', (e) => {
       DVT.state.targetLang = e.target.value;
     });
+
+    initDragBehavior(panel);
+  }
+
+  // ─── ドラッグ移動 ─────────────────────────────────────────────────
+  function initDragBehavior(panel) {
+    const header = panel.querySelector('.dvt-sel-header');
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    header.addEventListener('mousedown', onMouseDown);
+
+    function onMouseDown(e) {
+      if (e.button !== 0) return;                       // 左クリックのみ
+      if (e.target.closest('.dvt-sel-close')) return;    // 閉じるボタンは除外
+
+      isDragging = true;
+      offsetX = e.pageX - parseFloat(panel.style.left);
+      offsetY = e.pageY - parseFloat(panel.style.top);
+
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'grabbing';
+      panel.style.animation = 'none';
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      e.preventDefault();
+    }
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+
+      let newLeft = e.pageX - offsetX;
+      let newTop  = e.pageY - offsetY;
+
+      // ビューポート境界内にクランプ
+      const panelW = panel.offsetWidth;
+      const panelH = panel.offsetHeight;
+      const minLeft = window.scrollX;
+      const minTop  = window.scrollY;
+      const maxLeft = window.scrollX + window.innerWidth  - panelW;
+      const maxTop  = window.scrollY + window.innerHeight - panelH;
+
+      newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+      newTop  = Math.max(minTop,  Math.min(newTop,  maxTop));
+
+      panel.style.left = newLeft + 'px';
+      panel.style.top  = newTop  + 'px';
+    }
+
+    function onMouseUp() {
+      if (!isDragging) return;
+      isDragging = false;
+
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    }
   }
 
   // ─── パネルHTML生成 ────────────────────────────────────────────────
