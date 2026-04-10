@@ -1,48 +1,91 @@
-# 権限の正当性説明文
+# Chrome Web Store 審査回答
 
-Chrome Web Store 審査の「権限の正当性」フォームに記載する説明文。
-
----
-
-## `<all_urls>` host_permissions の正当性
-
-### 英語（審査フォーム提出用）
-
-**Permission: `<all_urls>` (host_permissions)**
-
-DualView Translator requires access to all URLs because its core functionality is to translate any web page the user visits. The extension cannot predict in advance which websites users want to translate — the entire value of the extension is that it works on any site.
-
-Specifically, `<all_urls>` is required for the following reasons:
-
-1. **Content script injection**: The extension injects content scripts (`content-core.js`, `content-page.js`, `content-bar.js`, etc.) into web pages to display dual-view translations (original text alongside translated text). This must work on any URL the user chooses to translate.
-
-2. **Automatic translation bar**: When the user visits a page in a foreign language, the extension automatically detects the language and displays a translation bar at the top of the page. This feature requires permission to run on all pages.
-
-3. **Auto-translation rules**: Users can register URL patterns (e.g., `*://example.com/*`) to auto-translate specific sites. Since users define these patterns themselves, the extension cannot restrict host permissions to a predefined list of domains.
-
-4. **Selection translation**: The user can select any text on any web page to trigger an instant translation panel. This requires content script access to all pages.
-
-The extension does NOT use `<all_urls>` to collect user data, track browsing history, or access page content for any purpose other than displaying translations requested by the user. Translation text is sent only to the translation API selected by the user (Google Translate or DeepL), and API keys are stored only in the browser's local storage.
+Chrome Web Store 審査フォームへの回答をまとめたドキュメント。
 
 ---
 
-### 日本語（社内確認用）
+## 単一用途（Single Purpose）
 
-**権限: `<all_urls>` (host_permissions)**
+DualView Translator has a single purpose: to display original text and its translation side by side on any web page, so users can read foreign-language content while keeping the original context visible.
 
-DualView Translatorは、ユーザーが訪問するあらゆるウェブページを翻訳することを核心機能としているため、すべてのURLへのアクセスが必要です。ユーザーがどのウェブサイトを翻訳したいかを事前に特定することはできず、「どのサイトでも翻訳できる」ことが本拡張の主たる価値です。
+All features serve this purpose:
 
-具体的に `<all_urls>` が必要な理由は以下のとおりです。
+- Selection translation — translates selected text in a floating panel alongside the original
+- Full-page translation — inserts translations below each paragraph, keeping original text visible
+- Element translation — translates a clicked element in dual-view
+- AI summarization — summarizes translated content as a reading aid (complementary to translation)
+- Auto-translation rules — applies dual-view translation automatically on predefined sites
+- Translation bar — prompts translation when a foreign-language page is detected
 
-1. **コンテンツスクリプトの注入**: 原文と翻訳を並べて表示するデュアルビュー翻訳を実現するため、ウェブページにコンテンツスクリプトを注入する必要があります。ユーザーが翻訳を選択したページで動作するため、すべてのURLへのアクセスが必要です。
+The extension does not modify browser settings, manage bookmarks, alter search behavior, or perform any function unrelated to translation.
 
-2. **自動翻訳バー**: ユーザーが外国語のページを訪問した際、言語を自動検出して翻訳バーをページ上部に表示します。この機能はすべてのページで実行される必要があります。
+---
 
-3. **自動翻訳ルール**: ユーザーが独自のURLパターン（例: `*://example.com/*`）を登録して特定サイトを自動翻訳できます。ユーザーが自由にパターンを定義するため、ドメインを事前に限定することは不可能です。
+## activeTab が必要な理由
 
-4. **選択翻訳**: ユーザーが任意のウェブページ上でテキストを選択すると翻訳パネルが表示されます。この機能もすべてのページへのコンテンツスクリプトアクセスが必要です。
+The `activeTab` permission is required to interact with the currently active tab when the user clicks the extension icon. Specifically, it is used to send messages from the popup to the content scripts running in the active tab — for example, to trigger page translation, reset translations, or enter element selection mode. Without this permission, the popup cannot communicate with the page the user is currently viewing.
 
-本拡張は `<all_urls>` をユーザーデータの収集・閲覧履歴の追跡・翻訳表示以外の目的でのページ内容アクセスには一切使用していません。翻訳テキストはユーザーが選択した翻訳API（Google翻訳またはDeepL）にのみ送信され、APIキーはブラウザのローカルストレージにのみ保存されます。
+---
+
+## storage が必要な理由
+
+The `storage` permission is required to persist user settings across browser sessions. The following data is stored locally using `chrome.storage.local`:
+
+- Selected translation engine (Google Translate or DeepL) and DeepL API key
+- Selected AI summarization engine (Claude or Gemini) and the respective API key
+- Target language for translation
+- UI display language
+- Auto-translation rules (URL patterns, CSS selectors, translation mode)
+
+No data is synced to external servers. All settings remain on the user's device.
+
+---
+
+## scripting が必要な理由
+
+The `scripting` permission is required to programmatically inject content scripts into web pages. While content scripts are declared statically in the manifest, `scripting` is additionally used to execute functions in the page context — for example, to extract CSS selectors when the user activates the element picker for auto-translation rule configuration. This allows the extension to identify the exact DOM element the user clicked without exposing page content to the background service worker.
+
+---
+
+## contextMenus が必要な理由
+
+The `contextMenus` permission is required to add translation options to the browser's right-click context menu. The extension adds the following menu items:
+
+- "DualView: Translate selection" — appears when the user has selected text; translates the selection and displays it in a panel
+- "DualView: Translate this element" — appears when no text is selected; translates the block element at the cursor position in dual-view
+- "DualView: Translate & summarize this element" — same as above, with AI summarization
+
+These menu items provide a quick translation trigger without requiring the user to open the popup.
+
+---
+
+## ホスト権限が必要な理由（host_permissions）
+
+`<all_urls>` is required because the extension must work on any web page the user chooses to translate. The target site cannot be known in advance. It is used solely to inject content scripts for dual-view translation, show the auto-detection bar, support user-defined auto-translation rules, and enable selection translation. It is NOT used to collect data or track browsing history.
+
+Additional API endpoints are declared for the translation and AI services the user selects:
+
+- `https://translate.googleapis.com/*` — Google Translate (default engine, no API key required)
+- `https://api-free.deepl.com/*`, `https://api.deepl.com/*` — DeepL Free and Pro (requires user's API key)
+- `https://api.anthropic.com/*` — Claude AI summarization (requires user's API key)
+- `https://generativelanguage.googleapis.com/*` — Gemini AI summarization (requires user's API key)
+
+All requests are triggered only by explicit user action.
+
+---
+
+## リモートコードの利用有無
+
+**The extension does NOT use any remote code.**
+
+All JavaScript executed by the extension is bundled locally within the extension package:
+
+- `background.js` — service worker
+- `content-core.js`, `content-page.js`, `content-bar.js`, `content-selection.js` — content scripts
+- `i18n.js` — localization
+- `popup.js` — popup UI logic
+
+The extension makes network requests only to the translation and AI APIs listed above (Google Translate, DeepL, Claude, Gemini), and these requests transmit user-provided text for translation or summarization only. No external scripts are fetched or executed at runtime.
 
 ---
 
