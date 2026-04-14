@@ -1,6 +1,6 @@
 {
   "name": "dualview-translator",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "原文と翻訳を**並べて表示**するブラウザ翻訳拡張。Chrome / Firefox 対応。",
   "main": "background.js",
   "directories": {
