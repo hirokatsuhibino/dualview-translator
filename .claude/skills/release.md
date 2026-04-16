@@ -26,14 +26,22 @@ node -p "require('./manifest.json').version"
 - `manifest.json` の `version`
 - `package.json` の `version`
 
-### 3. zip作成
+### 3. リリースノート更新
+
+`docs/RELEASE_NOTES.md` の先頭（`## v1.x.x` の前）に新バージョンのセクションを追加する。
+
+- 前回リリースからの `git log` を確認して変更内容をまとめる
+- フォーマットは既存エントリに合わせる（`## v<VERSION>（YYYY-MM-DD）` + カテゴリ別リスト）
+- カテゴリ: `新機能` / `改善` / `修正` を内容に応じて使い分ける
+
+### 4. zip作成
 
 `/skill build-zip` を使用して公開用zipとソースコードアーカイブを作成する。
 
-### 4. コミット & Push
+### 5. コミット & Push
 
 ```bash
-git add manifest.json package.json
+git add manifest.json package.json docs/RELEASE_NOTES.md
 git commit -m "$(cat <<'EOF'
 chore: バージョンを<VERSION>に更新
 
