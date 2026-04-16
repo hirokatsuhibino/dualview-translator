@@ -8,6 +8,37 @@ var DVT_SEL = (function () {
   const SVG_TRANSLATE = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 3l14 0M12 3v4M3 10h8m0 0-3 3m3-3-3-3M16 10h5M16 14l5 0M16 17l5 0"/></svg>';
   const SVG_COPY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
 
+  // 言語オプション定義
+  const LANG_OPTIONS = [
+    ['ja', '🇯🇵 日本語'], ['en', '🇺🇸 English'],
+    ['zh-CN', '🇨🇳 中文（簡）'], ['zh-TW', '🇹🇼 中文（繁）'],
+    ['ko', '🇰🇷 한국어'], ['fr', '🇫🇷 Français'],
+    ['de', '🇩🇪 Deutsch'], ['es', '🇪🇸 Español'],
+    ['pt', '🇵🇹 Português'], ['ru', '🇷🇺 Русский'],
+    ['ar', '🇸🇦 العربية'],
+  ];
+
+  // SVG文字列をDOM要素に変換
+  function parseSvg(svgStr) {
+    const doc = new DOMParser().parseFromString(svgStr, 'image/svg+xml');
+    return document.importNode(doc.documentElement, true);
+  }
+
+  // DOM要素生成ヘルパー
+  function h(tag, attrs, ...children) {
+    const el = document.createElement(tag);
+    if (attrs) {
+      for (const [k, v] of Object.entries(attrs)) {
+        el.setAttribute(k, v);
+      }
+    }
+    for (const c of children) {
+      if (typeof c === 'string') el.appendChild(document.createTextNode(c));
+      else if (c) el.appendChild(c);
+    }
+    return el;
+  }
+
   // ─── テキスト選択イベント ───────────────────────────────────────────
   document.addEventListener('mouseup', (e) => {
     const sel = window.getSelection();
@@ -38,7 +69,7 @@ var DVT_SEL = (function () {
     const panel = document.createElement('div');
     panel.className = 'dvt-sel-panel';
     panel.setAttribute('data-dvt', 'true');
-    panel.innerHTML = buildSelectionPanelHTML(text);
+    panel.appendChild(buildSelectionPanelDOM(text));
 
     const top = rect.bottom + window.scrollY + 10;
     const left = Math.min(Math.max(rect.left + window.scrollX, 8), window.innerWidth - 360 + window.scrollX);
@@ -58,7 +89,7 @@ var DVT_SEL = (function () {
     const panel = document.createElement('div');
     panel.className = 'dvt-sel-panel';
     panel.setAttribute('data-dvt', 'true');
-    panel.innerHTML = buildSelectionPanelHTML(text);
+    panel.appendChild(buildSelectionPanelDOM(text));
 
     // 選択範囲の位置を取得（可能なら）
     const sel = window.getSelection();
@@ -162,48 +193,43 @@ var DVT_SEL = (function () {
     }
   }
 
-  // ─── パネルHTML生成 ────────────────────────────────────────────────
-  function buildSelectionPanelHTML(text) {
+  // ─── パネルDOM生成 ─────────────────────────────────────────────────
+  function buildSelectionPanelDOM(text) {
     const preview = text.length > 60 ? text.slice(0, 60) + '…' : text;
-    return `
-      <div class="dvt-sel-header">
-        <span class="dvt-sel-label">${DVT.escapeHtml(t('dualviewTitle'))}</span>
-        <button class="dvt-sel-close" title="${DVT.escapeHtml(t('close'))}">✕</button>
-      </div>
-      <div class="dvt-sel-original">
-        <span class="dvt-badge dvt-badge-orig">${DVT.escapeHtml(t('original'))}</span>
-        <div class="dvt-sel-orig-text">${DVT.escapeHtml(preview)}</div>
-      </div>
-      <div class="dvt-sel-controls">
-        <select class="dvt-sel-lang">
-          <option value="ja">🇯🇵 日本語</option>
-          <option value="en">🇺🇸 English</option>
-          <option value="zh-CN">🇨🇳 中文（簡）</option>
-          <option value="zh-TW">🇹🇼 中文（繁）</option>
-          <option value="ko">🇰🇷 한국어</option>
-          <option value="fr">🇫🇷 Français</option>
-          <option value="de">🇩🇪 Deutsch</option>
-          <option value="es">🇪🇸 Español</option>
-          <option value="pt">🇵🇹 Português</option>
-          <option value="ru">🇷🇺 Русский</option>
-          <option value="ar">🇸🇦 العربية</option>
-        </select>
-        <button class="dvt-sel-btn">
-          ${SVG_TRANSLATE}
-          ${DVT.escapeHtml(t('translateBtn'))}
-        </button>
-      </div>
-      <div class="dvt-sel-result" style="display:none">
-        <span class="dvt-badge dvt-badge-trans">${DVT.escapeHtml(t('translated'))}</span>
-        <div class="dvt-sel-trans-text"></div>
-        <div class="dvt-sel-actions">
-          <button class="dvt-copy-btn" title="${DVT.escapeHtml(t('copyBtn'))}">
-            ${SVG_COPY}
-            ${DVT.escapeHtml(t('copyBtn'))}
-          </button>
-        </div>
-      </div>
-    `;
+    const frag = document.createDocumentFragment();
+
+    // ヘッダー
+    frag.appendChild(h('div', { class: 'dvt-sel-header' },
+      h('span', { class: 'dvt-sel-label' }, t('dualviewTitle')),
+      h('button', { class: 'dvt-sel-close', title: t('close') }, '✕')
+    ));
+
+    // 原文表示
+    frag.appendChild(h('div', { class: 'dvt-sel-original' },
+      h('span', { class: 'dvt-badge dvt-badge-orig' }, t('original')),
+      h('div', { class: 'dvt-sel-orig-text' }, preview)
+    ));
+
+    // 言語選択 + 翻訳ボタン
+    const select = h('select', { class: 'dvt-sel-lang' });
+    LANG_OPTIONS.forEach(([val, label]) => {
+      select.appendChild(h('option', { value: val }, label));
+    });
+    frag.appendChild(h('div', { class: 'dvt-sel-controls' },
+      select,
+      h('button', { class: 'dvt-sel-btn' }, parseSvg(SVG_TRANSLATE), t('translateBtn'))
+    ));
+
+    // 翻訳結果
+    frag.appendChild(h('div', { class: 'dvt-sel-result', style: 'display:none' },
+      h('span', { class: 'dvt-badge dvt-badge-trans' }, t('translated')),
+      h('div', { class: 'dvt-sel-trans-text' }),
+      h('div', { class: 'dvt-sel-actions' },
+        h('button', { class: 'dvt-copy-btn', title: t('copyBtn') }, parseSvg(SVG_COPY), t('copyBtn'))
+      )
+    ));
+
+    return frag;
   }
 
   // ─── 選択テキスト翻訳実行 ──────────────────────────────────────────
@@ -215,25 +241,31 @@ var DVT_SEL = (function () {
     btn.disabled = true;
     btn.textContent = t('translating');
     result.style.display = 'block';
-    transText.innerHTML = '<span class="dvt-spinner"></span>';
+    transText.textContent = '';
+    transText.appendChild(h('span', { class: 'dvt-spinner' }));
 
     const { text: translated, detectedLang } = await DVT.translate(text, tl);
 
     if (DVT.langMatches(detectedLang, tl)) {
-      transText.innerHTML = `<span class="dvt-same-lang">${DVT.escapeHtml(t('sameLang', { lang: detectedLang }))}</span>`;
+      transText.textContent = '';
+      transText.appendChild(h('span', { class: 'dvt-same-lang' }, t('sameLang', { lang: detectedLang })));
     } else {
       transText.textContent = translated;
     }
 
     btn.disabled = false;
-    btn.innerHTML = `${SVG_TRANSLATE} ${DVT.escapeHtml(t('retranslateBtn'))}`;
+    btn.textContent = '';
+    btn.appendChild(parseSvg(SVG_TRANSLATE));
+    btn.appendChild(document.createTextNode(' ' + t('retranslateBtn')));
 
     panel.querySelector('.dvt-copy-btn').addEventListener('click', () => {
       navigator.clipboard.writeText(translated).then(() => {
         const cb = panel.querySelector('.dvt-copy-btn');
         cb.textContent = t('copied');
         setTimeout(() => {
-          cb.innerHTML = `${SVG_COPY} ${DVT.escapeHtml(t('copyBtn'))}`;
+          cb.textContent = '';
+          cb.appendChild(parseSvg(SVG_COPY));
+          cb.appendChild(document.createTextNode(' ' + t('copyBtn')));
         }, 2000);
       });
     });
