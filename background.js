@@ -317,7 +317,7 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 512,
       messages: [{
         role: 'user',
@@ -398,14 +398,18 @@ async function testApiKey(engine, apiKey) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1,
         messages: [{ role: 'user', content: 'Hi' }],
       }),
     });
     if (!res.ok) {
+      // 401のみキー無効。400（残高不足等）や429（レート制限）は認証成功とみなす
       if (res.status === 401) throw new Error('APIキーが無効です');
-      throw new Error(`HTTP ${res.status}`);
+      if (res.status === 400 || res.status === 429) return;
+      let detail = '';
+      try { const err = await res.json(); detail = err.error?.message || ''; } catch(e) {}
+      throw new Error(`HTTP ${res.status}: ${detail}`);
     }
     return;
   }
