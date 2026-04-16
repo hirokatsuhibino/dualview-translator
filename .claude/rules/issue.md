@@ -23,6 +23,22 @@ gh issue comment <番号> --repo hirokatsuhibino/dualview-translator --body "...
 
 コメントのフォーマットは `/skill issue-comment` を参照。
 
+## PR作成
+
+- 実装が完了したらPRを作成する（mainへの直接pushは禁止）
+- PRのbodyに `closes #<番号>` を含め、マージ時にIssueが自動クローズされるようにする
+- 対応するIssueがない場合は、PRの前にIssueを作成する
+
+```bash
+gh pr create --title "<type>: <説明>" --body "$(cat <<'EOF'
+## Summary
+...
+
+closes #<番号>
+EOF
+)"
+```
+
 ## コミット
 
 - コミットメッセージのフォーマットは `.claude/rules/git.md` に従う

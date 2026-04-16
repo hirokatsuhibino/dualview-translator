@@ -25,13 +25,16 @@ Conventional Commits形式で日本語を使って記述する。
 ## 例
 
 ```
-feat: 自動翻訳ルール登録機能を追加 (closes #17)
+feat: 自動翻訳ルール登録機能を追加
 fix: ルール削除後もObserverが残るバグを修正
 test: content-bar の waitForElement テストを追加
 ```
 
+※ Issue自動クローズは **PRのbody** に `closes #<番号>` を記載して行う（コミットメッセージには含めない）
+
 ## ルール
 
 - typeは英語、説明は日本語で書く
-- GitHub Issueに対応するコミットには `closes #<番号>` を末尾に含めてIssueを自動クローズする
+- コミットメッセージに `closes #<番号>` は**含めない**（Issue自動クローズはPRのbodyで行う）
 - 複数行のコミットメッセージにはHEREDOCを使う
+- mainへの直接pushは禁止。必ずブランチ→PR→マージの流れで行う

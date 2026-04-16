@@ -35,14 +35,29 @@ gh issue view <番号>
 ```bash
 git add <files>
 git commit -m "$(cat <<'EOF'
-feat: <日本語の説明> (closes #<番号>)
+feat: <日本語の説明>
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 EOF
 )"
-git push
+git push -u origin <branch>
 ```
 
 ### 6. Issueにコメント
 `/skill issue-comment` を使って実装詳細をコメント投稿する。
+
+### 7. PR作成
+PRのbodyに `closes #<番号>` を含め、マージ時にIssueを自動クローズする。
+
+```bash
+gh pr create --title "<type>: <説明>" --body "$(cat <<'EOF'
+## Summary
+...
+
+closes #<番号>
+EOF
+)"
+```
 
 ## 変更対象ファイルの判断基準
 

@@ -38,7 +38,9 @@ node -p "require('./manifest.json').version"
 
 `/skill build-zip` を使用して公開用zipとソースコードアーカイブを作成する。
 
-### 5. コミット & Push
+### 5. コミット & Push & PR作成
+
+対応するIssueがなければ作成し、PRで `closes #<番号>` を含める。
 
 ```bash
 git add manifest.json package.json docs/RELEASE_NOTES.md
@@ -48,7 +50,15 @@ chore: バージョンを<VERSION>に更新
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 EOF
 )"
-git push origin main
+git push -u origin <branch>
+gh pr create --title "chore: バージョンを<VERSION>に更新" --body "$(cat <<'EOF'
+## Summary
+- バージョンを<VERSION>に更新
+- リリースノート追加
+
+closes #<番号>
+EOF
+)"
 ```
 
 ## ルール
@@ -56,3 +66,4 @@ git push origin main
 - バージョンは `manifest.json` と `package.json` の両方を必ず同期させる
 - zipファイルはgitに含めない
 - コミットメッセージは `chore: バージョンを<VERSION>に更新` の形式
+- mainへの直接pushは禁止。必ずPR経由でマージする
