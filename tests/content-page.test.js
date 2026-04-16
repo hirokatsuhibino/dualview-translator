@@ -155,6 +155,38 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('runConcurrentTranslation — 二重翻訳防止（dvt-pendingマーカー）', () => {
+    it('翻訳開始直後に要素が dvt-pending マークされ filterTranslatableElements から除外される', async () => {
+      // jsdom は innerText 未サポートのため textContent で代用するモックを設定
+      Object.defineProperty(HTMLElement.prototype, 'innerText', {
+        get() { return this.textContent; },
+        configurable: true,
+      });
+
+      chrome.storage.local.set({ translateEngine: 'google', deeplApiKey: '' });
+      document.body.innerHTML = '<p>This is a long enough text for translation testing</p>';
+      const el = document.querySelector('p');
+      DVT.state.pageTranslateActive = false;
+      DVT.state.targetLang = 'ja';
+
+      // translatePage を開始（await しない）
+      // 非同期関数は最初の await まで同期的に実行されるため、
+      // runConcurrentTranslation 冒頭の forEach（dvt-pending セット）も同期で完了する
+      const promise = DVT_PAGE.translatePage('ja');
+
+      // この時点で dvt-pending がセットされているはず
+      expect(el.dataset.dvtId).toBe('dvt-pending');
+
+      // filterTranslatableElements に相当するロジック: data-dvt-id があれば除外
+      const reFiltered = Array.from(document.querySelectorAll('p')).filter(e => !e.dataset.dvtId);
+      expect(reFiltered.length).toBe(0); // 同じ要素は二重取得されない
+
+      // 後処理（テスト環境では翻訳APIが未実装のため翻訳完了は期待しない）
+      try { await promise; } catch (_) { /* ignore */ }
+      delete HTMLElement.prototype.innerText;
+    });
+  });
+
   describe('showToast() / updateToast()', () => {
     it('トーストがDOMに追加される', () => {
       const toast = DVT.showToast('テスト', true);

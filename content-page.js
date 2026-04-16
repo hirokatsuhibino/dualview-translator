@@ -80,6 +80,12 @@ var DVT_PAGE = (function () {
 
   // ─── 並列翻訳ワーカー ──────────────────────────────────────────────
   async function runConcurrentTranslation(elements, tl, idPrefix) {
+    // 二重翻訳防止: 最初のawaitより前に全要素を処理中マークで確保する。
+    // filterTranslatableElements / extractRegionElements は data-dvt-id が設定された
+    // 要素を除外するため、並走する別の翻訳処理が同じ要素を重複取得しない。
+    // insertDualView が後で実際のIDに上書きする。
+    elements.forEach(el => { el.dataset.dvtId = 'dvt-pending'; });
+
     // DeepL選択時にAPIキー未設定ならトーストで通知して中断（最終防衛ライン）
     const engineConfig = await new Promise(resolve => {
       chrome.storage.local.get(['translateEngine', 'deeplApiKey'], resolve);
@@ -208,11 +214,15 @@ var DVT_PAGE = (function () {
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
       const origEl = el.querySelector('.dvt-orig');
       if (origEl) {
+        // 翻訳済み要素: 原文HTMLに戻してIDを削除
         el.innerHTML = origEl.innerHTML;
         delete el.dataset.dvtId;
       }
+      // dvt-pending状態（処理中）の要素は .dvt-orig が存在しないためスキップ。
+      // 次のループで dvt-id のみ削除する。
     });
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
+      // dvt-pending 等の残存マークを削除
       delete el.dataset.dvtId;
     });
     DVT.showToast(t('toastReset'), false, TOAST_SHORT_DURATION_MS);
