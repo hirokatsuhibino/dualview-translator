@@ -49,7 +49,18 @@ var DVT_BAR = (function () {
     bar.setAttribute('data-dvt', 'true');
     const barText = document.createElement('span');
     barText.className = 'dvt-translate-bar-text';
-    barText.textContent = t('translateBarMsg', { lang: langName });
+    // <strong>タグを含むメッセージをDOM要素に変換
+    const msgParts = t('translateBarMsg', { lang: langName }).split(/(<strong>.*?<\/strong>)/);
+    msgParts.forEach(part => {
+      const m = part.match(/^<strong>(.*)<\/strong>$/);
+      if (m) {
+        const strong = document.createElement('strong');
+        strong.textContent = m[1];
+        barText.appendChild(strong);
+      } else if (part) {
+        barText.appendChild(document.createTextNode(part));
+      }
+    });
     bar.appendChild(barText);
     const acceptBtn = document.createElement('button');
     acceptBtn.className = 'dvt-translate-bar-btn dvt-translate-bar-accept';

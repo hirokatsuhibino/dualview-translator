@@ -60,6 +60,8 @@ chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey', 'llmEn
   toggleLLMSettings();
   updateTranslateButtons();
   updateSummaryButtons();
+  // ストレージ読み込み後にテストボタンの状態を更新
+  updateApiTestButtons();
 });
 
 // ── UI言語変更 ───────────────────────────────────────────────────────
@@ -138,10 +140,17 @@ function toggleLLMSettings() {
 }
 
 // ── APIキー検証 ──────────────────────────────────────────────────────
+const apiTestButtons = [];
+
 function setupApiKeyTest(btnId, inputId, engine) {
   const btn = document.getElementById(btnId);
   const input = document.getElementById(inputId);
   if (!btn || !input) return;
+
+  function updateTestBtn() {
+    btn.disabled = !input.value.trim();
+  }
+  apiTestButtons.push(updateTestBtn);
 
   btn.addEventListener('click', () => {
     const apiKey = input.value.trim();
@@ -159,23 +168,25 @@ function setupApiKeyTest(btnId, inputId, engine) {
           btn.classList.add('dvt-test-ok');
         } else {
           btn.textContent = t('apiKeyInvalid');
+          btn.title = res?.error || '';
           btn.classList.add('dvt-test-ng');
         }
         btn.disabled = false;
         setTimeout(() => {
           btn.textContent = t('apiKeyTest');
           btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+          btn.title = '';
         }, 3000);
       }
     );
   });
 
-  // キー未入力時はボタン無効化
-  function updateTestBtn() {
-    btn.disabled = !input.value.trim();
-  }
   input.addEventListener('input', updateTestBtn);
-  updateTestBtn();
+}
+
+// ストレージ読み込み後に呼ぶ
+function updateApiTestButtons() {
+  apiTestButtons.forEach(fn => fn());
 }
 
 setupApiKeyTest('deeplTestBtn', 'deeplApiKey', 'deepl');
