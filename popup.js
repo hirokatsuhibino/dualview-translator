@@ -137,6 +137,51 @@ function toggleLLMSettings() {
   geminiSettings.style.display = llmSel.value === 'gemini' ? 'block' : 'none';
 }
 
+// ── APIキー検証 ──────────────────────────────────────────────────────
+function setupApiKeyTest(btnId, inputId, engine) {
+  const btn = document.getElementById(btnId);
+  const input = document.getElementById(inputId);
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => {
+    const apiKey = input.value.trim();
+    if (!apiKey) return;
+
+    btn.disabled = true;
+    btn.textContent = t('apiKeyTesting');
+    btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+
+    chrome.runtime.sendMessage(
+      { action: 'testApiKey', engine, apiKey },
+      (res) => {
+        if (res?.ok) {
+          btn.textContent = t('apiKeyValid');
+          btn.classList.add('dvt-test-ok');
+        } else {
+          btn.textContent = t('apiKeyInvalid');
+          btn.classList.add('dvt-test-ng');
+        }
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = t('apiKeyTest');
+          btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+        }, 3000);
+      }
+    );
+  });
+
+  // キー未入力時はボタン無効化
+  function updateTestBtn() {
+    btn.disabled = !input.value.trim();
+  }
+  input.addEventListener('input', updateTestBtn);
+  updateTestBtn();
+}
+
+setupApiKeyTest('deeplTestBtn', 'deeplApiKey', 'deepl');
+setupApiKeyTest('claudeTestBtn', 'claudeApiKey', 'claude');
+setupApiKeyTest('geminiTestBtn', 'geminiApiKey', 'gemini');
+
 // ── Sync target language change to content script ────────────────────
 targetLangSel.addEventListener('change', () => {
   const lang = targetLangSel.value;
