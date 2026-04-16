@@ -60,10 +60,20 @@ var DVT = (function () {
     const el = document.createElement('div');
     el.className = 'dvt-toast';
     el.setAttribute('data-dvt', 'true');
-    el.innerHTML = `
-      <span class="dvt-toast-icon">${persistent ? '<span class="dvt-spinner dvt-spinner-sm"></span>' : '●'}</span>
-      <span class="dvt-toast-msg">${message}</span>
-    `;
+    const icon = document.createElement('span');
+    icon.className = 'dvt-toast-icon';
+    if (persistent) {
+      const spinner = document.createElement('span');
+      spinner.className = 'dvt-spinner dvt-spinner-sm';
+      icon.appendChild(spinner);
+    } else {
+      icon.textContent = '●';
+    }
+    el.appendChild(icon);
+    const msg = document.createElement('span');
+    msg.className = 'dvt-toast-msg';
+    msg.textContent = message;
+    el.appendChild(msg);
     document.body.appendChild(el);
     if (duration > 0) setTimeout(() => el.remove(), duration);
     return el;

@@ -24,17 +24,24 @@ var DVT_PAGE = (function () {
 
   // ─── デュアルビュー挿入（共通処理） ────────────────────────────────
   function insertDualView(el, idPrefix) {
-    const originalHTML = el.innerHTML;
     const id = idPrefix + Math.random().toString(36).slice(2);
     el.dataset.dvtId = id;
 
     const wrapper = document.createElement('span');
     wrapper.setAttribute('data-dvt', 'true');
-    wrapper.innerHTML = `
-      <span class="dvt-orig" data-dvt="true">${originalHTML}</span>
-      <span class="dvt-trans" data-dvt="true"><span class="dvt-spinner"></span></span>
-    `;
-    el.innerHTML = '';
+    const orig = document.createElement('span');
+    orig.className = 'dvt-orig';
+    orig.setAttribute('data-dvt', 'true');
+    // 元のDOM構造を保持するため子ノードを直接移動
+    while (el.firstChild) orig.appendChild(el.firstChild);
+    const trans = document.createElement('span');
+    trans.className = 'dvt-trans';
+    trans.setAttribute('data-dvt', 'true');
+    const spinner = document.createElement('span');
+    spinner.className = 'dvt-spinner';
+    trans.appendChild(spinner);
+    wrapper.appendChild(orig);
+    wrapper.appendChild(trans);
     el.appendChild(wrapper);
     return el;
   }
@@ -59,7 +66,9 @@ var DVT_PAGE = (function () {
           // 元のHTMLを復元してdata-dvt-idを削除
           const origEl = el.querySelector('.dvt-orig');
           if (origEl) {
-            el.innerHTML = origEl.innerHTML;
+            // 元のノードを復元
+            el.textContent = '';
+            while (origEl.firstChild) el.appendChild(origEl.firstChild);
             delete el.dataset.dvtId;
           }
         });
@@ -214,8 +223,9 @@ var DVT_PAGE = (function () {
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
       const origEl = el.querySelector('.dvt-orig');
       if (origEl) {
-        // 翻訳済み要素: 原文HTMLに戻してIDを削除
-        el.innerHTML = origEl.innerHTML;
+        // 翻訳済み要素: 原文ノードを復元してIDを削除
+        el.textContent = '';
+        while (origEl.firstChild) el.appendChild(origEl.firstChild);
         delete el.dataset.dvtId;
       }
       // dvt-pending状態（処理中）の要素は .dvt-orig が存在しないためスキップ。
@@ -423,10 +433,17 @@ var DVT_PAGE = (function () {
     summaryBlock.className = 'dvt-summary';
     summaryBlock.setAttribute('data-dvt', 'true');
     if (isPageSummary) summaryBlock.id = 'dvt-page-summary';
-    summaryBlock.innerHTML = `
-      <span class="dvt-badge dvt-badge-summary">${DVT.escapeHtml(t('summaryBadge'))}</span>
-      <div class="dvt-summary-text"><span class="dvt-spinner"></span> ${DVT.escapeHtml(t('summarizing'))}</div>
-    `;
+    const badge = document.createElement('span');
+    badge.className = 'dvt-badge dvt-badge-summary';
+    badge.textContent = t('summaryBadge');
+    summaryBlock.appendChild(badge);
+    const summaryText = document.createElement('div');
+    summaryText.className = 'dvt-summary-text';
+    const summarySpinner = document.createElement('span');
+    summarySpinner.className = 'dvt-spinner';
+    summaryText.appendChild(summarySpinner);
+    summaryText.appendChild(document.createTextNode(' ' + t('summarizing')));
+    summaryBlock.appendChild(summaryText);
     insertTarget.insertBefore(summaryBlock, insertTarget.firstChild);
     summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
@@ -447,8 +464,12 @@ var DVT_PAGE = (function () {
       summaryBlock.querySelector('.dvt-summary-text').textContent = summary;
       summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) {
-      summaryBlock.querySelector('.dvt-summary-text').innerHTML =
-        `<span class="dvt-same-lang">${DVT.escapeHtml(e.message)}</span>`;
+      const errText = summaryBlock.querySelector('.dvt-summary-text');
+      errText.textContent = '';
+      const errSpan = document.createElement('span');
+      errSpan.className = 'dvt-same-lang';
+      errSpan.textContent = e.message;
+      errText.appendChild(errSpan);
     }
   }
 

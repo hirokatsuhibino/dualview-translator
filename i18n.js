@@ -859,9 +859,21 @@ var DVT_I18N = (function () {
     container.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       const translated = t(key);
-      // innerHTML指定（selectionTip等HTMLを含むキー用）
+      // HTML指定（selectionTip等<strong>タグを含むキー用）
       if (el.hasAttribute('data-i18n-html')) {
-        el.innerHTML = translated;
+        el.textContent = '';
+        // <strong>...</strong> パターンをDOM要素に変換
+        const parts = translated.split(/(<strong>.*?<\/strong>)/);
+        parts.forEach(part => {
+          const m = part.match(/^<strong>(.*)<\/strong>$/);
+          if (m) {
+            const strong = document.createElement('strong');
+            strong.textContent = m[1];
+            el.appendChild(strong);
+          } else if (part) {
+            el.appendChild(document.createTextNode(part));
+          }
+        });
       } else {
         el.textContent = translated;
       }

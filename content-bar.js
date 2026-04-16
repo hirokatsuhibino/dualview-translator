@@ -47,14 +47,23 @@ var DVT_BAR = (function () {
     const bar = document.createElement('div');
     bar.className = 'dvt-translate-bar';
     bar.setAttribute('data-dvt', 'true');
-    bar.innerHTML = `
-      <span class="dvt-translate-bar-text">
-        ${t('translateBarMsg', { lang: DVT.escapeHtml(langName) })}
-      </span>
-      <button class="dvt-translate-bar-btn dvt-translate-bar-accept">${DVT.escapeHtml(t('translateBarAccept'))}</button>
-      <button class="dvt-translate-bar-btn dvt-translate-bar-summarize">${DVT.escapeHtml(t('translateBarSummarize'))}</button>
-      <button class="dvt-translate-bar-btn dvt-translate-bar-close" title="${DVT.escapeHtml(t('close'))}">✕</button>
-    `;
+    const barText = document.createElement('span');
+    barText.className = 'dvt-translate-bar-text';
+    barText.textContent = t('translateBarMsg', { lang: langName });
+    bar.appendChild(barText);
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'dvt-translate-bar-btn dvt-translate-bar-accept';
+    acceptBtn.textContent = t('translateBarAccept');
+    bar.appendChild(acceptBtn);
+    const summarizeBtn = document.createElement('button');
+    summarizeBtn.className = 'dvt-translate-bar-btn dvt-translate-bar-summarize';
+    summarizeBtn.textContent = t('translateBarSummarize');
+    bar.appendChild(summarizeBtn);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'dvt-translate-bar-btn dvt-translate-bar-close';
+    closeBtn.title = t('close');
+    closeBtn.textContent = '✕';
+    bar.appendChild(closeBtn);
     document.body.appendChild(bar);
     DVT.state.translateBar = bar;
 

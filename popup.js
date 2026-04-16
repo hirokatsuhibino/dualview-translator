@@ -36,6 +36,12 @@ const statusText      = document.getElementById('statusText');
 const SVG_PAGE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>';
 const SVG_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
+// SVG文字列をDOM要素に変換
+function parseSvg(svgStr) {
+  const doc = new DOMParser().parseFromString(svgStr, 'image/svg+xml');
+  return document.importNode(doc.documentElement, true);
+}
+
 // ── UI言語の初期化 ───────────────────────────────────────────────────
 DVT_I18N.loadLang((lang) => {
   uiLangSel.value = lang;
@@ -203,11 +209,20 @@ function setPageActive(active) {
   pageActive = active;
   if (active) {
     btnPage.className = 'btn btn-active';
-    btnPage.innerHTML = `${SVG_CHECK} <span>${t('translatingClick')}</span>`;
+    btnPage.textContent = '';
+    btnPage.appendChild(parseSvg(SVG_CHECK));
+    const span = document.createElement('span');
+    span.textContent = t('translatingClick');
+    btnPage.appendChild(span);
     btnUndo.style.display = 'flex';
   } else {
     btnPage.className = 'btn btn-primary';
-    btnPage.innerHTML = `${SVG_PAGE} <span data-i18n="translateFullPage">${t('translateFullPage')}</span>`;
+    btnPage.textContent = '';
+    btnPage.appendChild(parseSvg(SVG_PAGE));
+    const span = document.createElement('span');
+    span.setAttribute('data-i18n', 'translateFullPage');
+    span.textContent = t('translateFullPage');
+    btnPage.appendChild(span);
     btnUndo.style.display = 'none';
     setStatus('idle', t('statusDefault'));
   }
@@ -308,7 +323,7 @@ function saveAutoRules() {
 function renderAutoRules() {
   const list = document.getElementById('autoRuleList');
   if (!list) return;
-  list.innerHTML = '';
+  list.textContent = '';
 
   if (autoRules.length === 0) {
     const empty = document.createElement('div');
@@ -327,16 +342,31 @@ function renderAutoRules() {
       ? `${escHtml(rule.selector)} · ${t(modeLabelKey)}`
       : `${t('translateFullPage')} · ${t(modeLabelKey)}`;
 
-    item.innerHTML = `
-      <div class="rule-item-row">
-        <label class="rule-toggle">
-          <input type="checkbox" ${rule.enabled ? 'checked' : ''} data-idx="${idx}">
-          <span class="rule-pattern">${escHtml(rule.urlPattern)}</span>
-        </label>
-        <button class="rule-del" data-idx="${idx}" title="${t('autoRuleDelete')}">✕</button>
-      </div>
-      <div class="rule-item-sub">${subText}</div>
-    `;
+    const row = document.createElement('div');
+    row.className = 'rule-item-row';
+    const label = document.createElement('label');
+    label.className = 'rule-toggle';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = rule.enabled;
+    checkbox.dataset.idx = idx;
+    label.appendChild(checkbox);
+    const pattern = document.createElement('span');
+    pattern.className = 'rule-pattern';
+    pattern.textContent = rule.urlPattern;
+    label.appendChild(pattern);
+    row.appendChild(label);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'rule-del';
+    delBtn.dataset.idx = idx;
+    delBtn.title = t('autoRuleDelete');
+    delBtn.textContent = '✕';
+    row.appendChild(delBtn);
+    item.appendChild(row);
+    const sub = document.createElement('div');
+    sub.className = 'rule-item-sub';
+    sub.textContent = subText;
+    item.appendChild(sub);
     list.appendChild(item);
   });
 
