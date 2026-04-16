@@ -23,12 +23,12 @@ node -p "require('./manifest.json').version"
 ### 2. 既存zipを削除
 
 ```bash
-rm -f dualview-translator-v*.zip
+rm -f dualview-translator-*.zip
 ```
 
 ### 3. 公開用zip（拡張本体）を作成
 
-ファイル名: `dualview-translator-v<VERSION>.zip`
+ファイル名: `dualview-translator-<VERSION>.zip`
 
 含めるファイル:
 - `manifest.json`
@@ -45,7 +45,7 @@ rm -f dualview-translator-v*.zip
 - `LICENSE`
 
 ```bash
-zip -r dualview-translator-v<VERSION>.zip \
+zip -r dualview-translator-<VERSION>.zip \
   manifest.json \
   background.js \
   content-core.js \
@@ -62,12 +62,12 @@ zip -r dualview-translator-v<VERSION>.zip \
 
 ### 4. ソースコードアーカイブを作成（Firefox審査用）
 
-ファイル名: `dualview-translator-v<VERSION>-source.zip`
+ファイル名: `dualview-translator-<VERSION>-source.zip`
 
 除外するもの: `node_modules/`, `.git/`, `*.zip`
 
 ```bash
-zip -r dualview-translator-v<VERSION>-source.zip . \
+zip -r dualview-translator-<VERSION>-source.zip . \
   -x "node_modules/*" \
   -x ".git/*" \
   -x "*.zip"
@@ -76,7 +76,7 @@ zip -r dualview-translator-v<VERSION>-source.zip . \
 ### 5. 生成物を確認
 
 ```bash
-ls -lh dualview-translator-v*.zip
+ls -lh dualview-translator-*.zip
 ```
 
 ## 出力
@@ -85,8 +85,8 @@ ls -lh dualview-translator-v*.zip
 
 | ファイル | 用途 |
 |---|---|
-| `dualview-translator-v<VERSION>.zip` | Chrome Web Store / Firefox Add-ons 提出用 |
-| `dualview-translator-v<VERSION>-source.zip` | Firefox審査用ソースコード |
+| `dualview-translator-<VERSION>.zip` | Chrome Web Store / Firefox Add-ons 提出用 |
+| `dualview-translator-<VERSION>-source.zip` | Firefox審査用ソースコード |
 
 ## ルール
 
