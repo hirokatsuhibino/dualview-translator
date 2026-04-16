@@ -141,6 +141,24 @@
       min-width: 42px;
     }
 
+    .dvt-api-test-btn {
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      min-width: 56px;
+      text-align: center;
+    }
+    .dvt-api-test-btn:hover { background: var(--bg2); }
+    .dvt-api-test-btn:disabled { opacity: 0.5; cursor: default; }
+    .dvt-api-test-btn.dvt-test-ok { color: #22c55e; border-color: #22c55e; }
+    .dvt-api-test-btn.dvt-test-ng { color: #ef4444; border-color: #ef4444; }
+
     select {
       flex: 1;
       background: var(--bg3);
@@ -568,6 +586,7 @@
         <div class="lang-row">
           <span class="lang-label" data-i18n="deeplApiKeyLabel">APIキー</span>
           <input type="password" id="deeplApiKey" data-i18n-placeholder="deeplApiKeyPlaceholder" placeholder="APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+          <button class="dvt-api-test-btn" id="deeplTestBtn" data-i18n="apiKeyTest">テスト</button>
         </div>
       </div>
     </div>
@@ -585,12 +604,14 @@
         <div class="lang-row">
           <span class="lang-label" data-i18n="claudeApiKeyLabel">APIキー</span>
           <input type="password" id="claudeApiKey" data-i18n-placeholder="claudeApiKeyPlaceholder" placeholder="Claude APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+          <button class="dvt-api-test-btn" id="claudeTestBtn" data-i18n="apiKeyTest">テスト</button>
         </div>
       </div>
       <div id="geminiSettings" style="display:none; margin-top: 8px;">
         <div class="lang-row">
           <span class="lang-label" data-i18n="geminiApiKeyLabel">APIキー</span>
           <input type="password" id="geminiApiKey" data-i18n-placeholder="geminiApiKeyPlaceholder" placeholder="Gemini APIキーを入力" style="flex:1; background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; outline:none;">
+          <button class="dvt-api-test-btn" id="geminiTestBtn" data-i18n="apiKeyTest">テスト</button>
         </div>
       </div>
     </div>

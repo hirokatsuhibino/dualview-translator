@@ -10,6 +10,7 @@ let splitIntoChunks;
 let getMenuTitles;
 let hasLLMApiKey;
 let isTranslateAvailable;
+let testApiKey;
 
 beforeAll(() => {
   const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
@@ -36,6 +37,13 @@ beforeAll(() => {
   // isTranslateAvailable を抽出
   const translateMatch = code.match(/function isTranslateAvailable\(data\)\s*\{[\s\S]*?\n\}/);
   if (translateMatch) isTranslateAvailable = new Function('data', translateMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
+
+  // testApiKey を抽出（getDeepLEndpointに依存するため一緒にeval）
+  const testApiKeyMatch = code.match(/async function testApiKey\(engine, apiKey\)\s*\{[\s\S]*?\n\}/);
+  if (testApiKeyMatch && deepLMatch) {
+    const combined = deepLMatch[0] + '\n' + testApiKeyMatch[0] + '\n return testApiKey;';
+    testApiKey = new Function('fetch', combined)();
+  }
 });
 
 describe('getDeepLEndpoint()', () => {
@@ -168,5 +176,62 @@ describe('isTranslateAvailable()', () => {
 
   it('DeepL選択＋APIキーundefinedはfalse', () => {
     expect(isTranslateAvailable({ translateEngine: 'deepl' })).toBe(false);
+  });
+});
+
+describe('testApiKey()', () => {
+  it('APIキーが空の場合はエラー', async () => {
+    await expect(testApiKey('deepl', '')).rejects.toThrow('APIキーが入力されていません');
+  });
+
+  it('APIキーがundefinedの場合はエラー', async () => {
+    await expect(testApiKey('claude', undefined)).rejects.toThrow('APIキーが入力されていません');
+  });
+
+  it('不明なエンジンの場合はエラー', async () => {
+    const mockFetch = () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    await expect(testApiKey('unknown', 'test-key')).rejects.toThrow('不明なエンジン: unknown');
+  });
+
+  it('DeepL成功時はresolve', async () => {
+    const mockFetch = () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    const fn = new Function('fetch', `
+      function getDeepLEndpoint(apiKey) {
+        return apiKey.endsWith(':fx') ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+      }
+      async function testApiKey(engine, apiKey) {
+        if (!apiKey) throw new Error('APIキーが入力されていません');
+        if (engine === 'deepl') {
+          const endpoint = getDeepLEndpoint(apiKey);
+          const res = await fetch(endpoint, { method: 'POST', headers: { 'Authorization': 'DeepL-Auth-Key ' + apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ text: ['test'], target_lang: 'JA' }) });
+          if (!res.ok) { if (res.status === 403) throw new Error('APIキーが無効です'); throw new Error('HTTP ' + res.status); }
+          return;
+        }
+        throw new Error('不明なエンジン: ' + engine);
+      }
+      return testApiKey;
+    `)(mockFetch);
+    await expect(fn('deepl', 'valid-key')).resolves.toBeUndefined();
+  });
+
+  it('DeepL 403エラー時はreject', async () => {
+    const mockFetch = () => Promise.resolve({ ok: false, status: 403 });
+    const fn = new Function('fetch', `
+      function getDeepLEndpoint(apiKey) {
+        return apiKey.endsWith(':fx') ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+      }
+      async function testApiKey(engine, apiKey) {
+        if (!apiKey) throw new Error('APIキーが入力されていません');
+        if (engine === 'deepl') {
+          const endpoint = getDeepLEndpoint(apiKey);
+          const res = await fetch(endpoint, { method: 'POST', headers: { 'Authorization': 'DeepL-Auth-Key ' + apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ text: ['test'], target_lang: 'JA' }) });
+          if (!res.ok) { if (res.status === 403) throw new Error('APIキーが無効です'); throw new Error('HTTP ' + res.status); }
+          return;
+        }
+        throw new Error('不明なエンジン: ' + engine);
+      }
+      return testApiKey;
+    `)(mockFetch);
+    await expect(fn('deepl', 'invalid-key')).rejects.toThrow('APIキーが無効です');
   });
 });

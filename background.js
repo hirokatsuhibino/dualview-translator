@@ -145,6 +145,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
+  if (msg.action === 'testApiKey') {
+    testApiKey(msg.engine, msg.apiKey)
+      .then(() => sendResponse({ ok: true }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
   if (msg.action === 'summarize') {
     getLLMConfig().then(config => {
       return fetchSummary(msg.text, msg.targetLang, config);
@@ -359,6 +365,68 @@ async function fetchGeminiSummary(text, targetLang, apiKey) {
 
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ─── APIキー検証 ────────────────────────────────────────────────────
+async function testApiKey(engine, apiKey) {
+  if (!apiKey) throw new Error('APIキーが入力されていません');
+
+  if (engine === 'deepl') {
+    const endpoint = getDeepLEndpoint(apiKey);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `DeepL-Auth-Key ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: ['test'], target_lang: 'JA' }),
+    });
+    if (!res.ok) {
+      if (res.status === 403) throw new Error('APIキーが無効です');
+      throw new Error(`HTTP ${res.status}`);
+    }
+    return;
+  }
+
+  if (engine === 'claude') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('APIキーが無効です');
+      throw new Error(`HTTP ${res.status}`);
+    }
+    return;
+  }
+
+  if (engine === 'gemini') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: 'Hi' }] }],
+      }),
+    });
+    if (!res.ok) {
+      if (res.status === 400) throw new Error('APIキーが無効です');
+      throw new Error(`HTTP ${res.status}`);
+    }
+    return;
+  }
+
+  throw new Error(`不明なエンジン: ${engine}`);
 }
 
 // ─── 言語検出（常にGoogle APIを使用 — 無料で高速） ───────────────────
