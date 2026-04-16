@@ -18,6 +18,7 @@ LLM（Claude / Gemini）による要約機能も搭載。
 ├── content.css            # 注入スタイル（ダーク/ライト対応）
 ├── i18n.js                # 多言語辞書(DVT_I18N) + t()ヘルパー（11言語対応）
 ├── popup.html             # ポップアップUI（タブ式: 翻訳/設定）
+├── popup-init.js          # ポップアップ初期化（テーマ適用・ショートカット表示）
 ├── popup.js               # ポップアップのイベント処理・タブ切り替え
 ├── icons/                 # 拡張アイコン（16/32/48/128px）
 ├── LICENSE                # MIT License

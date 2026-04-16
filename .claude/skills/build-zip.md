@@ -1,6 +1,7 @@
 ---
 name: リリースzip作成
 description: 拡張機能の公開用zip（拡張本体）とソースコードアーカイブをバージョン付きで作成する
+user_invocable: true
 ---
 
 # リリースzip作成スキル
@@ -40,6 +41,7 @@ rm -f dualview-translator-*.zip
 - `content.css`
 - `i18n.js`
 - `popup.html`
+- `popup-init.js`
 - `popup.js`
 - `icons/`
 - `LICENSE`
@@ -55,6 +57,7 @@ zip -r dualview-translator-<VERSION>.zip \
   content.css \
   i18n.js \
   popup.html \
+  popup-init.js \
   popup.js \
   icons/ \
   LICENSE
@@ -91,5 +94,5 @@ ls -lh dualview-translator-*.zip
 ## ルール
 
 - バージョンは必ず `manifest.json` から取得する（手入力しない）
-- 作業ディレクトリは `/Users/nonki/IdeaProjects/dualview-translator`
 - 既存のzipは上書き前に削除する
+- 新しいファイルが追加された場合はこのスキルの含めるファイルリストも更新する

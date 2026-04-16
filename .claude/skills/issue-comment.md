@@ -1,6 +1,7 @@
 ---
 name: Issueコメント投稿
 description: 実装完了後にGitHub Issueへ操作方法・実装詳細をコメントとして投稿する
+user_invocable: true
 ---
 
 # Issueコメント投稿スキル

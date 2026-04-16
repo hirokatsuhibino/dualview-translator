@@ -1,6 +1,7 @@
 ---
 name: i18n全言語キー追加
 description: i18n.jsに新しいメッセージキーを全11言語分追加する
+user_invocable: true
 ---
 
 # i18n全言語キー追加スキル

@@ -1,6 +1,7 @@
 ---
 name: Issue対応ワークフロー
 description: GitHub Issueの調査→実装→コミット→pushを一連で実行
+user_invocable: true
 ---
 
 # Issue対応ワークフロー
@@ -52,7 +53,7 @@ git push
 | ページ/範囲/要素翻訳 | `content-page.js` |
 | 翻訳バー・言語検出 | `content-bar.js` |
 | 翻訳API・エンジン | `background.js` |
-| ポップアップUI | `popup.html` + `popup.js` |
+| ポップアップUI | `popup.html` + `popup-init.js` + `popup.js` |
 | UI文字列 | `i18n.js` |
 | スタイル | `content.css` |
 | 権限・スクリプト定義 | `manifest.json` |
