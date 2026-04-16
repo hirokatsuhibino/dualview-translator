@@ -1,5 +1,17 @@
 # リリースノート
 
+## v1.2.3（2026-04-16）
+
+### 修正
+
+- **Firefox互換性の改善**: Firefox Add-ons申請時の警告をすべて解消
+  - 全ファイルの `innerHTML` をDOM API（`createElement` 等）に置換しセキュリティ警告を解消
+  - ポップアップのインラインスクリプトを外部ファイル（`popup-init.js`）に分離（CSP対応）
+  - `manifest.json` に `data_collection_permissions` を追加（Firefox新規拡張で必須化）
+  - Firefox最低バージョンを109→112に引き上げ（`background.type` サポートに対応）
+
+---
+
 ## v1.2.2（2026-04-16）
 
 ### 修正
