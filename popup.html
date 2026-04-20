@@ -247,6 +247,10 @@
       letter-spacing: 0.03em;
     }
 
+    /* iOS Safari等ショートカット非対応環境で表示を隠す */
+    :root.dvt-no-shortcuts .btn-shortcut,
+    :root.dvt-no-shortcuts #shortcutInfoRow { display: none !important; }
+
     /* ── Status ── */
     .status-bar {
       padding: 10px 18px;
@@ -661,8 +665,8 @@
     <div class="section">
       <div class="info-box">
         <span data-i18n="selectionTip" data-i18n-html>選択翻訳：ページ上でテキストを選択すると、自動的に翻訳パネルが表示されます。</span><br>
-        <span data-i18n="engineInfo" data-i18n-html>翻訳エンジン：Google 翻訳（無料）</span><br>
-        <span data-i18n="shortcutInfo" data-i18n-html>ショートカット：Ctrl+Shift+T（ページ翻訳）/ Ctrl+Shift+Y（選択翻訳）/ Ctrl+Shift+R（領域選択）</span>
+        <span data-i18n="engineInfo" data-i18n-html>翻訳エンジン：Google 翻訳（無料）</span>
+        <span id="shortcutInfoRow"><br><span data-i18n="shortcutInfo" data-i18n-html>ショートカット：Ctrl+Shift+T（ページ翻訳）/ Ctrl+Shift+Y（選択翻訳）/ Ctrl+Shift+R（領域選択）</span></span>
       </div>
     </div>
   </div>
