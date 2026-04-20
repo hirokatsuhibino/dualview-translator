@@ -25,3 +25,11 @@
     });
   }
 })();
+
+// iOS Safari等 chrome.commands 非対応環境ではショートカット表示を隠す
+(function() {
+  var hasCommands = typeof chrome !== 'undefined' && typeof chrome.commands !== 'undefined';
+  if (!hasCommands) {
+    document.documentElement.classList.add('dvt-no-shortcuts');
+  }
+})();

@@ -31,35 +31,42 @@ function isTranslateAvailable(data) {
   return data.translateEngine !== 'deepl' || !!data.deeplApiKey;
 }
 
+// ─── 機能検出フラグ（iOS Safariはcontextual menu / commands非対応） ──
+const HAS_CONTEXT_MENUS = typeof chrome.contextMenus !== 'undefined';
+const HAS_COMMANDS = typeof chrome.commands !== 'undefined';
+
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
-    const titles = getMenuTitles(data.uiLang || 'ja');
-    const llmEnabled = hasLLMApiKey(data);
-    const translateEnabled = isTranslateAvailable(data);
-    chrome.contextMenus.create({
-      id: 'dvt-translate-selection',
-      title: titles.selection,
-      contexts: ['selection'],
-      enabled: translateEnabled,
-    });
-    chrome.contextMenus.create({
-      id: 'dvt-translate-element',
-      title: titles.element,
-      contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
-      enabled: translateEnabled,
-    });
-    chrome.contextMenus.create({
-      id: 'dvt-translate-summarize-element',
-      title: titles.elementSummary,
-      contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
-      enabled: translateEnabled && llmEnabled,
+if (HAS_CONTEXT_MENUS) {
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
+      const titles = getMenuTitles(data.uiLang || 'ja');
+      const llmEnabled = hasLLMApiKey(data);
+      const translateEnabled = isTranslateAvailable(data);
+      chrome.contextMenus.create({
+        id: 'dvt-translate-selection',
+        title: titles.selection,
+        contexts: ['selection'],
+        enabled: translateEnabled,
+      });
+      chrome.contextMenus.create({
+        id: 'dvt-translate-element',
+        title: titles.element,
+        contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
+        enabled: translateEnabled,
+      });
+      chrome.contextMenus.create({
+        id: 'dvt-translate-summarize-element',
+        title: titles.elementSummary,
+        contexts: ['page', 'frame', 'link', 'image', 'video', 'audio'],
+        enabled: translateEnabled && llmEnabled,
+      });
     });
   });
-});
+}
 
 // ─── UI言語変更・APIキー変更時にメニューを更新 ──────────────────────
 chrome.storage.onChanged.addListener((changes) => {
+  if (!HAS_CONTEXT_MENUS) return;
   if (changes.uiLang) {
     const titles = getMenuTitles(changes.uiLang.newValue);
     chrome.contextMenus.update('dvt-translate-selection', { title: titles.selection });
@@ -88,46 +95,50 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 // ─── コンテキストメニュークリック ─────────────────────────────────────
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab?.id) return;
-  if (info.menuItemId === 'dvt-translate-selection' && info.selectionText) {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'contextMenuTranslate',
-      text: info.selectionText,
-    });
-  }
-  if (info.menuItemId === 'dvt-translate-element') {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'contextMenuTranslateElement',
-    });
-  }
-  if (info.menuItemId === 'dvt-translate-summarize-element') {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'contextMenuTranslateAndSummarize',
-    });
-  }
-});
+if (HAS_CONTEXT_MENUS) {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (!tab?.id) return;
+    if (info.menuItemId === 'dvt-translate-selection' && info.selectionText) {
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'contextMenuTranslate',
+        text: info.selectionText,
+      });
+    }
+    if (info.menuItemId === 'dvt-translate-element') {
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'contextMenuTranslateElement',
+      });
+    }
+    if (info.menuItemId === 'dvt-translate-summarize-element') {
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'contextMenuTranslateAndSummarize',
+      });
+    }
+  });
+}
 
 // ─── キーボードショートカット ─────────────────────────────────────────
-chrome.commands.onCommand.addListener(async (command) => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return;
+if (HAS_COMMANDS) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
 
-  if (command === 'toggle-page-translate') {
-    chrome.storage.local.get('targetLang', (data) => {
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'togglePageTranslate',
-        lang: data.targetLang || 'ja',
+    if (command === 'toggle-page-translate') {
+      chrome.storage.local.get('targetLang', (data) => {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'togglePageTranslate',
+          lang: data.targetLang || 'ja',
+        });
       });
-    });
-  }
-  if (command === 'translate-selection') {
-    chrome.tabs.sendMessage(tab.id, { action: 'keyboardTranslateSelection' });
-  }
-  if (command === 'enter-region-mode') {
-    chrome.tabs.sendMessage(tab.id, { action: 'enterRegionMode' });
-  }
-});
+    }
+    if (command === 'translate-selection') {
+      chrome.tabs.sendMessage(tab.id, { action: 'keyboardTranslateSelection' });
+    }
+    if (command === 'enter-region-mode') {
+      chrome.tabs.sendMessage(tab.id, { action: 'enterRegionMode' });
+    }
+  });
+}
 
 // ─── メッセージハンドラ ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
