@@ -20,3 +20,7 @@ Copyright (c) Orangesoft Inc.
 - 作業が終わったらPRを作成してマージする（ローカルマージ禁止）
 - PRには必ず対応するIssueを紐づける（なければIssueを先に作成する）
 - PRのbodyに `closes #<番号>` を含め、PRマージ時にIssueも自動クローズされるようにする
+
+# PRレビュー対応のルール
+
+PRレビューの取得・修正適用・インライン返信・マージ済みPRへの follow-up の詳細は `.claude/rules/pr-review.md` を参照。
