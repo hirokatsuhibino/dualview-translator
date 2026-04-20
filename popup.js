@@ -520,13 +520,16 @@ document.getElementById('btnAddRule').addEventListener('click', () => {
     // 既存ルールを更新
     const idx = autoRules.findIndex(r => r.id === editingRuleId);
     if (idx !== -1) {
-      const prevSelector = autoRules[idx].selector;
-      const prevMode = autoRules[idx].mode;
-      autoRules[idx] = { ...autoRules[idx], urlPattern, selector, mode };
+      const prev = autoRules[idx];
+      const changed = prev.urlPattern !== urlPattern
+        || prev.selector !== selector
+        || prev.mode !== mode;
+      autoRules[idx] = { ...prev, urlPattern, selector, mode };
       saveAutoRules();
-      // selector/mode が変わった場合は既存 Observer を一旦停止して再起動させる
-      if (prevSelector !== selector || prevMode !== mode) {
-        sendToContent({ action: 'stopAutoRuleObserver', ruleId: editingRuleId });
+      // urlPattern/selector/mode のいずれかが変わったら現ページに再適用を依頼する
+      // （旧Observer停止 → 最新ルールで checkAutoRules を再実行）
+      if (changed) {
+        sendToContent({ action: 'reapplyAutoRule', ruleId: editingRuleId });
       }
     }
     exitEditMode();

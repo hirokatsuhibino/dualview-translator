@@ -49,15 +49,20 @@ function createRuleStore(initialRules = []) {
       const idx = state.rules.findIndex(r => r.id === state.editingRuleId);
       if (idx === -1) return { ok: false, reason: 'not-found' };
       const prev = state.rules[idx];
+      const newSelector = state.form.selector.trim();
+      const newMode = state.form.mode;
       state.rules[idx] = {
         ...prev,
         urlPattern,
-        selector: state.form.selector.trim(),
-        mode: state.form.mode,
+        selector: newSelector,
+        mode: newMode,
       };
-      const observerRestart = prev.selector !== state.form.selector.trim() || prev.mode !== state.form.mode;
+      // urlPattern/selector/mode のいずれかが変わったら再適用が必要
+      const needsReapply = prev.urlPattern !== urlPattern
+        || prev.selector !== newSelector
+        || prev.mode !== newMode;
       exitEditMode();
-      return { ok: true, action: 'update', observerRestart };
+      return { ok: true, action: 'update', needsReapply };
     }
 
     state.rules.push(makeRule({
@@ -118,7 +123,7 @@ describe('自動翻訳ルールの編集フロー', () => {
     store.state.form.selector = 'article';
     store.state.form.mode = 'translate';
     const result = store.submitForm();
-    expect(result).toEqual({ ok: true, action: 'update', observerRestart: true });
+    expect(result).toEqual({ ok: true, action: 'update', needsReapply: true });
     expect(store.state.rules).toHaveLength(1);
     expect(store.state.rules[0].urlPattern).toBe('*://foo.com/page/*');
     expect(store.state.rules[0].selector).toBe('article');
@@ -126,12 +131,18 @@ describe('自動翻訳ルールの編集フロー', () => {
     expect(store.state.rules[0].id).toBe('rule-1'); // IDは維持
   });
 
-  it('selector/mode に変更がない更新では observerRestart が false', () => {
+  it('URLパターンだけ変えても needsReapply は true（開いているページで再評価が必要）', () => {
     store.enterEditMode('rule-1');
-    // URLパターンだけ変える
     store.state.form.urlPattern = '*://foo.com/different/*';
     const result = store.submitForm();
-    expect(result.observerRestart).toBe(false);
+    expect(result.needsReapply).toBe(true);
+  });
+
+  it('全フィールド同一なら needsReapply は false', () => {
+    store.enterEditMode('rule-1');
+    // 値を変えずに送信
+    const result = store.submitForm();
+    expect(result.needsReapply).toBe(false);
   });
 
   it('更新後は編集モードが解除される', () => {
@@ -193,5 +204,34 @@ describe('ルール項目のDOM構造（クリック伝播の回帰防止）', (
   it('削除ボタンの click が stopPropagation されている', () => {
     const delHandlerMatch = popupJsSource.match(/querySelectorAll\(['"]\.rule-del['"]\)[\s\S]{0,400}?stopPropagation/);
     expect(delHandlerMatch).not.toBeNull();
+  });
+});
+
+describe('ルール更新時の再適用（reapplyAutoRule メッセージ）', () => {
+  const popupJsSource = readFileSync(resolve(import.meta.dirname, '..', 'popup.js'), 'utf-8');
+  const coreJsSource = readFileSync(resolve(import.meta.dirname, '..', 'content-core.js'), 'utf-8');
+  const barJsSource = readFileSync(resolve(import.meta.dirname, '..', 'content-bar.js'), 'utf-8');
+
+  it('popup は更新時に reapplyAutoRule メッセージを送信する', () => {
+    expect(popupJsSource).toMatch(/action:\s*['"]reapplyAutoRule['"]/);
+  });
+
+  it('content-core は reapplyAutoRule メッセージを受信する', () => {
+    expect(coreJsSource).toMatch(/msg\.action === ['"]reapplyAutoRule['"]/);
+  });
+
+  it('content-core は reapplyAutoRule 受信時に stopAutoRuleObserver と checkAutoRules を呼ぶ', () => {
+    // reapplyAutoRule ハンドラ本体に両方の呼び出しが含まれる
+    const handlerMatch = coreJsSource.match(
+      /msg\.action === ['"]reapplyAutoRule['"][\s\S]{0,400}?sendResponse/
+    );
+    expect(handlerMatch).not.toBeNull();
+    expect(handlerMatch[0]).toMatch(/stopAutoRuleObserver/);
+    expect(handlerMatch[0]).toMatch(/checkAutoRules/);
+  });
+
+  it('content-bar の checkAutoRules は公開エクスポートに含まれている', () => {
+    // content-core が DVT_BAR.checkAutoRules() を呼べるよう公開されている必要がある
+    expect(barJsSource).toMatch(/return\s*\{[^}]*checkAutoRules[^}]*\}/);
   });
 });
