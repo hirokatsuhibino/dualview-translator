@@ -69,7 +69,7 @@ describe('DVT_I18N', () => {
       'translateBtn', 'regionHint', 'regionHintSummarize',
       'tabTranslate', 'tabRules', 'tabSettings',
       'translateAndSummarize', 'translateRegionSummarize',
-      'autoRuleAdd', 'autoRuleUpdate', 'autoRuleCancel',
+      'autoRuleAdd', 'autoRuleUpdate', 'autoRuleCancel', 'autoRuleNotFound',
     ];
 
     for (const lang of langs) {

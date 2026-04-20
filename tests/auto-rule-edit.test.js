@@ -6,9 +6,12 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 // popup.js と同じデータ形状（id/urlPattern/selector/mode/enabled）
+// ID生成は決定的にする（Math.random 衝突・テスト非決定性の回避）
+let __ruleIdCounter = 0;
+function resetRuleIdCounter() { __ruleIdCounter = 0; }
 function makeRule(overrides = {}) {
   return {
-    id: 'r' + Math.random().toString(36).slice(2),
+    id: 'r' + (++__ruleIdCounter),
     urlPattern: '*://example.com/*',
     selector: '',
     mode: 'translate',
@@ -88,6 +91,7 @@ describe('自動翻訳ルールの編集フロー', () => {
   });
 
   beforeEach(() => {
+    resetRuleIdCounter();
     store = createRuleStore([existingRule]);
   });
 
@@ -233,5 +237,47 @@ describe('ルール更新時の再適用（reapplyAutoRule メッセージ）', 
   it('content-bar の checkAutoRules は公開エクスポートに含まれている', () => {
     // content-core が DVT_BAR.checkAutoRules() を呼べるよう公開されている必要がある
     expect(barJsSource).toMatch(/return\s*\{[^}]*checkAutoRules[^}]*\}/);
+  });
+});
+
+describe('ルール一覧のアクセシビリティと i18n 表示の回帰防止', () => {
+  const popupJsSource = readFileSync(resolve(import.meta.dirname, '..', 'popup.js'), 'utf-8');
+
+  it('rule-item に role="button" / tabindex / aria-pressed が付与されている', () => {
+    expect(popupJsSource).toMatch(/setAttribute\(['"]role['"],\s*['"]button['"]\)/);
+    expect(popupJsSource).toMatch(/\.tabIndex\s*=\s*0/);
+    expect(popupJsSource).toMatch(/setAttribute\(['"]aria-pressed['"],/);
+  });
+
+  it('rule-item に keydown ハンドラが登録されて Enter / Space を拾う', () => {
+    expect(popupJsSource).toMatch(/addEventListener\(['"]keydown['"][\s\S]{0,200}?Enter/);
+    expect(popupJsSource).toMatch(/addEventListener\(['"]keydown['"][\s\S]{0,200}?['"] ['"]/);
+  });
+
+  it('subText では textContent 用に escHtml を使わない（二重エスケープ防止）', () => {
+    // 旧バグ: escHtml(rule.selector) してから textContent に代入して &gt; が表示されていた
+    expect(popupJsSource).not.toMatch(/escHtml\(rule\.selector\)/);
+    // 未使用になった escHtml 関数自体も削除済み
+    expect(popupJsSource).not.toMatch(/function escHtml\(/);
+  });
+
+  it('編集モード遷移時に btnAddRule の data-i18n キーも autoRuleUpdate に切り替わる', () => {
+    // textContent だけ差し替えると applyToDOM() でラベルが戻るため dataset.i18n も変更する
+    // setAddButtonLabelKey('autoRuleUpdate') / ('autoRuleAdd') 両方の呼び出しが必要
+    expect(popupJsSource).toMatch(/setAddButtonLabelKey\(['"]autoRuleUpdate['"]\)/);
+    expect(popupJsSource).toMatch(/setAddButtonLabelKey\(['"]autoRuleAdd['"]\)/);
+    // 実装側で dataset.i18n を更新していることも確認（textContent だけでは不十分）
+    expect(popupJsSource).toMatch(/btn\.dataset\.i18n\s*=/);
+  });
+
+  it('要素ピッカー結果復元時は tabBtnRules（ルールタブ）に切り替える', () => {
+    // 旧バグ: tabBtnSettings を click しており、ルールフォームが見えなかった
+    expect(popupJsSource).toMatch(/getElementById\(['"]tabBtnRules['"]\)\.click\(\)/);
+    expect(popupJsSource).not.toMatch(/pendingRuleSelector[\s\S]{0,500}tabBtnSettings/);
+  });
+
+  it('findIndex で見つからない場合は exitEditMode せず通知する', () => {
+    // 旧実装は idx === -1 時に exitEditMode() に落ち込んで編集内容が失われていた
+    expect(popupJsSource).toMatch(/idx === -1[\s\S]{0,300}?autoRuleNotFound/);
   });
 });

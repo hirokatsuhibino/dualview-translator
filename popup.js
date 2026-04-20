@@ -362,11 +362,6 @@ let autoRules = [];
 // 編集中ルールのID（null のとき新規追加モード）
 let editingRuleId = null;
 
-// HTML特殊文字のエスケープ（content scriptのDVT.escapeHtmlは使えないため独自実装）
-function escHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function loadAutoRules() {
   chrome.storage.local.get('autoRules', (data) => {
     autoRules = data.autoRules || [];
@@ -378,6 +373,14 @@ function saveAutoRules() {
   chrome.storage.local.set({ autoRules });
 }
 
+// ボタンラベルを data-i18n キーごと切り替える
+// （textContent だけ差し替えると DVT_I18N.applyToDOM() でラベルが戻ってしまう）
+function setAddButtonLabelKey(key) {
+  const btn = document.getElementById('btnAddRule');
+  btn.dataset.i18n = key;
+  btn.textContent = t(key);
+}
+
 // 編集モードへ切り替え（select-to-edit: 一覧項目タップでフォームに値をセット）
 function enterEditMode(ruleId) {
   const rule = autoRules.find(r => r.id === ruleId);
@@ -386,7 +389,7 @@ function enterEditMode(ruleId) {
   document.getElementById('ruleUrlPattern').value = rule.urlPattern;
   document.getElementById('ruleSelector').value = rule.selector || '';
   document.getElementById('ruleMode').value = rule.mode || 'translate';
-  document.getElementById('btnAddRule').textContent = t('autoRuleUpdate');
+  setAddButtonLabelKey('autoRuleUpdate');
   document.getElementById('btnCancelRuleEdit').style.display = '';
   renderAutoRules();
 }
@@ -397,7 +400,7 @@ function exitEditMode() {
   document.getElementById('ruleUrlPattern').value = '';
   document.getElementById('ruleSelector').value = '';
   document.getElementById('ruleMode').value = 'translate';
-  document.getElementById('btnAddRule').textContent = t('autoRuleAdd');
+  setAddButtonLabelKey('autoRuleAdd');
   document.getElementById('btnCancelRuleEdit').style.display = 'none';
   renderAutoRules();
 }
@@ -420,10 +423,15 @@ function renderAutoRules() {
     item.className = 'rule-item';
     if (rule.id === editingRuleId) item.classList.add('editing');
     item.dataset.ruleId = rule.id;
+    // キーボード操作・スクリーンリーダー対応
+    item.setAttribute('role', 'button');
+    item.tabIndex = 0;
+    item.setAttribute('aria-pressed', String(rule.id === editingRuleId));
 
     const modeLabelKey = rule.mode === 'summarize' ? 'autoRuleModeSummarize' : 'autoRuleModeTranslate';
+    // textContent に代入するのでエスケープ不要（エスケープすると &gt; 等がそのまま表示される）
     const subText = rule.selector
-      ? `${escHtml(rule.selector)} · ${t(modeLabelKey)}`
+      ? `${rule.selector} · ${t(modeLabelKey)}`
       : `${t('translateFullPage')} · ${t(modeLabelKey)}`;
 
     const row = document.createElement('div');
@@ -499,6 +507,13 @@ function renderAutoRules() {
         enterEditMode(ruleId);
       }
     });
+    // キーボード（Enter / Space）でも同じ操作ができるように
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        item.click();
+      }
+    });
   });
 }
 
@@ -519,18 +534,22 @@ document.getElementById('btnAddRule').addEventListener('click', () => {
   if (editingRuleId) {
     // 既存ルールを更新
     const idx = autoRules.findIndex(r => r.id === editingRuleId);
-    if (idx !== -1) {
-      const prev = autoRules[idx];
-      const changed = prev.urlPattern !== urlPattern
-        || prev.selector !== selector
-        || prev.mode !== mode;
-      autoRules[idx] = { ...prev, urlPattern, selector, mode };
-      saveAutoRules();
-      // urlPattern/selector/mode のいずれかが変わったら現ページに再適用を依頼する
-      // （旧Observer停止 → 最新ルールで checkAutoRules を再実行）
-      if (changed) {
-        sendToContent({ action: 'reapplyAutoRule', ruleId: editingRuleId });
-      }
+    if (idx === -1) {
+      // 編集中に他コンテキスト（storage event等）で削除されていたケース。
+      // 編集内容を失わないようにフォームと編集状態は維持してユーザーに通知する
+      alert(t('autoRuleNotFound'));
+      return;
+    }
+    const prev = autoRules[idx];
+    const changed = prev.urlPattern !== urlPattern
+      || prev.selector !== selector
+      || prev.mode !== mode;
+    autoRules[idx] = { ...prev, urlPattern, selector, mode };
+    saveAutoRules();
+    // urlPattern/selector/mode のいずれかが変わったら現ページに再適用を依頼する
+    // （旧Observer停止 → 最新ルールで checkAutoRules を再実行）
+    if (changed) {
+      sendToContent({ action: 'reapplyAutoRule', ruleId: editingRuleId });
     }
     exitEditMode();
   } else {
@@ -587,8 +606,8 @@ document.getElementById('btnPickSelector').addEventListener('click', async () =>
       }
       // storageから削除
       chrome.storage.local.remove(['pendingRuleSelector', 'pendingRuleUrlPattern']);
-      // 設定タブに切り替え
-      document.getElementById('tabBtnSettings').click();
+      // ルールタブに切り替え（フォームが表示されるタブへ）
+      document.getElementById('tabBtnRules').click();
     }
   });
 })();
