@@ -5,6 +5,6 @@
 git pull request以外のコーディングルールなどについては、
 [../CLAUDE.md](../CLAUDE.md) を参照してください。
 
-# git pull request レビューおよびコメント生成の方針
+# Pull Request レビューおよびコメント生成の方針
 
-.github/pr-guidelines.md を参照してください。
+[./pr-guidelines.md](./pr-guidelines.md) を参照してください。
