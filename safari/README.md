@@ -83,8 +83,13 @@ xcrun safari-web-extension-converter . \
 - `ViewController.swift` の force-unwrap / force-cast 排除（クラッシュ回避）
 - `Resources/Style.css` の重複 CSS ルール除去
 - `project.pbxproj` から runtime に不要なファイル（`node_modules/`・`tests/`・`docs/`・`README.md` 等）を除外する調整
+- `Assets.xcassets/AppIcon.appiconset/` — `icons/icon128.png` からリサイズして差し替え済み（Xcode デフォルトは使わない）
 
 再生成後は Git diff で上記を適用し直してください。
+
+### アプリアイコンについて
+
+現状の AppIcon は `icons/icon128.png` を `sips` でリサイズして生成。元が 128px のため **1024px は拡大ぼやけあり**。App Store 提出前に本番 HD アイコン（1024x1024）を差し替え推奨。
 
 ## ディレクトリ構成
 
