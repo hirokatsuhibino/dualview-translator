@@ -67,8 +67,9 @@ describe('DVT_I18N', () => {
     // 日本語をベースに全言語で同じキーが存在するか確認
     const requiredKeys = [
       'translateBtn', 'regionHint', 'regionHintSummarize',
-      'tabTranslate', 'tabSettings',
+      'tabTranslate', 'tabRules', 'tabSettings',
       'translateAndSummarize', 'translateRegionSummarize',
+      'autoRuleAdd', 'autoRuleUpdate', 'autoRuleCancel', 'autoRuleNotFound',
     ];
 
     for (const lang of langs) {

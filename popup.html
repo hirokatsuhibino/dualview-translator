@@ -368,6 +368,18 @@
       border-radius: 7px;
       padding: 7px 10px;
       margin-bottom: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .rule-item:hover {
+      border-color: var(--btn-sec-hover-border);
+    }
+
+    .rule-item.editing {
+      border-color: var(--accent);
+      background: var(--bg3);
+      box-shadow: 0 0 0 1px var(--accent);
     }
 
     .rule-item-row {
@@ -376,16 +388,7 @@
       gap: 6px;
     }
 
-    .rule-toggle {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
-      cursor: pointer;
-      min-width: 0;
-    }
-
-    .rule-toggle input[type=checkbox] {
+    .rule-toggle-cb {
       flex-shrink: 0;
       accent-color: var(--accent);
       width: 14px;
@@ -400,6 +403,8 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-family: 'DM Mono', monospace;
+      flex: 1;
+      min-width: 0;
     }
 
     .rule-del {
@@ -465,6 +470,13 @@
       font-size: 12px;
     }
 
+    .rule-cancel-btn {
+      flex-shrink: 0;
+      width: auto;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
     /* ── Rule Input Row ── */
     .rule-input-row {
       display: flex;
@@ -513,6 +525,7 @@
   <!-- タブバー -->
   <div class="dvt-tab-bar">
     <button class="dvt-tab active" id="tabBtnTranslate" data-tab="tabTranslate" data-i18n="tabTranslate">翻訳</button>
+    <button class="dvt-tab" id="tabBtnRules" data-tab="tabRules" data-i18n="tabRules">ルール</button>
     <button class="dvt-tab" id="tabBtnSettings" data-tab="tabSettings" data-i18n="tabSettings">設定</button>
   </div>
 
@@ -567,6 +580,31 @@
     <div class="status-bar">
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText" data-i18n="statusDefault">テキストを選択して翻訳、またはモードを選択</span>
+    </div>
+  </div>
+
+  <!-- ルールタブ -->
+  <div class="dvt-tab-content" id="tabRules">
+    <div class="section">
+      <div class="section-label" data-i18n="autoRulesLabel">自動翻訳ルール</div>
+      <!-- ルール一覧 -->
+      <div id="autoRuleList" class="rule-list"></div>
+      <!-- ルール追加/編集フォーム -->
+      <div class="rule-form">
+        <input type="text" id="ruleUrlPattern" class="rule-input" data-i18n-placeholder="autoRuleUrlPlaceholder" placeholder="*://example.com/*">
+        <div class="rule-input-row">
+          <input type="text" id="ruleSelector" class="rule-input" data-i18n-placeholder="autoRuleSelectorPlaceholder" placeholder="div.content">
+          <button class="btn-pick" id="btnPickSelector" data-i18n="btnSelectElement">要素を選択</button>
+        </div>
+        <div class="rule-form-row">
+          <select id="ruleMode" class="rule-mode-select">
+            <option value="translate" data-i18n="autoRuleModeTranslate">翻訳のみ</option>
+            <option value="summarize" data-i18n="autoRuleModeSummarize">翻訳＆要約</option>
+          </select>
+          <button class="btn btn-secondary rule-cancel-btn" id="btnCancelRuleEdit" data-i18n="autoRuleCancel" style="display:none">キャンセル</button>
+          <button class="btn btn-primary rule-add-btn" id="btnAddRule" data-i18n="autoRuleAdd">追加</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -637,27 +675,6 @@
             <input type="password" id="geminiApiKey" data-i18n-placeholder="geminiApiKeyPlaceholder" placeholder="Gemini APIキーを入力" style="background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:7px; font-size:12.5px; font-family:inherit; outline:none;">
             <button class="dvt-api-test-btn" id="geminiTestBtn" data-i18n="apiKeyTest">テスト</button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label" data-i18n="autoRulesLabel">自動翻訳ルール</div>
-      <!-- ルール一覧 -->
-      <div id="autoRuleList" class="rule-list"></div>
-      <!-- ルール追加フォーム -->
-      <div class="rule-form">
-        <input type="text" id="ruleUrlPattern" class="rule-input" data-i18n-placeholder="autoRuleUrlPlaceholder" placeholder="*://example.com/*">
-        <div class="rule-input-row">
-          <input type="text" id="ruleSelector" class="rule-input" data-i18n-placeholder="autoRuleSelectorPlaceholder" placeholder="div.content">
-          <button class="btn-pick" id="btnPickSelector" data-i18n="btnSelectElement">要素を選択</button>
-        </div>
-        <div class="rule-form-row">
-          <select id="ruleMode" class="rule-mode-select">
-            <option value="translate" data-i18n="autoRuleModeTranslate">翻訳のみ</option>
-            <option value="summarize" data-i18n="autoRuleModeSummarize">翻訳＆要約</option>
-          </select>
-          <button class="btn btn-primary rule-add-btn" id="btnAddRule" data-i18n="autoRuleAdd">追加</button>
         </div>
       </div>
     </div>

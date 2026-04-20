@@ -142,6 +142,14 @@ var DVT = (function () {
       if (typeof DVT_BAR !== 'undefined') DVT_BAR.stopAutoRuleObserver(msg.ruleId);
       sendResponse({ ok: true });
     }
+    if (msg.action === 'reapplyAutoRule') {
+      // ルール更新時: 既存Observerを停止してから最新ルールで再評価
+      if (typeof DVT_BAR !== 'undefined') {
+        DVT_BAR.stopAutoRuleObserver(msg.ruleId);
+        DVT_BAR.checkAutoRules();
+      }
+      sendResponse({ ok: true });
+    }
     if (msg.action === 'setLang') {
       state.targetLang = msg.lang;
       chrome.storage.local.set({ targetLang: msg.lang });

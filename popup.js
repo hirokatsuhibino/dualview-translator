@@ -359,11 +359,8 @@ btnRegionSummary.addEventListener('click', async () => {
 
 // ── 自動翻訳ルール管理 ─────────────────────────────────────────────
 let autoRules = [];
-
-// HTML特殊文字のエスケープ（content scriptのDVT.escapeHtmlは使えないため独自実装）
-function escHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+// 編集中ルールのID（null のとき新規追加モード）
+let editingRuleId = null;
 
 function loadAutoRules() {
   chrome.storage.local.get('autoRules', (data) => {
@@ -374,6 +371,38 @@ function loadAutoRules() {
 
 function saveAutoRules() {
   chrome.storage.local.set({ autoRules });
+}
+
+// ボタンラベルを data-i18n キーごと切り替える
+// （textContent だけ差し替えると DVT_I18N.applyToDOM() でラベルが戻ってしまう）
+function setAddButtonLabelKey(key) {
+  const btn = document.getElementById('btnAddRule');
+  btn.dataset.i18n = key;
+  btn.textContent = t(key);
+}
+
+// 編集モードへ切り替え（select-to-edit: 一覧項目タップでフォームに値をセット）
+function enterEditMode(ruleId) {
+  const rule = autoRules.find(r => r.id === ruleId);
+  if (!rule) return;
+  editingRuleId = ruleId;
+  document.getElementById('ruleUrlPattern').value = rule.urlPattern;
+  document.getElementById('ruleSelector').value = rule.selector || '';
+  document.getElementById('ruleMode').value = rule.mode || 'translate';
+  setAddButtonLabelKey('autoRuleUpdate');
+  document.getElementById('btnCancelRuleEdit').style.display = '';
+  renderAutoRules();
+}
+
+// 編集モード解除（フォームをクリアして追加モードに戻す）
+function exitEditMode() {
+  editingRuleId = null;
+  document.getElementById('ruleUrlPattern').value = '';
+  document.getElementById('ruleSelector').value = '';
+  document.getElementById('ruleMode').value = 'translate';
+  setAddButtonLabelKey('autoRuleAdd');
+  document.getElementById('btnCancelRuleEdit').style.display = 'none';
+  renderAutoRules();
 }
 
 function renderAutoRules() {
@@ -392,26 +421,33 @@ function renderAutoRules() {
   autoRules.forEach((rule, idx) => {
     const item = document.createElement('div');
     item.className = 'rule-item';
+    if (rule.id === editingRuleId) item.classList.add('editing');
+    item.dataset.ruleId = rule.id;
+    // キーボード操作・スクリーンリーダー対応
+    item.setAttribute('role', 'button');
+    item.tabIndex = 0;
+    item.setAttribute('aria-pressed', String(rule.id === editingRuleId));
 
     const modeLabelKey = rule.mode === 'summarize' ? 'autoRuleModeSummarize' : 'autoRuleModeTranslate';
+    // textContent に代入するのでエスケープ不要（エスケープすると &gt; 等がそのまま表示される）
     const subText = rule.selector
-      ? `${escHtml(rule.selector)} · ${t(modeLabelKey)}`
+      ? `${rule.selector} · ${t(modeLabelKey)}`
       : `${t('translateFullPage')} · ${t(modeLabelKey)}`;
 
     const row = document.createElement('div');
     row.className = 'rule-item-row';
-    const label = document.createElement('label');
-    label.className = 'rule-toggle';
+    // 有効/無効トグル（<label> で包まずチェックボックス単体に — パターンテキストを
+    // クリックしたときにトグルしてしまう／編集モードに入れない問題を避ける）
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = rule.enabled;
     checkbox.dataset.idx = idx;
-    label.appendChild(checkbox);
+    checkbox.className = 'rule-toggle-cb';
+    row.appendChild(checkbox);
     const pattern = document.createElement('span');
     pattern.className = 'rule-pattern';
     pattern.textContent = rule.urlPattern;
-    label.appendChild(pattern);
-    row.appendChild(label);
+    row.appendChild(pattern);
     const delBtn = document.createElement('button');
     delBtn.className = 'rule-del';
     delBtn.dataset.idx = idx;
@@ -428,6 +464,8 @@ function renderAutoRules() {
 
   // チェックボックスのイベント設定（無効化時はObserverを停止）
   list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    // click が項目クリック（編集モード遷移）まで伝播しないように止める
+    cb.addEventListener('click', (e) => e.stopPropagation());
     cb.addEventListener('change', () => {
       const idx = Number(cb.dataset.idx);
       autoRules[idx].enabled = cb.checked;
@@ -440,14 +478,40 @@ function renderAutoRules() {
 
   // 削除ボタンのイベント設定（削除時はObserverを停止）
   list.querySelectorAll('.rule-del').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // 項目クリック（編集モード遷移）と分離
       const idx = Number(btn.dataset.idx);
-      const deletedId = autoRules[idx]?.id;
+      const deleted = autoRules[idx];
       autoRules.splice(idx, 1);
       saveAutoRules();
-      renderAutoRules();
-      if (deletedId) {
-        sendToContent({ action: 'stopAutoRuleObserver', ruleId: deletedId });
+      // 編集中のルールを削除したら編集モード解除
+      if (deleted?.id === editingRuleId) {
+        exitEditMode();
+      } else {
+        renderAutoRules();
+      }
+      if (deleted?.id) {
+        sendToContent({ action: 'stopAutoRuleObserver', ruleId: deleted.id });
+      }
+    });
+  });
+
+  // ルール項目クリックで編集モードに遷移（チェックボックス・削除ボタン以外）
+  list.querySelectorAll('.rule-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const ruleId = item.dataset.ruleId;
+      if (ruleId === editingRuleId) {
+        // 編集中の項目を再度クリックしたら解除
+        exitEditMode();
+      } else {
+        enterEditMode(ruleId);
+      }
+    });
+    // キーボード（Enter / Space）でも同じ操作ができるように
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        item.click();
       }
     });
   });
@@ -467,20 +531,45 @@ document.getElementById('btnAddRule').addEventListener('click', () => {
   const selector = selectorInput.value.trim();
   const mode = modeSelect.value;
 
-  autoRules.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-    urlPattern,
-    selector,
-    mode,
-    enabled: true,
-  });
+  if (editingRuleId) {
+    // 既存ルールを更新
+    const idx = autoRules.findIndex(r => r.id === editingRuleId);
+    if (idx === -1) {
+      // 編集中に他コンテキスト（storage event等）で削除されていたケース。
+      // 編集内容を失わないようにフォームと編集状態は維持してユーザーに通知する
+      alert(t('autoRuleNotFound'));
+      return;
+    }
+    const prev = autoRules[idx];
+    const changed = prev.urlPattern !== urlPattern
+      || prev.selector !== selector
+      || prev.mode !== mode;
+    autoRules[idx] = { ...prev, urlPattern, selector, mode };
+    saveAutoRules();
+    // urlPattern/selector/mode のいずれかが変わったら現ページに再適用を依頼する
+    // （旧Observer停止 → 最新ルールで checkAutoRules を再実行）
+    if (changed) {
+      sendToContent({ action: 'reapplyAutoRule', ruleId: editingRuleId });
+    }
+    exitEditMode();
+  } else {
+    // 新規追加
+    autoRules.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      urlPattern,
+      selector,
+      mode,
+      enabled: true,
+    });
+    saveAutoRules();
+    renderAutoRules();
+    urlInput.value = '';
+    selectorInput.value = '';
+  }
+});
 
-  saveAutoRules();
-  renderAutoRules();
-
-  // 入力フォームをリセット
-  urlInput.value = '';
-  selectorInput.value = '';
+document.getElementById('btnCancelRuleEdit').addEventListener('click', () => {
+  exitEditMode();
 });
 
 loadAutoRules();
@@ -517,8 +606,8 @@ document.getElementById('btnPickSelector').addEventListener('click', async () =>
       }
       // storageから削除
       chrome.storage.local.remove(['pendingRuleSelector', 'pendingRuleUrlPattern']);
-      // 設定タブに切り替え
-      document.getElementById('tabBtnSettings').click();
+      // ルールタブに切り替え（フォームが表示されるタブへ）
+      document.getElementById('tabBtnRules').click();
     }
   });
 })();
