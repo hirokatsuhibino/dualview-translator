@@ -34,49 +34,25 @@
 		7D1D48392F95AD9500B65F5F /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48212F95AD9500B65F5F /* popup.js */; };
 		7D1D483A2F95AD9500B65F5F /* content-selection.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48222F95AD9500B65F5F /* content-selection.js */; };
 		7D1D483B2F95AD9500B65F5F /* content.css in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48232F95AD9500B65F5F /* content.css */; };
-		7D1D483C2F95AD9500B65F5F /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48242F95AD9500B65F5F /* LICENSE */; };
 		7D1D483D2F95AD9500B65F5F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48252F95AD9500B65F5F /* background.js */; };
 		7D1D483E2F95AD9500B65F5F /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48262F95AD9500B65F5F /* popup.html */; };
-		7D1D483F2F95AD9500B65F5F /* node_modules in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48272F95AD9500B65F5F /* node_modules */; };
-		7D1D48402F95AD9500B65F5F /* tests in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48282F95AD9500B65F5F /* tests */; };
-		7D1D48412F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */; };
-		7D1D48422F95AD9500B65F5F /* docs in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482A2F95AD9500B65F5F /* docs */; };
-		7D1D48432F95AD9500B65F5F /* vitest.config.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482B2F95AD9500B65F5F /* vitest.config.js */; };
-		7D1D48442F95AD9500B65F5F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482C2F95AD9500B65F5F /* README.md */; };
-		7D1D48452F95AD9500B65F5F /* package-lock.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482D2F95AD9500B65F5F /* package-lock.json */; };
-		7D1D48462F95AD9500B65F5F /* package.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482E2F95AD9500B65F5F /* package.json */; };
-		7D1D48472F95AD9500B65F5F /* safari in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482F2F95AD9500B65F5F /* safari */; };
 		7D1D48482F95AD9500B65F5F /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48302F95AD9500B65F5F /* icons */; };
 		7D1D48492F95AD9500B65F5F /* content-bar.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48312F95AD9500B65F5F /* content-bar.js */; };
 		7D1D484A2F95AD9500B65F5F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48322F95AD9500B65F5F /* manifest.json */; };
-		7D1D484B2F95AD9500B65F5F /* dualview-translator-1.2.4.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */; };
 		7D1D484C2F95AD9500B65F5F /* i18n.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48342F95AD9500B65F5F /* i18n.js */; };
 		7D1D484D2F95AD9500B65F5F /* popup-init.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48352F95AD9500B65F5F /* popup-init.js */; };
-		7D1D484E2F95AD9500B65F5F /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48362F95AD9500B65F5F /* CLAUDE.md */; };
 		7D1D484F2F95AD9500B65F5F /* content-page.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D481F2F95AD9500B65F5F /* content-page.js */; };
 		7D1D48502F95AD9500B65F5F /* content-core.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48202F95AD9500B65F5F /* content-core.js */; };
 		7D1D48512F95AD9500B65F5F /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48212F95AD9500B65F5F /* popup.js */; };
 		7D1D48522F95AD9500B65F5F /* content-selection.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48222F95AD9500B65F5F /* content-selection.js */; };
 		7D1D48532F95AD9500B65F5F /* content.css in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48232F95AD9500B65F5F /* content.css */; };
-		7D1D48542F95AD9500B65F5F /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48242F95AD9500B65F5F /* LICENSE */; };
 		7D1D48552F95AD9500B65F5F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48252F95AD9500B65F5F /* background.js */; };
 		7D1D48562F95AD9500B65F5F /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48262F95AD9500B65F5F /* popup.html */; };
-		7D1D48572F95AD9500B65F5F /* node_modules in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48272F95AD9500B65F5F /* node_modules */; };
-		7D1D48582F95AD9500B65F5F /* tests in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48282F95AD9500B65F5F /* tests */; };
-		7D1D48592F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */; };
-		7D1D485A2F95AD9500B65F5F /* docs in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482A2F95AD9500B65F5F /* docs */; };
-		7D1D485B2F95AD9500B65F5F /* vitest.config.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482B2F95AD9500B65F5F /* vitest.config.js */; };
-		7D1D485C2F95AD9500B65F5F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482C2F95AD9500B65F5F /* README.md */; };
-		7D1D485D2F95AD9600B65F5F /* package-lock.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482D2F95AD9500B65F5F /* package-lock.json */; };
-		7D1D485E2F95AD9600B65F5F /* package.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482E2F95AD9500B65F5F /* package.json */; };
-		7D1D485F2F95AD9600B65F5F /* safari in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482F2F95AD9500B65F5F /* safari */; };
 		7D1D48602F95AD9600B65F5F /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48302F95AD9500B65F5F /* icons */; };
 		7D1D48612F95AD9600B65F5F /* content-bar.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48312F95AD9500B65F5F /* content-bar.js */; };
 		7D1D48622F95AD9600B65F5F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48322F95AD9500B65F5F /* manifest.json */; };
-		7D1D48632F95AD9600B65F5F /* dualview-translator-1.2.4.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */; };
 		7D1D48642F95AD9600B65F5F /* i18n.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48342F95AD9500B65F5F /* i18n.js */; };
 		7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48352F95AD9500B65F5F /* popup-init.js */; };
-		7D1D48662F95AD9600B65F5F /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48362F95AD9500B65F5F /* CLAUDE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -148,25 +124,13 @@
 		7D1D48212F95AD9500B65F5F /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = ../../../popup.js; sourceTree = "<group>"; };
 		7D1D48222F95AD9500B65F5F /* content-selection.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "content-selection.js"; path = "../../../content-selection.js"; sourceTree = "<group>"; };
 		7D1D48232F95AD9500B65F5F /* content.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = content.css; path = ../../../content.css; sourceTree = "<group>"; };
-		7D1D48242F95AD9500B65F5F /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE; path = ../../../LICENSE; sourceTree = "<group>"; };
 		7D1D48252F95AD9500B65F5F /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../background.js; sourceTree = "<group>"; };
 		7D1D48262F95AD9500B65F5F /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = ../../../popup.html; sourceTree = "<group>"; };
-		7D1D48272F95AD9500B65F5F /* node_modules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = node_modules; path = ../../../node_modules; sourceTree = "<group>"; };
-		7D1D48282F95AD9500B65F5F /* tests */ = {isa = PBXFileReference; lastKnownFileType = folder; name = tests; path = ../../../tests; sourceTree = "<group>"; };
-		7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = "dualview-translator-1.2.4-source.zip"; path = "../../../dualview-translator-1.2.4-source.zip"; sourceTree = "<group>"; };
-		7D1D482A2F95AD9500B65F5F /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../../../docs; sourceTree = "<group>"; };
-		7D1D482B2F95AD9500B65F5F /* vitest.config.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = vitest.config.js; path = ../../../vitest.config.js; sourceTree = "<group>"; };
-		7D1D482C2F95AD9500B65F5F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../../../README.md; sourceTree = "<group>"; };
-		7D1D482D2F95AD9500B65F5F /* package-lock.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "package-lock.json"; path = "../../../package-lock.json"; sourceTree = "<group>"; };
-		7D1D482E2F95AD9500B65F5F /* package.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = package.json; path = ../../../package.json; sourceTree = "<group>"; };
-		7D1D482F2F95AD9500B65F5F /* safari */ = {isa = PBXFileReference; lastKnownFileType = folder; name = safari; path = ../..; sourceTree = "<group>"; };
 		7D1D48302F95AD9500B65F5F /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../../icons; sourceTree = "<group>"; };
 		7D1D48312F95AD9500B65F5F /* content-bar.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "content-bar.js"; path = "../../../content-bar.js"; sourceTree = "<group>"; };
 		7D1D48322F95AD9500B65F5F /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../manifest.json; sourceTree = "<group>"; };
-		7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = "dualview-translator-1.2.4.zip"; path = "../../../dualview-translator-1.2.4.zip"; sourceTree = "<group>"; };
 		7D1D48342F95AD9500B65F5F /* i18n.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = i18n.js; path = ../../../i18n.js; sourceTree = "<group>"; };
 		7D1D48352F95AD9500B65F5F /* popup-init.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "popup-init.js"; path = "../../../popup-init.js"; sourceTree = "<group>"; };
-		7D1D48362F95AD9500B65F5F /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = CLAUDE.md; path = ../../../CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -301,25 +265,13 @@
 				7D1D48212F95AD9500B65F5F /* popup.js */,
 				7D1D48222F95AD9500B65F5F /* content-selection.js */,
 				7D1D48232F95AD9500B65F5F /* content.css */,
-				7D1D48242F95AD9500B65F5F /* LICENSE */,
 				7D1D48252F95AD9500B65F5F /* background.js */,
 				7D1D48262F95AD9500B65F5F /* popup.html */,
-				7D1D48272F95AD9500B65F5F /* node_modules */,
-				7D1D48282F95AD9500B65F5F /* tests */,
-				7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */,
-				7D1D482A2F95AD9500B65F5F /* docs */,
-				7D1D482B2F95AD9500B65F5F /* vitest.config.js */,
-				7D1D482C2F95AD9500B65F5F /* README.md */,
-				7D1D482D2F95AD9500B65F5F /* package-lock.json */,
-				7D1D482E2F95AD9500B65F5F /* package.json */,
-				7D1D482F2F95AD9500B65F5F /* safari */,
 				7D1D48302F95AD9500B65F5F /* icons */,
 				7D1D48312F95AD9500B65F5F /* content-bar.js */,
 				7D1D48322F95AD9500B65F5F /* manifest.json */,
-				7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */,
 				7D1D48342F95AD9500B65F5F /* i18n.js */,
 				7D1D48352F95AD9500B65F5F /* popup-init.js */,
-				7D1D48362F95AD9500B65F5F /* CLAUDE.md */,
 			);
 			name = Resources;
 			path = "Shared (Extension)";
@@ -486,30 +438,18 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7D1D48632F95AD9600B65F5F /* dualview-translator-1.2.4.zip in Resources */,
 				7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */,
-				7D1D485E2F95AD9600B65F5F /* package.json in Resources */,
-				7D1D48542F95AD9500B65F5F /* LICENSE in Resources */,
 				7D1D48562F95AD9500B65F5F /* popup.html in Resources */,
 				7D1D48602F95AD9600B65F5F /* icons in Resources */,
-				7D1D485D2F95AD9600B65F5F /* package-lock.json in Resources */,
 				7D1D484F2F95AD9500B65F5F /* content-page.js in Resources */,
 				7D1D48552F95AD9500B65F5F /* background.js in Resources */,
 				7D1D48642F95AD9600B65F5F /* i18n.js in Resources */,
 				7D1D48522F95AD9500B65F5F /* content-selection.js in Resources */,
-				7D1D485B2F95AD9500B65F5F /* vitest.config.js in Resources */,
 				7D1D48512F95AD9500B65F5F /* popup.js in Resources */,
-				7D1D48592F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */,
-				7D1D48662F95AD9600B65F5F /* CLAUDE.md in Resources */,
 				7D1D48612F95AD9600B65F5F /* content-bar.js in Resources */,
 				7D1D48622F95AD9600B65F5F /* manifest.json in Resources */,
 				7D1D48532F95AD9500B65F5F /* content.css in Resources */,
-				7D1D48572F95AD9500B65F5F /* node_modules in Resources */,
-				7D1D485C2F95AD9500B65F5F /* README.md in Resources */,
-				7D1D485A2F95AD9500B65F5F /* docs in Resources */,
-				7D1D48582F95AD9500B65F5F /* tests in Resources */,
 				7D1D48502F95AD9500B65F5F /* content-core.js in Resources */,
-				7D1D485F2F95AD9600B65F5F /* safari in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -517,30 +457,18 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7D1D484B2F95AD9500B65F5F /* dualview-translator-1.2.4.zip in Resources */,
 				7D1D484D2F95AD9500B65F5F /* popup-init.js in Resources */,
-				7D1D48462F95AD9500B65F5F /* package.json in Resources */,
-				7D1D483C2F95AD9500B65F5F /* LICENSE in Resources */,
 				7D1D483E2F95AD9500B65F5F /* popup.html in Resources */,
 				7D1D48482F95AD9500B65F5F /* icons in Resources */,
-				7D1D48452F95AD9500B65F5F /* package-lock.json in Resources */,
 				7D1D48372F95AD9500B65F5F /* content-page.js in Resources */,
 				7D1D483D2F95AD9500B65F5F /* background.js in Resources */,
 				7D1D484C2F95AD9500B65F5F /* i18n.js in Resources */,
 				7D1D483A2F95AD9500B65F5F /* content-selection.js in Resources */,
-				7D1D48432F95AD9500B65F5F /* vitest.config.js in Resources */,
 				7D1D48392F95AD9500B65F5F /* popup.js in Resources */,
-				7D1D48412F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */,
-				7D1D484E2F95AD9500B65F5F /* CLAUDE.md in Resources */,
 				7D1D48492F95AD9500B65F5F /* content-bar.js in Resources */,
 				7D1D484A2F95AD9500B65F5F /* manifest.json in Resources */,
 				7D1D483B2F95AD9500B65F5F /* content.css in Resources */,
-				7D1D483F2F95AD9500B65F5F /* node_modules in Resources */,
-				7D1D48442F95AD9500B65F5F /* README.md in Resources */,
-				7D1D48422F95AD9500B65F5F /* docs in Resources */,
-				7D1D48402F95AD9500B65F5F /* tests in Resources */,
 				7D1D48382F95AD9500B65F5F /* content-core.js in Resources */,
-				7D1D48472F95AD9500B65F5F /* safari in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

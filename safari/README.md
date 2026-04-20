@@ -77,7 +77,14 @@ xcrun safari-web-extension-converter . \
   --force
 ```
 
-`--force` は既存の `safari/` を上書きします。Swift ソースの手動変更（Copyright 追記等）は再生成時に失われるので注意してください。
+`--force` は既存の `safari/` を上書きします。以下の手動調整は再生成時に失われるので注意してください:
+
+- Swift ソースの Copyright ヘッダ
+- `ViewController.swift` の force-unwrap / force-cast 排除（クラッシュ回避）
+- `Resources/Style.css` の重複 CSS ルール除去
+- `project.pbxproj` から runtime に不要なファイル（`node_modules/`・`tests/`・`docs/`・`README.md` 等）を除外する調整
+
+再生成後は Git diff で上記を適用し直してください。
 
 ## ディレクトリ構成
 

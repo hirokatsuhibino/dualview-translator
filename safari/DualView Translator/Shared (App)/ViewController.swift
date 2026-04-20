@@ -33,7 +33,13 @@ class ViewController: PlatformViewController, WKNavigationDelegate, WKScriptMess
 
         self.webView.configuration.userContentController.add(self, name: "controller")
 
-        self.webView.loadFileURL(Bundle.main.url(forResource: "Main", withExtension: "html")!, allowingReadAccessTo: Bundle.main.resourceURL!)
+        // Main.html / resourceURL 欠落時にクラッシュしないようガード
+        guard let mainHTMLURL = Bundle.main.url(forResource: "Main", withExtension: "html"),
+              let resourceURL = Bundle.main.resourceURL else {
+            assertionFailure("Bundled Main.html or resourceURL is missing")
+            return
+        }
+        self.webView.loadFileURL(mainHTMLURL, allowingReadAccessTo: resourceURL)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -61,7 +67,8 @@ class ViewController: PlatformViewController, WKNavigationDelegate, WKScriptMess
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
 #if os(macOS)
-        if (message.body as! String != "open-preferences") {
+        // 想定外のペイロードが来てもクラッシュしないよう、安全にキャストして判定
+        guard let messageBody = message.body as? String, messageBody == "open-preferences" else {
             return
         }
 
