@@ -428,18 +428,18 @@ function renderAutoRules() {
 
     const row = document.createElement('div');
     row.className = 'rule-item-row';
-    const label = document.createElement('label');
-    label.className = 'rule-toggle';
+    // 有効/無効トグル（<label> で包まずチェックボックス単体に — パターンテキストを
+    // クリックしたときにトグルしてしまう／編集モードに入れない問題を避ける）
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = rule.enabled;
     checkbox.dataset.idx = idx;
-    label.appendChild(checkbox);
+    checkbox.className = 'rule-toggle-cb';
+    row.appendChild(checkbox);
     const pattern = document.createElement('span');
     pattern.className = 'rule-pattern';
     pattern.textContent = rule.urlPattern;
-    label.appendChild(pattern);
-    row.appendChild(label);
+    row.appendChild(pattern);
     const delBtn = document.createElement('button');
     delBtn.className = 'rule-del';
     delBtn.dataset.idx = idx;
@@ -456,8 +456,9 @@ function renderAutoRules() {
 
   // チェックボックスのイベント設定（無効化時はObserverを停止）
   list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      e.stopPropagation(); // 項目クリック（編集モード遷移）と分離
+    // click が項目クリック（編集モード遷移）まで伝播しないように止める
+    cb.addEventListener('click', (e) => e.stopPropagation());
+    cb.addEventListener('change', () => {
       const idx = Number(cb.dataset.idx);
       autoRules[idx].enabled = cb.checked;
       saveAutoRules();
@@ -485,11 +486,6 @@ function renderAutoRules() {
         sendToContent({ action: 'stopAutoRuleObserver', ruleId: deleted.id });
       }
     });
-  });
-
-  // トグルラベル（チェックボックスを含む）のクリックは項目クリックに伝播させない
-  list.querySelectorAll('.rule-toggle').forEach(label => {
-    label.addEventListener('click', (e) => e.stopPropagation());
   });
 
   // ルール項目クリックで編集モードに遷移（チェックボックス・削除ボタン以外）

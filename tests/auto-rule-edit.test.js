@@ -2,6 +2,8 @@
 // 自動翻訳ルールの編集フロー（select-to-edit）のテスト
 // popup.js のロジックに相当する状態遷移を再現して検証する
 import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 // popup.js と同じデータ形状（id/urlPattern/selector/mode/enabled）
 function makeRule(overrides = {}) {
@@ -165,5 +167,31 @@ describe('自動翻訳ルールの編集フロー', () => {
     const result = store.submitForm();
     expect(result.ok).toBe(false);
     expect(result.reason).toBe('not-found');
+  });
+});
+
+describe('ルール項目のDOM構造（クリック伝播の回帰防止）', () => {
+  const popupJsSource = readFileSync(resolve(import.meta.dirname, '..', 'popup.js'), 'utf-8');
+
+  // 過去のバグ: チェックボックスと URL パターンを <label> で包んでいたため、
+  // label の click stopPropagation が URL パターンのクリックも止めてしまい、
+  // 「更新後に別ルールをクリックしても編集モードに入らない」問題が発生していた。
+  it('renderAutoRules は rule-item 内でチェックボックスを <label> でラップしない', () => {
+    // renderAutoRules の本体を抽出
+    const renderStart = popupJsSource.indexOf('function renderAutoRules');
+    const renderEnd = popupJsSource.indexOf('\n}', renderStart);
+    const renderBody = popupJsSource.slice(renderStart, renderEnd);
+    // rule-toggle クラスは不要（label を使わない新構造）
+    expect(renderBody).not.toMatch(/createElement\(['"]label['"]\)/);
+    expect(renderBody).not.toMatch(/\.rule-toggle['"]/);
+  });
+
+  it('チェックボックスの click が stopPropagation されている（change 経由で親の click が発火するのを防ぐ）', () => {
+    expect(popupJsSource).toMatch(/cb\.addEventListener\(['"]click['"],\s*\(e\)\s*=>\s*e\.stopPropagation\(\)\)/);
+  });
+
+  it('削除ボタンの click が stopPropagation されている', () => {
+    const delHandlerMatch = popupJsSource.match(/querySelectorAll\(['"]\.rule-del['"]\)[\s\S]{0,400}?stopPropagation/);
+    expect(delHandlerMatch).not.toBeNull();
   });
 });
