@@ -16,3 +16,8 @@ package-lock.json
 *.crx
 *.pem
 *.zip
+
+# Xcode (Safari Web Extension project)
+safari/**/xcuserdata/
+safari/**/*.xcuserstate
+safari/build/
