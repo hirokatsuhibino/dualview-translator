@@ -27,7 +27,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             message = request?.userInfo?["message"]
         }
 
-        os_log(.default, "Received message from browser.runtime.sendNativeMessage: %@ (profile: %@)", String(describing: message), profile?.uuidString ?? "none")
+        // ペイロードに翻訳対象テキスト等のユーザーコンテンツが含まれる可能性があるため、
+        // 本体は出力せず、存在有無とプロファイルIDのみデバッグレベルで記録する
+        os_log(.debug, "Received message from browser.runtime.sendNativeMessage (hasMessage: %{public}@, profile: %{public}@)", message == nil ? "false" : "true", profile?.uuidString ?? "none")
 
         let response = NSExtensionItem()
         if #available(iOS 15.0, macOS 11.0, *) {
