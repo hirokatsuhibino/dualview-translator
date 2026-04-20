@@ -1,0 +1,1101 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7D1D47D62F95AD9500B65F5F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47D52F95AD9500B65F5F /* AppDelegate.swift */; };
+		7D1D47D82F95AD9500B65F5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47D72F95AD9500B65F5F /* SceneDelegate.swift */; };
+		7D1D47DB2F95AD9500B65F5F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47D92F95AD9500B65F5F /* LaunchScreen.storyboard */; };
+		7D1D47DE2F95AD9500B65F5F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47DC2F95AD9500B65F5F /* Main.storyboard */; };
+		7D1D47E72F95AD9500B65F5F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47E62F95AD9500B65F5F /* AppDelegate.swift */; };
+		7D1D47EA2F95AD9500B65F5F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47E82F95AD9500B65F5F /* Main.storyboard */; };
+		7D1D47F12F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7D1D47F02F95AD9500B65F5F /* DualView Translator Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7D1D47FB2F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7D1D48002F95AD9500B65F5F /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C52F95AD9300B65F5F /* Main.html */; };
+		7D1D48012F95AD9500B65F5F /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C52F95AD9300B65F5F /* Main.html */; };
+		7D1D48022F95AD9500B65F5F /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C72F95AD9300B65F5F /* Icon.png */; };
+		7D1D48032F95AD9500B65F5F /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C72F95AD9300B65F5F /* Icon.png */; };
+		7D1D48042F95AD9500B65F5F /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C82F95AD9300B65F5F /* Style.css */; };
+		7D1D48052F95AD9500B65F5F /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C82F95AD9300B65F5F /* Style.css */; };
+		7D1D48062F95AD9500B65F5F /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C92F95AD9300B65F5F /* Script.js */; };
+		7D1D48072F95AD9500B65F5F /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47C92F95AD9300B65F5F /* Script.js */; };
+		7D1D48082F95AD9500B65F5F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47CA2F95AD9300B65F5F /* ViewController.swift */; };
+		7D1D48092F95AD9500B65F5F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47CA2F95AD9300B65F5F /* ViewController.swift */; };
+		7D1D480A2F95AD9500B65F5F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47CB2F95AD9500B65F5F /* Assets.xcassets */; };
+		7D1D480B2F95AD9500B65F5F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47CB2F95AD9500B65F5F /* Assets.xcassets */; };
+		7D1D480C2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */; };
+		7D1D480D2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */; };
+		7D1D48372F95AD9500B65F5F /* content-page.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D481F2F95AD9500B65F5F /* content-page.js */; };
+		7D1D48382F95AD9500B65F5F /* content-core.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48202F95AD9500B65F5F /* content-core.js */; };
+		7D1D48392F95AD9500B65F5F /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48212F95AD9500B65F5F /* popup.js */; };
+		7D1D483A2F95AD9500B65F5F /* content-selection.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48222F95AD9500B65F5F /* content-selection.js */; };
+		7D1D483B2F95AD9500B65F5F /* content.css in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48232F95AD9500B65F5F /* content.css */; };
+		7D1D483C2F95AD9500B65F5F /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48242F95AD9500B65F5F /* LICENSE */; };
+		7D1D483D2F95AD9500B65F5F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48252F95AD9500B65F5F /* background.js */; };
+		7D1D483E2F95AD9500B65F5F /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48262F95AD9500B65F5F /* popup.html */; };
+		7D1D483F2F95AD9500B65F5F /* node_modules in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48272F95AD9500B65F5F /* node_modules */; };
+		7D1D48402F95AD9500B65F5F /* tests in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48282F95AD9500B65F5F /* tests */; };
+		7D1D48412F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */; };
+		7D1D48422F95AD9500B65F5F /* docs in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482A2F95AD9500B65F5F /* docs */; };
+		7D1D48432F95AD9500B65F5F /* vitest.config.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482B2F95AD9500B65F5F /* vitest.config.js */; };
+		7D1D48442F95AD9500B65F5F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482C2F95AD9500B65F5F /* README.md */; };
+		7D1D48452F95AD9500B65F5F /* package-lock.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482D2F95AD9500B65F5F /* package-lock.json */; };
+		7D1D48462F95AD9500B65F5F /* package.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482E2F95AD9500B65F5F /* package.json */; };
+		7D1D48472F95AD9500B65F5F /* safari in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482F2F95AD9500B65F5F /* safari */; };
+		7D1D48482F95AD9500B65F5F /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48302F95AD9500B65F5F /* icons */; };
+		7D1D48492F95AD9500B65F5F /* content-bar.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48312F95AD9500B65F5F /* content-bar.js */; };
+		7D1D484A2F95AD9500B65F5F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48322F95AD9500B65F5F /* manifest.json */; };
+		7D1D484B2F95AD9500B65F5F /* dualview-translator-1.2.4.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */; };
+		7D1D484C2F95AD9500B65F5F /* i18n.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48342F95AD9500B65F5F /* i18n.js */; };
+		7D1D484D2F95AD9500B65F5F /* popup-init.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48352F95AD9500B65F5F /* popup-init.js */; };
+		7D1D484E2F95AD9500B65F5F /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48362F95AD9500B65F5F /* CLAUDE.md */; };
+		7D1D484F2F95AD9500B65F5F /* content-page.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D481F2F95AD9500B65F5F /* content-page.js */; };
+		7D1D48502F95AD9500B65F5F /* content-core.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48202F95AD9500B65F5F /* content-core.js */; };
+		7D1D48512F95AD9500B65F5F /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48212F95AD9500B65F5F /* popup.js */; };
+		7D1D48522F95AD9500B65F5F /* content-selection.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48222F95AD9500B65F5F /* content-selection.js */; };
+		7D1D48532F95AD9500B65F5F /* content.css in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48232F95AD9500B65F5F /* content.css */; };
+		7D1D48542F95AD9500B65F5F /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48242F95AD9500B65F5F /* LICENSE */; };
+		7D1D48552F95AD9500B65F5F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48252F95AD9500B65F5F /* background.js */; };
+		7D1D48562F95AD9500B65F5F /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48262F95AD9500B65F5F /* popup.html */; };
+		7D1D48572F95AD9500B65F5F /* node_modules in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48272F95AD9500B65F5F /* node_modules */; };
+		7D1D48582F95AD9500B65F5F /* tests in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48282F95AD9500B65F5F /* tests */; };
+		7D1D48592F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */; };
+		7D1D485A2F95AD9500B65F5F /* docs in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482A2F95AD9500B65F5F /* docs */; };
+		7D1D485B2F95AD9500B65F5F /* vitest.config.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482B2F95AD9500B65F5F /* vitest.config.js */; };
+		7D1D485C2F95AD9500B65F5F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482C2F95AD9500B65F5F /* README.md */; };
+		7D1D485D2F95AD9600B65F5F /* package-lock.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482D2F95AD9500B65F5F /* package-lock.json */; };
+		7D1D485E2F95AD9600B65F5F /* package.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482E2F95AD9500B65F5F /* package.json */; };
+		7D1D485F2F95AD9600B65F5F /* safari in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D482F2F95AD9500B65F5F /* safari */; };
+		7D1D48602F95AD9600B65F5F /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48302F95AD9500B65F5F /* icons */; };
+		7D1D48612F95AD9600B65F5F /* content-bar.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48312F95AD9500B65F5F /* content-bar.js */; };
+		7D1D48622F95AD9600B65F5F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48322F95AD9500B65F5F /* manifest.json */; };
+		7D1D48632F95AD9600B65F5F /* dualview-translator-1.2.4.zip in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */; };
+		7D1D48642F95AD9600B65F5F /* i18n.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48342F95AD9500B65F5F /* i18n.js */; };
+		7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48352F95AD9500B65F5F /* popup-init.js */; };
+		7D1D48662F95AD9600B65F5F /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48362F95AD9500B65F5F /* CLAUDE.md */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7D1D47F22F95AD9500B65F5F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7D1D47BF2F95AD9300B65F5F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7D1D47EF2F95AD9500B65F5F;
+			remoteInfo = "DualView Translator Extension (iOS)";
+		};
+		7D1D47FC2F95AD9500B65F5F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7D1D47BF2F95AD9300B65F5F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7D1D47F92F95AD9500B65F5F;
+			remoteInfo = "DualView Translator Extension (macOS)";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7D1D48132F95AD9500B65F5F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7D1D47F12F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D481A2F95AD9500B65F5F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7D1D47FB2F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		7D1D47C62F95AD9300B65F5F /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		7D1D47C72F95AD9300B65F5F /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		7D1D47C82F95AD9300B65F5F /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		7D1D47C92F95AD9300B65F5F /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		7D1D47CA2F95AD9300B65F5F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		7D1D47CB2F95AD9500B65F5F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		7D1D47D22F95AD9500B65F5F /* DualView Translator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DualView Translator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D1D47D52F95AD9500B65F5F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7D1D47D72F95AD9500B65F5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		7D1D47DA2F95AD9500B65F5F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		7D1D47DD2F95AD9500B65F5F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		7D1D47DF2F95AD9500B65F5F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7D1D47E42F95AD9500B65F5F /* DualView Translator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DualView Translator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D1D47E62F95AD9500B65F5F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7D1D47E92F95AD9500B65F5F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		7D1D47EB2F95AD9500B65F5F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7D1D47F02F95AD9500B65F5F /* DualView Translator Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Translator Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D1D47F52F95AD9500B65F5F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Translator Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D1D47FF2F95AD9500B65F5F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7D1D481F2F95AD9500B65F5F /* content-page.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "content-page.js"; path = "../../../content-page.js"; sourceTree = "<group>"; };
+		7D1D48202F95AD9500B65F5F /* content-core.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "content-core.js"; path = "../../../content-core.js"; sourceTree = "<group>"; };
+		7D1D48212F95AD9500B65F5F /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = ../../../popup.js; sourceTree = "<group>"; };
+		7D1D48222F95AD9500B65F5F /* content-selection.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "content-selection.js"; path = "../../../content-selection.js"; sourceTree = "<group>"; };
+		7D1D48232F95AD9500B65F5F /* content.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = content.css; path = ../../../content.css; sourceTree = "<group>"; };
+		7D1D48242F95AD9500B65F5F /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE; path = ../../../LICENSE; sourceTree = "<group>"; };
+		7D1D48252F95AD9500B65F5F /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../background.js; sourceTree = "<group>"; };
+		7D1D48262F95AD9500B65F5F /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = ../../../popup.html; sourceTree = "<group>"; };
+		7D1D48272F95AD9500B65F5F /* node_modules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = node_modules; path = ../../../node_modules; sourceTree = "<group>"; };
+		7D1D48282F95AD9500B65F5F /* tests */ = {isa = PBXFileReference; lastKnownFileType = folder; name = tests; path = ../../../tests; sourceTree = "<group>"; };
+		7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = "dualview-translator-1.2.4-source.zip"; path = "../../../dualview-translator-1.2.4-source.zip"; sourceTree = "<group>"; };
+		7D1D482A2F95AD9500B65F5F /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../../../docs; sourceTree = "<group>"; };
+		7D1D482B2F95AD9500B65F5F /* vitest.config.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = vitest.config.js; path = ../../../vitest.config.js; sourceTree = "<group>"; };
+		7D1D482C2F95AD9500B65F5F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../../../README.md; sourceTree = "<group>"; };
+		7D1D482D2F95AD9500B65F5F /* package-lock.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "package-lock.json"; path = "../../../package-lock.json"; sourceTree = "<group>"; };
+		7D1D482E2F95AD9500B65F5F /* package.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = package.json; path = ../../../package.json; sourceTree = "<group>"; };
+		7D1D482F2F95AD9500B65F5F /* safari */ = {isa = PBXFileReference; lastKnownFileType = folder; name = safari; path = ../..; sourceTree = "<group>"; };
+		7D1D48302F95AD9500B65F5F /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../../icons; sourceTree = "<group>"; };
+		7D1D48312F95AD9500B65F5F /* content-bar.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "content-bar.js"; path = "../../../content-bar.js"; sourceTree = "<group>"; };
+		7D1D48322F95AD9500B65F5F /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../manifest.json; sourceTree = "<group>"; };
+		7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = "dualview-translator-1.2.4.zip"; path = "../../../dualview-translator-1.2.4.zip"; sourceTree = "<group>"; };
+		7D1D48342F95AD9500B65F5F /* i18n.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = i18n.js; path = ../../../i18n.js; sourceTree = "<group>"; };
+		7D1D48352F95AD9500B65F5F /* popup-init.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "popup-init.js"; path = "../../../popup-init.js"; sourceTree = "<group>"; };
+		7D1D48362F95AD9500B65F5F /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = CLAUDE.md; path = ../../../CLAUDE.md; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7D1D47CF2F95AD9500B65F5F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47E12F95AD9500B65F5F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47ED2F95AD9500B65F5F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47F72F95AD9500B65F5F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7D1D47BE2F95AD9300B65F5F = {
+			isa = PBXGroup;
+			children = (
+				7D1D47C32F95AD9300B65F5F /* Shared (App) */,
+				7D1D47CC2F95AD9500B65F5F /* Shared (Extension) */,
+				7D1D47D42F95AD9500B65F5F /* iOS (App) */,
+				7D1D47E52F95AD9500B65F5F /* macOS (App) */,
+				7D1D47F42F95AD9500B65F5F /* iOS (Extension) */,
+				7D1D47FE2F95AD9500B65F5F /* macOS (Extension) */,
+				7D1D47D32F95AD9500B65F5F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7D1D47C32F95AD9300B65F5F /* Shared (App) */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47CA2F95AD9300B65F5F /* ViewController.swift */,
+				7D1D47CB2F95AD9500B65F5F /* Assets.xcassets */,
+				7D1D47C42F95AD9300B65F5F /* Resources */,
+			);
+			path = "Shared (App)";
+			sourceTree = "<group>";
+		};
+		7D1D47C42F95AD9300B65F5F /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47C52F95AD9300B65F5F /* Main.html */,
+				7D1D47C72F95AD9300B65F5F /* Icon.png */,
+				7D1D47C82F95AD9300B65F5F /* Style.css */,
+				7D1D47C92F95AD9300B65F5F /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		7D1D47CC2F95AD9500B65F5F /* Shared (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D481E2F95AD9500B65F5F /* Resources */,
+				7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */,
+			);
+			path = "Shared (Extension)";
+			sourceTree = "<group>";
+		};
+		7D1D47D32F95AD9500B65F5F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47D22F95AD9500B65F5F /* DualView Translator.app */,
+				7D1D47E42F95AD9500B65F5F /* DualView Translator.app */,
+				7D1D47F02F95AD9500B65F5F /* DualView Translator Extension.appex */,
+				7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7D1D47D42F95AD9500B65F5F /* iOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47D52F95AD9500B65F5F /* AppDelegate.swift */,
+				7D1D47D72F95AD9500B65F5F /* SceneDelegate.swift */,
+				7D1D47D92F95AD9500B65F5F /* LaunchScreen.storyboard */,
+				7D1D47DC2F95AD9500B65F5F /* Main.storyboard */,
+				7D1D47DF2F95AD9500B65F5F /* Info.plist */,
+			);
+			path = "iOS (App)";
+			sourceTree = "<group>";
+		};
+		7D1D47E52F95AD9500B65F5F /* macOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47E62F95AD9500B65F5F /* AppDelegate.swift */,
+				7D1D47E82F95AD9500B65F5F /* Main.storyboard */,
+				7D1D47EB2F95AD9500B65F5F /* Info.plist */,
+			);
+			path = "macOS (App)";
+			sourceTree = "<group>";
+		};
+		7D1D47F42F95AD9500B65F5F /* iOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47F52F95AD9500B65F5F /* Info.plist */,
+			);
+			path = "iOS (Extension)";
+			sourceTree = "<group>";
+		};
+		7D1D47FE2F95AD9500B65F5F /* macOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D47FF2F95AD9500B65F5F /* Info.plist */,
+			);
+			path = "macOS (Extension)";
+			sourceTree = "<group>";
+		};
+		7D1D481E2F95AD9500B65F5F /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7D1D481F2F95AD9500B65F5F /* content-page.js */,
+				7D1D48202F95AD9500B65F5F /* content-core.js */,
+				7D1D48212F95AD9500B65F5F /* popup.js */,
+				7D1D48222F95AD9500B65F5F /* content-selection.js */,
+				7D1D48232F95AD9500B65F5F /* content.css */,
+				7D1D48242F95AD9500B65F5F /* LICENSE */,
+				7D1D48252F95AD9500B65F5F /* background.js */,
+				7D1D48262F95AD9500B65F5F /* popup.html */,
+				7D1D48272F95AD9500B65F5F /* node_modules */,
+				7D1D48282F95AD9500B65F5F /* tests */,
+				7D1D48292F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip */,
+				7D1D482A2F95AD9500B65F5F /* docs */,
+				7D1D482B2F95AD9500B65F5F /* vitest.config.js */,
+				7D1D482C2F95AD9500B65F5F /* README.md */,
+				7D1D482D2F95AD9500B65F5F /* package-lock.json */,
+				7D1D482E2F95AD9500B65F5F /* package.json */,
+				7D1D482F2F95AD9500B65F5F /* safari */,
+				7D1D48302F95AD9500B65F5F /* icons */,
+				7D1D48312F95AD9500B65F5F /* content-bar.js */,
+				7D1D48322F95AD9500B65F5F /* manifest.json */,
+				7D1D48332F95AD9500B65F5F /* dualview-translator-1.2.4.zip */,
+				7D1D48342F95AD9500B65F5F /* i18n.js */,
+				7D1D48352F95AD9500B65F5F /* popup-init.js */,
+				7D1D48362F95AD9500B65F5F /* CLAUDE.md */,
+			);
+			name = Resources;
+			path = "Shared (Extension)";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7D1D47D12F95AD9500B65F5F /* DualView Translator (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D1D48142F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator (iOS)" */;
+			buildPhases = (
+				7D1D47CE2F95AD9500B65F5F /* Sources */,
+				7D1D47CF2F95AD9500B65F5F /* Frameworks */,
+				7D1D47D02F95AD9500B65F5F /* Resources */,
+				7D1D48132F95AD9500B65F5F /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7D1D47F32F95AD9500B65F5F /* PBXTargetDependency */,
+			);
+			name = "DualView Translator (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "DualView Translator (iOS)";
+			productReference = 7D1D47D22F95AD9500B65F5F /* DualView Translator.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7D1D47E32F95AD9500B65F5F /* DualView Translator (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D1D481B2F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator (macOS)" */;
+			buildPhases = (
+				7D1D47E02F95AD9500B65F5F /* Sources */,
+				7D1D47E12F95AD9500B65F5F /* Frameworks */,
+				7D1D47E22F95AD9500B65F5F /* Resources */,
+				7D1D481A2F95AD9500B65F5F /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7D1D47FD2F95AD9500B65F5F /* PBXTargetDependency */,
+			);
+			name = "DualView Translator (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "DualView Translator (macOS)";
+			productReference = 7D1D47E42F95AD9500B65F5F /* DualView Translator.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7D1D47EF2F95AD9500B65F5F /* DualView Translator Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D1D48102F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator Extension (iOS)" */;
+			buildPhases = (
+				7D1D47EC2F95AD9500B65F5F /* Sources */,
+				7D1D47ED2F95AD9500B65F5F /* Frameworks */,
+				7D1D47EE2F95AD9500B65F5F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "DualView Translator Extension (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "DualView Translator Extension (iOS)";
+			productReference = 7D1D47F02F95AD9500B65F5F /* DualView Translator Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		7D1D47F92F95AD9500B65F5F /* DualView Translator Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D1D48172F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator Extension (macOS)" */;
+			buildPhases = (
+				7D1D47F62F95AD9500B65F5F /* Sources */,
+				7D1D47F72F95AD9500B65F5F /* Frameworks */,
+				7D1D47F82F95AD9500B65F5F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "DualView Translator Extension (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "DualView Translator Extension (macOS)";
+			productReference = 7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7D1D47BF2F95AD9300B65F5F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					7D1D47D12F95AD9500B65F5F = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					7D1D47E32F95AD9500B65F5F = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					7D1D47EF2F95AD9500B65F5F = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					7D1D47F92F95AD9500B65F5F = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
+			};
+			buildConfigurationList = 7D1D47C22F95AD9300B65F5F /* Build configuration list for PBXProject "DualView Translator" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7D1D47BE2F95AD9300B65F5F;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7D1D47D32F95AD9500B65F5F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7D1D47D12F95AD9500B65F5F /* DualView Translator (iOS) */,
+				7D1D47E32F95AD9500B65F5F /* DualView Translator (macOS) */,
+				7D1D47EF2F95AD9500B65F5F /* DualView Translator Extension (iOS) */,
+				7D1D47F92F95AD9500B65F5F /* DualView Translator Extension (macOS) */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7D1D47D02F95AD9500B65F5F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D48022F95AD9500B65F5F /* Icon.png in Resources */,
+				7D1D47DB2F95AD9500B65F5F /* LaunchScreen.storyboard in Resources */,
+				7D1D48002F95AD9500B65F5F /* Main.html in Resources */,
+				7D1D48062F95AD9500B65F5F /* Script.js in Resources */,
+				7D1D480A2F95AD9500B65F5F /* Assets.xcassets in Resources */,
+				7D1D47DE2F95AD9500B65F5F /* Main.storyboard in Resources */,
+				7D1D48042F95AD9500B65F5F /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47E22F95AD9500B65F5F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D48032F95AD9500B65F5F /* Icon.png in Resources */,
+				7D1D48052F95AD9500B65F5F /* Style.css in Resources */,
+				7D1D47EA2F95AD9500B65F5F /* Main.storyboard in Resources */,
+				7D1D48072F95AD9500B65F5F /* Script.js in Resources */,
+				7D1D480B2F95AD9500B65F5F /* Assets.xcassets in Resources */,
+				7D1D48012F95AD9500B65F5F /* Main.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47EE2F95AD9500B65F5F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D48632F95AD9600B65F5F /* dualview-translator-1.2.4.zip in Resources */,
+				7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */,
+				7D1D485E2F95AD9600B65F5F /* package.json in Resources */,
+				7D1D48542F95AD9500B65F5F /* LICENSE in Resources */,
+				7D1D48562F95AD9500B65F5F /* popup.html in Resources */,
+				7D1D48602F95AD9600B65F5F /* icons in Resources */,
+				7D1D485D2F95AD9600B65F5F /* package-lock.json in Resources */,
+				7D1D484F2F95AD9500B65F5F /* content-page.js in Resources */,
+				7D1D48552F95AD9500B65F5F /* background.js in Resources */,
+				7D1D48642F95AD9600B65F5F /* i18n.js in Resources */,
+				7D1D48522F95AD9500B65F5F /* content-selection.js in Resources */,
+				7D1D485B2F95AD9500B65F5F /* vitest.config.js in Resources */,
+				7D1D48512F95AD9500B65F5F /* popup.js in Resources */,
+				7D1D48592F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */,
+				7D1D48662F95AD9600B65F5F /* CLAUDE.md in Resources */,
+				7D1D48612F95AD9600B65F5F /* content-bar.js in Resources */,
+				7D1D48622F95AD9600B65F5F /* manifest.json in Resources */,
+				7D1D48532F95AD9500B65F5F /* content.css in Resources */,
+				7D1D48572F95AD9500B65F5F /* node_modules in Resources */,
+				7D1D485C2F95AD9500B65F5F /* README.md in Resources */,
+				7D1D485A2F95AD9500B65F5F /* docs in Resources */,
+				7D1D48582F95AD9500B65F5F /* tests in Resources */,
+				7D1D48502F95AD9500B65F5F /* content-core.js in Resources */,
+				7D1D485F2F95AD9600B65F5F /* safari in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47F82F95AD9500B65F5F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D484B2F95AD9500B65F5F /* dualview-translator-1.2.4.zip in Resources */,
+				7D1D484D2F95AD9500B65F5F /* popup-init.js in Resources */,
+				7D1D48462F95AD9500B65F5F /* package.json in Resources */,
+				7D1D483C2F95AD9500B65F5F /* LICENSE in Resources */,
+				7D1D483E2F95AD9500B65F5F /* popup.html in Resources */,
+				7D1D48482F95AD9500B65F5F /* icons in Resources */,
+				7D1D48452F95AD9500B65F5F /* package-lock.json in Resources */,
+				7D1D48372F95AD9500B65F5F /* content-page.js in Resources */,
+				7D1D483D2F95AD9500B65F5F /* background.js in Resources */,
+				7D1D484C2F95AD9500B65F5F /* i18n.js in Resources */,
+				7D1D483A2F95AD9500B65F5F /* content-selection.js in Resources */,
+				7D1D48432F95AD9500B65F5F /* vitest.config.js in Resources */,
+				7D1D48392F95AD9500B65F5F /* popup.js in Resources */,
+				7D1D48412F95AD9500B65F5F /* dualview-translator-1.2.4-source.zip in Resources */,
+				7D1D484E2F95AD9500B65F5F /* CLAUDE.md in Resources */,
+				7D1D48492F95AD9500B65F5F /* content-bar.js in Resources */,
+				7D1D484A2F95AD9500B65F5F /* manifest.json in Resources */,
+				7D1D483B2F95AD9500B65F5F /* content.css in Resources */,
+				7D1D483F2F95AD9500B65F5F /* node_modules in Resources */,
+				7D1D48442F95AD9500B65F5F /* README.md in Resources */,
+				7D1D48422F95AD9500B65F5F /* docs in Resources */,
+				7D1D48402F95AD9500B65F5F /* tests in Resources */,
+				7D1D48382F95AD9500B65F5F /* content-core.js in Resources */,
+				7D1D48472F95AD9500B65F5F /* safari in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7D1D47CE2F95AD9500B65F5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D48082F95AD9500B65F5F /* ViewController.swift in Sources */,
+				7D1D47D62F95AD9500B65F5F /* AppDelegate.swift in Sources */,
+				7D1D47D82F95AD9500B65F5F /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47E02F95AD9500B65F5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D48092F95AD9500B65F5F /* ViewController.swift in Sources */,
+				7D1D47E72F95AD9500B65F5F /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47EC2F95AD9500B65F5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D480C2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1D47F62F95AD9500B65F5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7D1D480D2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7D1D47F32F95AD9500B65F5F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7D1D47EF2F95AD9500B65F5F /* DualView Translator Extension (iOS) */;
+			targetProxy = 7D1D47F22F95AD9500B65F5F /* PBXContainerItemProxy */;
+		};
+		7D1D47FD2F95AD9500B65F5F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7D1D47F92F95AD9500B65F5F /* DualView Translator Extension (macOS) */;
+			targetProxy = 7D1D47FC2F95AD9500B65F5F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		7D1D47C52F95AD9300B65F5F /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7D1D47C62F95AD9300B65F5F /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		7D1D47D92F95AD9500B65F5F /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7D1D47DA2F95AD9500B65F5F /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		7D1D47DC2F95AD9500B65F5F /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7D1D47DD2F95AD9500B65F5F /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		7D1D47E82F95AD9500B65F5F /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7D1D47E92F95AD9500B65F5F /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		7D1D480E2F95AD9500B65F5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		7D1D480F2F95AD9500B65F5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		7D1D48112F95AD9500B65F5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.Extension";
+				PRODUCT_NAME = "DualView Translator Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7D1D48122F95AD9500B65F5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.Extension";
+				PRODUCT_NAME = "DualView Translator Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7D1D48152F95AD9500B65F5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator";
+				PRODUCT_NAME = "DualView Translator";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7D1D48162F95AD9500B65F5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator";
+				PRODUCT_NAME = "DualView Translator";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7D1D48182F95AD9500B65F5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.Extension";
+				PRODUCT_NAME = "DualView Translator Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7D1D48192F95AD9500B65F5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.Extension";
+				PRODUCT_NAME = "DualView Translator Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		7D1D481C2F95AD9500B65F5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator";
+				PRODUCT_NAME = "DualView Translator";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7D1D481D2F95AD9500B65F5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator";
+				PRODUCT_NAME = "DualView Translator";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7D1D47C22F95AD9300B65F5F /* Build configuration list for PBXProject "DualView Translator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D1D480E2F95AD9500B65F5F /* Debug */,
+				7D1D480F2F95AD9500B65F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7D1D48102F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator Extension (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D1D48112F95AD9500B65F5F /* Debug */,
+				7D1D48122F95AD9500B65F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7D1D48142F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D1D48152F95AD9500B65F5F /* Debug */,
+				7D1D48162F95AD9500B65F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7D1D48172F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D1D48182F95AD9500B65F5F /* Debug */,
+				7D1D48192F95AD9500B65F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7D1D481B2F95AD9500B65F5F /* Build configuration list for PBXNativeTarget "DualView Translator (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D1D481C2F95AD9500B65F5F /* Debug */,
+				7D1D481D2F95AD9500B65F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7D1D47BF2F95AD9300B65F5F /* Project object */;
+}

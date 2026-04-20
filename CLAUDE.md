@@ -35,10 +35,13 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── content-selection.test.js # content-selection テスト（9件）
 │   ├── background.test.js  #  background テスト（18件）
 │   └── safari-compat.test.js # Safari/iOS互換テスト（8件）
-└── docs/                  # 公開資料
-    ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
-    ├── RELEASE_NOTES.md   #   リリースノート
-    └── test-plan.md       #   テストプラン（74項目）
+├── docs/                  # 公開資料
+│   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
+│   ├── RELEASE_NOTES.md   #   リリースノート
+│   └── test-plan.md       #   テストプラン（74項目）
+└── safari/                # Safari Web Extension（Xcode プロジェクト）
+    ├── README.md          #   ビルド・インストール手順
+    └── DualView Translator/ # macOS/iOS両対応のXcodeプロジェクト
 ```
 
 ## アーキテクチャ
