@@ -34,7 +34,8 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── content-bar.test.js #   content-bar テスト（17件）
 │   ├── content-selection.test.js # content-selection テスト（9件）
 │   ├── background.test.js  #  background テスト（18件）
-│   └── safari-compat.test.js # Safari/iOS互換テスト（8件）
+│   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）
+│   └── auto-rule-edit.test.js # 自動翻訳ルール編集テスト（10件）
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
@@ -83,8 +84,11 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 ### ポップアップUI
 
-- 2タブ構成: 「翻訳」タブ（デフォルト）と「設定」タブ
+- 3タブ構成: 「翻訳」タブ（デフォルト）／「ルール」タブ／「設定」タブ
 - 翻訳タブ: 翻訳先言語セレクタ + 翻訳モードボタン群 + ステータスバー
+- ルールタブ: 自動翻訳ルール一覧 + 追加/編集フォーム
+  - 項目クリックで select-to-edit（フォームに値がセットされ、「追加」→「更新」、キャンセルボタン表示）
+  - `editingRuleId` で編集中IDを保持。selector/mode 変更時は既存 Observer を再起動
 - 設定タブ: 表示言語・翻訳エンジン・要約エンジン・ヒント情報
 - タブ切り替えは `.dvt-tab` / `.dvt-tab-content` クラスで制御
 

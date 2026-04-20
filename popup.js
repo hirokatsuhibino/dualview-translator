@@ -359,6 +359,8 @@ btnRegionSummary.addEventListener('click', async () => {
 
 // ── 自動翻訳ルール管理 ─────────────────────────────────────────────
 let autoRules = [];
+// 編集中ルールのID（null のとき新規追加モード）
+let editingRuleId = null;
 
 // HTML特殊文字のエスケープ（content scriptのDVT.escapeHtmlは使えないため独自実装）
 function escHtml(str) {
@@ -374,6 +376,30 @@ function loadAutoRules() {
 
 function saveAutoRules() {
   chrome.storage.local.set({ autoRules });
+}
+
+// 編集モードへ切り替え（select-to-edit: 一覧項目タップでフォームに値をセット）
+function enterEditMode(ruleId) {
+  const rule = autoRules.find(r => r.id === ruleId);
+  if (!rule) return;
+  editingRuleId = ruleId;
+  document.getElementById('ruleUrlPattern').value = rule.urlPattern;
+  document.getElementById('ruleSelector').value = rule.selector || '';
+  document.getElementById('ruleMode').value = rule.mode || 'translate';
+  document.getElementById('btnAddRule').textContent = t('autoRuleUpdate');
+  document.getElementById('btnCancelRuleEdit').style.display = '';
+  renderAutoRules();
+}
+
+// 編集モード解除（フォームをクリアして追加モードに戻す）
+function exitEditMode() {
+  editingRuleId = null;
+  document.getElementById('ruleUrlPattern').value = '';
+  document.getElementById('ruleSelector').value = '';
+  document.getElementById('ruleMode').value = 'translate';
+  document.getElementById('btnAddRule').textContent = t('autoRuleAdd');
+  document.getElementById('btnCancelRuleEdit').style.display = 'none';
+  renderAutoRules();
 }
 
 function renderAutoRules() {
@@ -392,6 +418,8 @@ function renderAutoRules() {
   autoRules.forEach((rule, idx) => {
     const item = document.createElement('div');
     item.className = 'rule-item';
+    if (rule.id === editingRuleId) item.classList.add('editing');
+    item.dataset.ruleId = rule.id;
 
     const modeLabelKey = rule.mode === 'summarize' ? 'autoRuleModeSummarize' : 'autoRuleModeTranslate';
     const subText = rule.selector
@@ -428,7 +456,8 @@ function renderAutoRules() {
 
   // チェックボックスのイベント設定（無効化時はObserverを停止）
   list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-    cb.addEventListener('change', () => {
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation(); // 項目クリック（編集モード遷移）と分離
       const idx = Number(cb.dataset.idx);
       autoRules[idx].enabled = cb.checked;
       saveAutoRules();
@@ -440,14 +469,38 @@ function renderAutoRules() {
 
   // 削除ボタンのイベント設定（削除時はObserverを停止）
   list.querySelectorAll('.rule-del').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // 項目クリック（編集モード遷移）と分離
       const idx = Number(btn.dataset.idx);
-      const deletedId = autoRules[idx]?.id;
+      const deleted = autoRules[idx];
       autoRules.splice(idx, 1);
       saveAutoRules();
-      renderAutoRules();
-      if (deletedId) {
-        sendToContent({ action: 'stopAutoRuleObserver', ruleId: deletedId });
+      // 編集中のルールを削除したら編集モード解除
+      if (deleted?.id === editingRuleId) {
+        exitEditMode();
+      } else {
+        renderAutoRules();
+      }
+      if (deleted?.id) {
+        sendToContent({ action: 'stopAutoRuleObserver', ruleId: deleted.id });
+      }
+    });
+  });
+
+  // トグルラベル（チェックボックスを含む）のクリックは項目クリックに伝播させない
+  list.querySelectorAll('.rule-toggle').forEach(label => {
+    label.addEventListener('click', (e) => e.stopPropagation());
+  });
+
+  // ルール項目クリックで編集モードに遷移（チェックボックス・削除ボタン以外）
+  list.querySelectorAll('.rule-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const ruleId = item.dataset.ruleId;
+      if (ruleId === editingRuleId) {
+        // 編集中の項目を再度クリックしたら解除
+        exitEditMode();
+      } else {
+        enterEditMode(ruleId);
       }
     });
   });
@@ -467,20 +520,38 @@ document.getElementById('btnAddRule').addEventListener('click', () => {
   const selector = selectorInput.value.trim();
   const mode = modeSelect.value;
 
-  autoRules.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-    urlPattern,
-    selector,
-    mode,
-    enabled: true,
-  });
+  if (editingRuleId) {
+    // 既存ルールを更新
+    const idx = autoRules.findIndex(r => r.id === editingRuleId);
+    if (idx !== -1) {
+      const prevSelector = autoRules[idx].selector;
+      const prevMode = autoRules[idx].mode;
+      autoRules[idx] = { ...autoRules[idx], urlPattern, selector, mode };
+      saveAutoRules();
+      // selector/mode が変わった場合は既存 Observer を一旦停止して再起動させる
+      if (prevSelector !== selector || prevMode !== mode) {
+        sendToContent({ action: 'stopAutoRuleObserver', ruleId: editingRuleId });
+      }
+    }
+    exitEditMode();
+  } else {
+    // 新規追加
+    autoRules.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      urlPattern,
+      selector,
+      mode,
+      enabled: true,
+    });
+    saveAutoRules();
+    renderAutoRules();
+    urlInput.value = '';
+    selectorInput.value = '';
+  }
+});
 
-  saveAutoRules();
-  renderAutoRules();
-
-  // 入力フォームをリセット
-  urlInput.value = '';
-  selectorInput.value = '';
+document.getElementById('btnCancelRuleEdit').addEventListener('click', () => {
+  exitEditMode();
 });
 
 loadAutoRules();
