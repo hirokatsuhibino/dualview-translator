@@ -1,5 +1,5 @@
 // Copyright (c) Orangesoft Inc
-// 翻訳キャッシュのロジックテスト
+// 翻訳・要約キャッシュのロジックテスト（tc: / sc: 両プレフィックス）
 // background.js から pure 関数・クラス非依存ロジックを抽出して検証する
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
@@ -14,7 +14,7 @@ function loadCacheModule() {
     'SC_PREFIX', 'SC_MAX_ENTRIES', 'SC_TTL_MS', 'SC_EVICT_RATIO',
     'storageGet', 'storageSet', 'storageRemove',
     'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
-    'evictByPrefix', 'evictIfNeeded', 'clearTranslationCache', 'getCacheStats',
+    'evictByPrefix', 'evictIfNeeded', 'clearCache', 'getCacheStats',
   ];
   const defs = names.map(n => {
     // const / async function / function いずれのパターンでも拾う
@@ -70,7 +70,7 @@ function createChromeStub() {
   };
 }
 
-describe('翻訳キャッシュ', () => {
+describe('翻訳・要約キャッシュ', () => {
   let mod;
   let chromeStub;
 
@@ -196,13 +196,13 @@ describe('翻訳キャッシュ', () => {
     });
   });
 
-  describe('clearTranslationCache', () => {
+  describe('clearCache', () => {
     it('tc: プレフィックスのキーのみ削除、他キーは残る', async () => {
       chromeStub._data['tc:google:en:ja:1111111111111111'] = { translated: 'v1', ts: Date.now() };
       chromeStub._data['tc:deepl:auto:ja:2222222222222222'] = { translated: 'v2', ts: Date.now() };
       chromeStub._data['autoRules'] = [{ id: 'rule-1' }];
       chromeStub._data['targetLang'] = 'ja';
-      const cleared = await mod.clearTranslationCache();
+      const cleared = await mod.clearCache();
       expect(cleared).toBe(2);
       expect(chromeStub._data['autoRules']).toBeDefined();
       expect(chromeStub._data['targetLang']).toBe('ja');
@@ -210,23 +210,27 @@ describe('翻訳キャッシュ', () => {
     });
 
     it('キャッシュが空のときは 0 を返す', async () => {
-      const cleared = await mod.clearTranslationCache();
+      const cleared = await mod.clearCache();
       expect(cleared).toBe(0);
     });
   });
 
   describe('getCacheStats', () => {
-    it('tc: と sc: 両プレフィックスのキー数の合計を返す', async () => {
+    it('tc: と sc: を別々にカウントし合計も返す', async () => {
       chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
       chromeStub._data['tc:deepl:en:ja:2'] = { ts: Date.now() };
       chromeStub._data['sc:claude:ja:abc'] = { ts: Date.now() };
       chromeStub._data['autoRules'] = [];
       const stats = await mod.getCacheStats();
+      expect(stats.tcEntries).toBe(2);
+      expect(stats.scEntries).toBe(1);
       expect(stats.entries).toBe(3);
     });
 
-    it('空キャッシュでは 0 を返す', async () => {
+    it('空キャッシュでは全て 0 を返す', async () => {
       const stats = await mod.getCacheStats();
+      expect(stats.tcEntries).toBe(0);
+      expect(stats.scEntries).toBe(0);
       expect(stats.entries).toBe(0);
     });
   });
@@ -265,20 +269,27 @@ describe('翻訳キャッシュ', () => {
       chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
       chromeStub._data['sc:claude:ja:abc'] = { ts: Date.now(), summary: '要約' };
       chromeStub._data['autoRules'] = [];
-      const count = await mod.clearTranslationCache();
+      const count = await mod.clearCache();
       expect(count).toBe(2);
       expect(chromeStub._data['autoRules']).toBeDefined();
       expect(chromeStub._data['sc:claude:ja:abc']).toBeUndefined();
     });
 
-    it('evictIfNeeded が sc: プレフィックスを独立して evict する', async () => {
-      // SC_MAX_ENTRIES=500 を超える sc: キーを追加
+    it('evictIfNeeded が sc: プレフィックスを独立して evict する（削除件数・削除順を検証）', async () => {
+      // SC_MAX_ENTRIES=500 を超える 505 件を追加（ts=0 が最古）
       for (let i = 0; i < 505; i++) {
         chromeStub._data[`sc:claude:ja:${String(i).padStart(3, '0')}`] = { ts: i };
       }
       await mod.evictIfNeeded();
-      const remaining = Object.keys(chromeStub._data).filter(k => k.startsWith('sc:')).length;
-      expect(remaining).toBeLessThan(505);
+      const remaining = Object.keys(chromeStub._data).filter(k => k.startsWith('sc:'));
+      // 期待削除件数: ceil(505 * 0.1) = 51
+      expect(remaining.length).toBe(505 - Math.ceil(505 * mod.SC_EVICT_RATIO));
+      // 最古キー（ts=0〜50）が削除されていること
+      for (let i = 0; i < Math.ceil(505 * mod.SC_EVICT_RATIO); i++) {
+        expect(chromeStub._data[`sc:claude:ja:${String(i).padStart(3, '0')}`]).toBeUndefined();
+      }
+      // 最新キー（ts=504）は残っていること
+      expect(chromeStub._data['sc:claude:ja:504']).toBeDefined();
     });
   });
 });

@@ -640,7 +640,7 @@ document.getElementById('btnClearCache').addEventListener('click', async () => {
   const label = document.getElementById('cacheEntriesLabel');
   btn.disabled = true;
   try {
-    const res = await sendMsg({ action: 'clearTranslationCache' });
+    const res = await sendMsg({ action: 'clearCache' });
     if (res?.ok) {
       // 完了メッセージを一時表示してから件数を再取得
       label.textContent = t('cacheClearedToast', { count: res.cleared });

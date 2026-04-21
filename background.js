@@ -176,8 +176,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
-  if (msg.action === 'clearTranslationCache') {
-    clearTranslationCache()
+  if (msg.action === 'clearCache') {
+    clearCache()
       .then(cleared => sendResponse({ ok: true, cleared }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
@@ -198,7 +198,8 @@ function getEngineConfig() {
 
 // ─── 翻訳・要約キャッシュ ────────────────────────────────────────────
 // Google/DeepL 翻訳結果を tc: プレフィックス、Claude/Gemini 要約を sc: プレフィックスでキャッシュ。
-// 同一入力 → 同一出力が期待できるため、再呼び出し時にAPI呼び出しをスキップしてコスト削減。
+// 同一テキストの再呼び出し時に API 呼び出しをスキップしてコスト削減・応答改善を図る。
+// （LLM 要約は出力が揺れる場合があるが、再利用による節約を優先してキャッシュ対象とする）
 // Google/DeepL 翻訳結果を tc: プレフィックスでキャッシュ
 const TC_PREFIX = 'tc:';
 const TC_MAX_ENTRIES = 2000;
@@ -274,7 +275,8 @@ async function evictIfNeeded() {
   await evictByPrefix(all, SC_PREFIX, SC_MAX_ENTRIES, SC_EVICT_RATIO);
 }
 
-async function clearTranslationCache() {
+// 翻訳・要約キャッシュを両方クリア（名称を clearCache に統一して挙動と一致させる）
+async function clearCache() {
   const all = await storageGet(null);
   const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX));
   if (cacheKeys.length === 0) return 0;
@@ -284,8 +286,10 @@ async function clearTranslationCache() {
 
 async function getCacheStats() {
   const all = await storageGet(null);
-  const entries = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX)).length;
-  return { entries };
+  const keys = Object.keys(all);
+  const tcEntries = keys.filter(k => k.startsWith(TC_PREFIX)).length;
+  const scEntries = keys.filter(k => k.startsWith(SC_PREFIX)).length;
+  return { tcEntries, scEntries, entries: tcEntries + scEntries };
 }
 
 // ─── 翻訳ディスパッチャー ────────────────────────────────────────────
