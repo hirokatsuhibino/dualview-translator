@@ -205,6 +205,11 @@ const TC_MAX_ENTRIES = 2000;
 const TC_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30日
 const TC_EVICT_RATIO = 0.1; // 超過時に古い順 10% を削除
 
+// chrome.storage.local の Promise ラッパー（callback-only 環境でも動作）
+const storageGet = (keys) => new Promise(resolve => chrome.storage.local.get(keys, resolve));
+const storageSet = (items) => new Promise(resolve => chrome.storage.local.set(items, resolve));
+const storageRemove = (keys) => new Promise(resolve => chrome.storage.local.remove(keys, resolve));
+
 // text の SHA-256 先頭16文字（8バイト）をキーに使う。<10000件なら衝突実質ゼロ
 async function hashText(text) {
   const encoded = new TextEncoder().encode(text);
@@ -220,20 +225,20 @@ async function buildCacheKey(engine, sl, tl, text) {
 
 // キャッシュ読み出し。TTL 切れは miss として削除し、hit 時は ts を更新（LRU的挙動）
 async function getCached(key) {
-  const data = await chrome.storage.local.get(key);
+  const data = await storageGet(key);
   const entry = data[key];
   if (!entry) return null;
   if (Date.now() - entry.ts > TC_TTL_MS) {
-    chrome.storage.local.remove(key);
+    void storageRemove(key).catch(() => {});
     return null;
   }
   // LRU: 非同期で ts を更新（待たない）
-  chrome.storage.local.set({ [key]: { ...entry, ts: Date.now() } });
+  void storageSet({ [key]: { ...entry, ts: Date.now() } }).catch(() => {});
   return entry;
 }
 
 async function setCached(key, entry) {
-  await chrome.storage.local.set({ [key]: { ...entry, ts: Date.now() } });
+  await storageSet({ [key]: { ...entry, ts: Date.now() } });
   // 毎回全走査するのは重いので 5% の確率で evict 判定
   if (Math.random() < 0.05) {
     evictIfNeeded().catch(() => {});
@@ -241,26 +246,26 @@ async function setCached(key, entry) {
 }
 
 async function evictIfNeeded() {
-  const all = await chrome.storage.local.get(null);
+  const all = await storageGet(null);
   const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX));
   if (cacheKeys.length <= TC_MAX_ENTRIES) return;
   const sorted = cacheKeys
     .map(k => ({ key: k, ts: all[k]?.ts || 0 }))
     .sort((a, b) => a.ts - b.ts);
   const toEvict = Math.ceil(cacheKeys.length * TC_EVICT_RATIO);
-  await chrome.storage.local.remove(sorted.slice(0, toEvict).map(x => x.key));
+  await storageRemove(sorted.slice(0, toEvict).map(x => x.key));
 }
 
 async function clearTranslationCache() {
-  const all = await chrome.storage.local.get(null);
+  const all = await storageGet(null);
   const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX));
   if (cacheKeys.length === 0) return 0;
-  await chrome.storage.local.remove(cacheKeys);
+  await storageRemove(cacheKeys);
   return cacheKeys.length;
 }
 
 async function getCacheStats() {
-  const all = await chrome.storage.local.get(null);
+  const all = await storageGet(null);
   const entries = Object.keys(all).filter(k => k.startsWith(TC_PREFIX)).length;
   return { entries };
 }

@@ -11,6 +11,7 @@ function loadCacheModule() {
   // キャッシュ関連の関数と定数をまとめて extract して eval
   const names = [
     'TC_PREFIX', 'TC_MAX_ENTRIES', 'TC_TTL_MS', 'TC_EVICT_RATIO',
+    'storageGet', 'storageSet', 'storageRemove',
     'hashText', 'buildCacheKey', 'getCached', 'setCached',
     'evictIfNeeded', 'clearTranslationCache', 'getCacheStats',
   ];
@@ -32,33 +33,36 @@ function loadCacheModule() {
   return fn;
 }
 
-// chrome.storage.local モック（background.js の挙動に合わせた最小実装）
+// chrome.storage.local モック（Promise / callback 両形式に対応）
 function createChromeStub() {
   const data = {};
+  function resolveOrCallback(result, cb) {
+    if (typeof cb === 'function') { cb(result); return undefined; }
+    return Promise.resolve(result);
+  }
   return {
     _data: data,
     storage: {
       local: {
-        get(keys) {
-          if (keys === null) return Promise.resolve({ ...data });
-          if (typeof keys === 'string') {
-            return Promise.resolve(keys in data ? { [keys]: data[keys] } : {});
-          }
-          if (Array.isArray(keys)) {
+        get(keys, cb) {
+          let result;
+          if (keys === null) result = { ...data };
+          else if (typeof keys === 'string') result = keys in data ? { [keys]: data[keys] } : {};
+          else if (Array.isArray(keys)) {
             const out = {};
             for (const k of keys) if (k in data) out[k] = data[k];
-            return Promise.resolve(out);
-          }
-          return Promise.resolve({});
+            result = out;
+          } else result = {};
+          return resolveOrCallback(result, cb);
         },
-        set(obj) {
+        set(obj, cb) {
           Object.assign(data, obj);
-          return Promise.resolve();
+          return resolveOrCallback(undefined, cb);
         },
-        remove(keys) {
+        remove(keys, cb) {
           const arr = Array.isArray(keys) ? keys : [keys];
           for (const k of arr) delete data[k];
-          return Promise.resolve();
+          return resolveOrCallback(undefined, cb);
         },
       },
     },
