@@ -31,8 +31,8 @@ gh pr view N --repo hirokatsuhibino/dualview-translator \
   --json reviews,comments
 
 # インラインコメント（ファイル・行への指摘と各返信）— --paginate で全件取得
-gh api repos/hirokatsuhibino/dualview-translator/pulls/N/comments \
-  --paginate -F per_page=100 \
+gh api "repos/hirokatsuhibino/dualview-translator/pulls/N/comments?per_page=100" \
+  --paginate \
   --jq '.[] | {id, path, line: (.line // .original_line), user: .user.login, in_reply_to_id, created_at, body}'
 ```
 
