@@ -11,9 +11,10 @@ function loadCacheModule() {
   // キャッシュ関連の関数と定数をまとめて extract して eval
   const names = [
     'TC_PREFIX', 'TC_MAX_ENTRIES', 'TC_TTL_MS', 'TC_EVICT_RATIO',
+    'SC_PREFIX', 'SC_MAX_ENTRIES', 'SC_TTL_MS', 'SC_EVICT_RATIO',
     'storageGet', 'storageSet', 'storageRemove',
-    'hashText', 'buildCacheKey', 'getCached', 'setCached',
-    'evictIfNeeded', 'clearTranslationCache', 'getCacheStats',
+    'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
+    'evictByPrefix', 'evictIfNeeded', 'clearTranslationCache', 'getCacheStats',
   ];
   const defs = names.map(n => {
     // const / async function / function いずれのパターンでも拾う
@@ -215,17 +216,69 @@ describe('翻訳キャッシュ', () => {
   });
 
   describe('getCacheStats', () => {
-    it('tc: プレフィックスのキー数を返す', async () => {
+    it('tc: と sc: 両プレフィックスのキー数の合計を返す', async () => {
       chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
       chromeStub._data['tc:deepl:en:ja:2'] = { ts: Date.now() };
+      chromeStub._data['sc:claude:ja:abc'] = { ts: Date.now() };
       chromeStub._data['autoRules'] = [];
       const stats = await mod.getCacheStats();
-      expect(stats.entries).toBe(2);
+      expect(stats.entries).toBe(3);
     });
 
     it('空キャッシュでは 0 を返す', async () => {
       const stats = await mod.getCacheStats();
       expect(stats.entries).toBe(0);
+    });
+  });
+
+  describe('要約キャッシュ（sc: プレフィックス）', () => {
+    it('buildSummaryCacheKey が sc: プレフィックスのキーを返す', async () => {
+      const key = await mod.buildSummaryCacheKey('claude', 'ja', 'テスト');
+      expect(key).toMatch(/^sc:claude:ja:[0-9a-f]{16}$/);
+    });
+
+    it('エンジンまたは言語が違えば異なるキーになる', async () => {
+      const k1 = await mod.buildSummaryCacheKey('claude', 'ja', 'テスト');
+      const k2 = await mod.buildSummaryCacheKey('gemini', 'ja', 'テスト');
+      const k3 = await mod.buildSummaryCacheKey('claude', 'en', 'テスト');
+      expect(k1).not.toBe(k2);
+      expect(k1).not.toBe(k3);
+    });
+
+    it('setCached → getCached で要約が取得できる', async () => {
+      const key = await mod.buildSummaryCacheKey('claude', 'ja', 'キャッシュテスト本文');
+      await mod.setCached(key, { summary: 'テスト要約' });
+      const entry = await mod.getCached(key, mod.SC_TTL_MS);
+      expect(entry).not.toBeNull();
+      expect(entry.summary).toBe('テスト要約');
+    });
+
+    it('TTL切れの要約エントリは miss 扱い', async () => {
+      const key = await mod.buildSummaryCacheKey('gemini', 'en', '古いテキスト');
+      const expired = Date.now() - (mod.SC_TTL_MS + 1000);
+      chromeStub._data[key] = { summary: '古い要約', ts: expired };
+      const entry = await mod.getCached(key, mod.SC_TTL_MS);
+      expect(entry).toBeNull();
+    });
+
+    it('clearTranslationCache が sc: プレフィックスも削除する', async () => {
+      chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
+      chromeStub._data['sc:claude:ja:abc'] = { ts: Date.now(), summary: '要約' };
+      chromeStub._data['autoRules'] = [];
+      const count = await mod.clearTranslationCache();
+      expect(count).toBe(2);
+      expect(chromeStub._data['autoRules']).toBeDefined();
+      expect(chromeStub._data['sc:claude:ja:abc']).toBeUndefined();
+    });
+
+    it('evictIfNeeded が sc: プレフィックスを独立して evict する', async () => {
+      // SC_MAX_ENTRIES=500 を超える sc: キーを追加
+      for (let i = 0; i < 505; i++) {
+        chromeStub._data[`sc:claude:ja:${String(i).padStart(3, '0')}`] = { ts: i };
+      }
+      await mod.evictIfNeeded();
+      const remaining = Object.keys(chromeStub._data).filter(k => k.startsWith('sc:')).length;
+      expect(remaining).toBeLessThan(505);
     });
   });
 });

@@ -196,14 +196,20 @@ function getEngineConfig() {
   });
 }
 
-// ─── 翻訳キャッシュ ──────────────────────────────────────────────────
-// Google/DeepL は決定的な翻訳エンジンなので、同一入力 → 同一出力。
-// 繰り返し呼び出しを減らすため chrome.storage.local にチャンク単位でキャッシュする。
-// 要約 (Claude/Gemini) は LLM 非決定出力なのでキャッシュ対象外。
+// ─── 翻訳・要約キャッシュ ────────────────────────────────────────────
+// Google/DeepL 翻訳結果を tc: プレフィックス、Claude/Gemini 要約を sc: プレフィックスでキャッシュ。
+// 同一入力 → 同一出力が期待できるため、再呼び出し時にAPI呼び出しをスキップしてコスト削減。
+// Google/DeepL 翻訳結果を tc: プレフィックスでキャッシュ
 const TC_PREFIX = 'tc:';
 const TC_MAX_ENTRIES = 2000;
 const TC_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30日
 const TC_EVICT_RATIO = 0.1; // 超過時に古い順 10% を削除
+
+// Claude/Gemini 要約結果を sc: プレフィックスでキャッシュ（有料APIなのでコスト削減効果大）
+const SC_PREFIX = 'sc:';
+const SC_MAX_ENTRIES = 500; // 要約は1件あたりのデータ量が多いため上限を小さめに
+const SC_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30日
+const SC_EVICT_RATIO = 0.1; // 超過時に古い順 10% を削除
 
 // chrome.storage.local の Promise ラッパー（callback-only 環境でも動作）
 const storageGet = (keys) => new Promise(resolve => chrome.storage.local.get(keys, resolve));
@@ -223,12 +229,17 @@ async function buildCacheKey(engine, sl, tl, text) {
   return `${TC_PREFIX}${engine}:${sl}:${tl}:${hash}`;
 }
 
+async function buildSummaryCacheKey(engine, tl, text) {
+  const hash = await hashText(text);
+  return `${SC_PREFIX}${engine}:${tl}:${hash}`;
+}
+
 // キャッシュ読み出し。TTL 切れは miss として削除し、hit 時は ts を更新（LRU的挙動）
-async function getCached(key) {
+async function getCached(key, ttl = TC_TTL_MS) {
   const data = await storageGet(key);
   const entry = data[key];
   if (!entry) return null;
-  if (Date.now() - entry.ts > TC_TTL_MS) {
+  if (Date.now() - entry.ts > ttl) {
     void storageRemove(key).catch(() => {});
     return null;
   }
@@ -245,20 +256,27 @@ async function setCached(key, entry) {
   }
 }
 
-async function evictIfNeeded() {
-  const all = await storageGet(null);
-  const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX));
-  if (cacheKeys.length <= TC_MAX_ENTRIES) return;
-  const sorted = cacheKeys
+// プレフィックス単位の LRU eviction
+async function evictByPrefix(all, prefix, maxEntries, evictRatio) {
+  const keys = Object.keys(all).filter(k => k.startsWith(prefix));
+  if (keys.length <= maxEntries) return;
+  const sorted = keys
     .map(k => ({ key: k, ts: all[k]?.ts || 0 }))
     .sort((a, b) => a.ts - b.ts);
-  const toEvict = Math.ceil(cacheKeys.length * TC_EVICT_RATIO);
+  const toEvict = Math.ceil(keys.length * evictRatio);
   await storageRemove(sorted.slice(0, toEvict).map(x => x.key));
+}
+
+async function evictIfNeeded() {
+  const all = await storageGet(null);
+  // 翻訳キャッシュ・要約キャッシュをそれぞれ独立して evict
+  await evictByPrefix(all, TC_PREFIX, TC_MAX_ENTRIES, TC_EVICT_RATIO);
+  await evictByPrefix(all, SC_PREFIX, SC_MAX_ENTRIES, SC_EVICT_RATIO);
 }
 
 async function clearTranslationCache() {
   const all = await storageGet(null);
-  const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX));
+  const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX));
   if (cacheKeys.length === 0) return 0;
   await storageRemove(cacheKeys);
   return cacheKeys.length;
@@ -266,7 +284,7 @@ async function clearTranslationCache() {
 
 async function getCacheStats() {
   const all = await storageGet(null);
-  const entries = Object.keys(all).filter(k => k.startsWith(TC_PREFIX)).length;
+  const entries = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX)).length;
   return { entries };
 }
 
@@ -421,15 +439,31 @@ async function fetchSummary(text, targetLang, config) {
 
   const langName = getLangNameForPrompt(targetLang);
 
-  // 選択されたエンジンを優先、APIキーがなければもう一方にフォールバック
+  // 使用エンジンとAPIキーを決定（フォールバック考慮）
+  let engine, apiKey;
   if (config.engine === 'gemini') {
-    if (config.geminiApiKey) return fetchGeminiSummary(text, langName, config.geminiApiKey);
-    if (config.claudeApiKey) return fetchClaudeSummary(text, langName, config.claudeApiKey);
+    if (config.geminiApiKey) { engine = 'gemini'; apiKey = config.geminiApiKey; }
+    else if (config.claudeApiKey) { engine = 'claude'; apiKey = config.claudeApiKey; }
   } else {
-    if (config.claudeApiKey) return fetchClaudeSummary(text, langName, config.claudeApiKey);
-    if (config.geminiApiKey) return fetchGeminiSummary(text, langName, config.geminiApiKey);
+    if (config.claudeApiKey) { engine = 'claude'; apiKey = config.claudeApiKey; }
+    else if (config.geminiApiKey) { engine = 'gemini'; apiKey = config.geminiApiKey; }
   }
-  throw new Error('要約エンジンのAPIキーが設定されていません');
+  if (!engine) throw new Error('要約エンジンのAPIキーが設定されていません');
+
+  // キャッシュ確認（有料APIなのでヒット時はAPI呼び出しをスキップ）
+  const cacheKey = await buildSummaryCacheKey(engine, targetLang, text);
+  const cached = await getCached(cacheKey, SC_TTL_MS);
+  if (cached) return cached.summary;
+
+  // キャッシュミス → LLM呼び出し
+  const summary = engine === 'gemini'
+    ? await fetchGeminiSummary(text, langName, apiKey)
+    : await fetchClaudeSummary(text, langName, apiKey);
+
+  // 結果をキャッシュ保存
+  await setCached(cacheKey, { summary });
+
+  return summary;
 }
 
 // ─── Claude API 要約 ─────────────────────────────────────────────────
