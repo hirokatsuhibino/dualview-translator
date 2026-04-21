@@ -611,3 +611,46 @@ document.getElementById('btnPickSelector').addEventListener('click', async () =>
     }
   });
 })();
+
+// ── 翻訳キャッシュ ───────────────────────────────────────────────────
+// ポップアップ起動時にキャッシュ件数を表示し、クリアボタンで一括削除できる
+
+// chrome.runtime.sendMessage の Promise ラッパー（callback-only 環境でも動作）
+const sendMsg = (msg) => new Promise(resolve => chrome.runtime.sendMessage(msg, resolve));
+
+async function refreshCacheStats() {
+  const label = document.getElementById('cacheEntriesLabel');
+  if (!label) return;
+  // applyToDOM() による data-i18n 上書きを防ぐため属性を除去
+  label.removeAttribute('data-i18n');
+  try {
+    const res = await sendMsg({ action: 'cacheStats' });
+    if (res?.ok) {
+      label.textContent = t('cacheEntriesLabel', { count: res.entries });
+    } else {
+      label.textContent = '—';
+    }
+  } catch (e) {
+    label.textContent = '—';
+  }
+}
+
+document.getElementById('btnClearCache').addEventListener('click', async () => {
+  const btn = document.getElementById('btnClearCache');
+  const label = document.getElementById('cacheEntriesLabel');
+  btn.disabled = true;
+  try {
+    const res = await sendMsg({ action: 'clearTranslationCache' });
+    if (res?.ok) {
+      // 完了メッセージを一時表示してから件数を再取得
+      label.textContent = t('cacheClearedToast', { count: res.cleared });
+      setTimeout(refreshCacheStats, 2000);
+    }
+  } catch (e) {
+    // エラー時は何もせず元の件数のまま
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+refreshCacheStats();

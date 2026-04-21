@@ -170,6 +170,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
+  if (msg.action === 'cacheStats') {
+    getCacheStats()
+      .then(stats => sendResponse({ ok: true, ...stats }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+  if (msg.action === 'clearTranslationCache') {
+    clearTranslationCache()
+      .then(cleared => sendResponse({ ok: true, cleared }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
 });
 
 // ─── エンジン設定をstorageから取得 ────────────────────────────────────
@@ -184,6 +196,80 @@ function getEngineConfig() {
   });
 }
 
+// ─── 翻訳キャッシュ ──────────────────────────────────────────────────
+// Google/DeepL は決定的な翻訳エンジンなので、同一入力 → 同一出力。
+// 繰り返し呼び出しを減らすため chrome.storage.local にチャンク単位でキャッシュする。
+// 要約 (Claude/Gemini) は LLM 非決定出力なのでキャッシュ対象外。
+const TC_PREFIX = 'tc:';
+const TC_MAX_ENTRIES = 2000;
+const TC_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30日
+const TC_EVICT_RATIO = 0.1; // 超過時に古い順 10% を削除
+
+// chrome.storage.local の Promise ラッパー（callback-only 環境でも動作）
+const storageGet = (keys) => new Promise(resolve => chrome.storage.local.get(keys, resolve));
+const storageSet = (items) => new Promise(resolve => chrome.storage.local.set(items, resolve));
+const storageRemove = (keys) => new Promise(resolve => chrome.storage.local.remove(keys, resolve));
+
+// text の SHA-256 先頭16文字（8バイト）をキーに使う。<10000件なら衝突実質ゼロ
+async function hashText(text) {
+  const encoded = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function buildCacheKey(engine, sl, tl, text) {
+  const hash = await hashText(text);
+  return `${TC_PREFIX}${engine}:${sl}:${tl}:${hash}`;
+}
+
+// キャッシュ読み出し。TTL 切れは miss として削除し、hit 時は ts を更新（LRU的挙動）
+async function getCached(key) {
+  const data = await storageGet(key);
+  const entry = data[key];
+  if (!entry) return null;
+  if (Date.now() - entry.ts > TC_TTL_MS) {
+    void storageRemove(key).catch(() => {});
+    return null;
+  }
+  // LRU: 非同期で ts を更新（待たない）
+  void storageSet({ [key]: { ...entry, ts: Date.now() } }).catch(() => {});
+  return entry;
+}
+
+async function setCached(key, entry) {
+  await storageSet({ [key]: { ...entry, ts: Date.now() } });
+  // 毎回全走査するのは重いので 5% の確率で evict 判定
+  if (Math.random() < 0.05) {
+    evictIfNeeded().catch(() => {});
+  }
+}
+
+async function evictIfNeeded() {
+  const all = await storageGet(null);
+  const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX));
+  if (cacheKeys.length <= TC_MAX_ENTRIES) return;
+  const sorted = cacheKeys
+    .map(k => ({ key: k, ts: all[k]?.ts || 0 }))
+    .sort((a, b) => a.ts - b.ts);
+  const toEvict = Math.ceil(cacheKeys.length * TC_EVICT_RATIO);
+  await storageRemove(sorted.slice(0, toEvict).map(x => x.key));
+}
+
+async function clearTranslationCache() {
+  const all = await storageGet(null);
+  const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX));
+  if (cacheKeys.length === 0) return 0;
+  await storageRemove(cacheKeys);
+  return cacheKeys.length;
+}
+
+async function getCacheStats() {
+  const all = await storageGet(null);
+  const entries = Object.keys(all).filter(k => k.startsWith(TC_PREFIX)).length;
+  return { entries };
+}
+
 // ─── 翻訳ディスパッチャー ────────────────────────────────────────────
 async function fetchTranslation(text, tl, sl, config) {
   if (!text || !text.trim()) return { text: '', detectedLang: null };
@@ -195,19 +281,32 @@ async function fetchTranslation(text, tl, sl, config) {
 }
 
 // ─── Google Translate ────────────────────────────────────────────────
+// 実 API 呼び出し（1 チャンク分）
+async function fetchGoogleChunk(chunk, sl, tl) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(chunk)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
+  const data = await res.json();
+  const translated = data[0].map(item => item[0]).filter(Boolean).join('');
+  const detectedLang = data[2] || null;
+  return { translated, detectedLang };
+}
+
 async function fetchGoogle(text, tl, sl) {
   const chunks = splitIntoChunks(text, 4500);
   const results = [];
   let detectedLang = null;
 
   for (const chunk of chunks) {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(chunk)}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
-    const data = await res.json();
-    const translated = data[0].map(item => item[0]).filter(Boolean).join('');
-    results.push(translated);
-    if (!detectedLang && data[2]) detectedLang = data[2];
+    const cacheKey = await buildCacheKey('google', sl, tl, chunk);
+    let entry = await getCached(cacheKey);
+    if (!entry) {
+      const fetched = await fetchGoogleChunk(chunk, sl, tl);
+      entry = { translated: fetched.translated, detectedLang: fetched.detectedLang };
+      await setCached(cacheKey, entry);
+    }
+    results.push(entry.translated);
+    if (!detectedLang && entry.detectedLang) detectedLang = entry.detectedLang;
   }
 
   return { text: results.join(' '), detectedLang };
@@ -232,45 +331,61 @@ function getDeepLEndpoint(apiKey) {
     : 'https://api.deepl.com/v2/translate';
 }
 
+// 実 API 呼び出し（1 チャンク分）
+async function fetchDeepLChunk(chunk, sl, tl, apiKey) {
+  const endpoint = getDeepLEndpoint(apiKey);
+  const body = {
+    text: [chunk],
+    target_lang: toDeepLLang(tl),
+  };
+  // DeepLは source_lang が 'auto' の場合は省略する（自動検出）
+  if (sl && sl !== 'auto') {
+    body.source_lang = toDeepLLang(sl);
+  }
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `DeepL-Auth-Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const status = res.status;
+    if (status === 403) throw new Error('DeepL: APIキーが無効です');
+    if (status === 456) throw new Error('DeepL: 翻訳上限に達しました');
+    throw new Error(`DeepL HTTP ${status}`);
+  }
+
+  const data = await res.json();
+  if (data.translations && data.translations.length > 0) {
+    return {
+      translated: data.translations[0].text,
+      detectedLang: data.translations[0].detected_source_language
+        ? data.translations[0].detected_source_language.toLowerCase()
+        : null,
+    };
+  }
+  return { translated: '', detectedLang: null };
+}
+
 async function fetchDeepL(text, tl, sl, apiKey) {
   const chunks = splitIntoChunks(text, 4500);
   const results = [];
   let detectedLang = null;
-  const endpoint = getDeepLEndpoint(apiKey);
 
   for (const chunk of chunks) {
-    const body = {
-      text: [chunk],
-      target_lang: toDeepLLang(tl),
-    };
-    // DeepLは source_lang が 'auto' の場合は省略する（自動検出）
-    if (sl && sl !== 'auto') {
-      body.source_lang = toDeepLLang(sl);
+    const cacheKey = await buildCacheKey('deepl', sl, tl, chunk);
+    let entry = await getCached(cacheKey);
+    if (!entry) {
+      const fetched = await fetchDeepLChunk(chunk, sl, tl, apiKey);
+      entry = { translated: fetched.translated, detectedLang: fetched.detectedLang };
+      await setCached(cacheKey, entry);
     }
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `DeepL-Auth-Key ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const status = res.status;
-      if (status === 403) throw new Error('DeepL: APIキーが無効です');
-      if (status === 456) throw new Error('DeepL: 翻訳上限に達しました');
-      throw new Error(`DeepL HTTP ${status}`);
-    }
-
-    const data = await res.json();
-    if (data.translations && data.translations.length > 0) {
-      results.push(data.translations[0].text);
-      if (!detectedLang && data.translations[0].detected_source_language) {
-        detectedLang = data.translations[0].detected_source_language.toLowerCase();
-      }
-    }
+    results.push(entry.translated);
+    if (!detectedLang && entry.detectedLang) detectedLang = entry.detectedLang;
   }
 
   return { text: results.join(' '), detectedLang };

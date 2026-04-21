@@ -294,6 +294,27 @@
 
     .info-box strong { color: var(--text); }
 
+    /* ── Cache ── */
+    .cache-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cache-entries {
+      flex: 1;
+      font-size: 11.5px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .cache-clear-btn {
+      flex-shrink: 0;
+      width: auto;
+      padding: 6px 12px;
+      font-size: 11.5px;
+    }
+
     /* ── Divider ── */
     .divider {
       height: 1px;
@@ -676,6 +697,15 @@
             <button class="dvt-api-test-btn" id="geminiTestBtn" data-i18n="apiKeyTest">テスト</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label" data-i18n="cacheSectionLabel">翻訳キャッシュ</div>
+      <div class="cache-row">
+        <span class="lang-label" aria-hidden="true">💾</span>
+        <span id="cacheEntriesLabel" class="cache-entries" data-i18n="cacheLoading">読み込み中…</span>
+        <button class="btn btn-secondary cache-clear-btn" id="btnClearCache" data-i18n="cacheClearBtn">キャッシュをクリア</button>
       </div>
     </div>
 
