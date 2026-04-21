@@ -1,5 +1,5 @@
 // Copyright (c) Orangesoft Inc
-// 翻訳キャッシュのロジックテスト
+// 翻訳・要約キャッシュのロジックテスト（tc: / sc: 両プレフィックス）
 // background.js から pure 関数・クラス非依存ロジックを抽出して検証する
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
@@ -11,9 +11,10 @@ function loadCacheModule() {
   // キャッシュ関連の関数と定数をまとめて extract して eval
   const names = [
     'TC_PREFIX', 'TC_MAX_ENTRIES', 'TC_TTL_MS', 'TC_EVICT_RATIO',
+    'SC_PREFIX', 'SC_MAX_ENTRIES', 'SC_TTL_MS', 'SC_EVICT_RATIO',
     'storageGet', 'storageSet', 'storageRemove',
-    'hashText', 'buildCacheKey', 'getCached', 'setCached',
-    'evictIfNeeded', 'clearTranslationCache', 'getCacheStats',
+    'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
+    'evictByPrefix', 'evictIfNeeded', 'clearCache', 'getCacheStats',
   ];
   const defs = names.map(n => {
     // const / async function / function いずれのパターンでも拾う
@@ -69,7 +70,7 @@ function createChromeStub() {
   };
 }
 
-describe('翻訳キャッシュ', () => {
+describe('翻訳・要約キャッシュ', () => {
   let mod;
   let chromeStub;
 
@@ -195,13 +196,13 @@ describe('翻訳キャッシュ', () => {
     });
   });
 
-  describe('clearTranslationCache', () => {
+  describe('clearCache', () => {
     it('tc: プレフィックスのキーのみ削除、他キーは残る', async () => {
       chromeStub._data['tc:google:en:ja:1111111111111111'] = { translated: 'v1', ts: Date.now() };
       chromeStub._data['tc:deepl:auto:ja:2222222222222222'] = { translated: 'v2', ts: Date.now() };
       chromeStub._data['autoRules'] = [{ id: 'rule-1' }];
       chromeStub._data['targetLang'] = 'ja';
-      const cleared = await mod.clearTranslationCache();
+      const cleared = await mod.clearCache();
       expect(cleared).toBe(2);
       expect(chromeStub._data['autoRules']).toBeDefined();
       expect(chromeStub._data['targetLang']).toBe('ja');
@@ -209,23 +210,86 @@ describe('翻訳キャッシュ', () => {
     });
 
     it('キャッシュが空のときは 0 を返す', async () => {
-      const cleared = await mod.clearTranslationCache();
+      const cleared = await mod.clearCache();
       expect(cleared).toBe(0);
     });
   });
 
   describe('getCacheStats', () => {
-    it('tc: プレフィックスのキー数を返す', async () => {
+    it('tc: と sc: を別々にカウントし合計も返す', async () => {
       chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
       chromeStub._data['tc:deepl:en:ja:2'] = { ts: Date.now() };
+      chromeStub._data['sc:claude:ja:abc'] = { ts: Date.now() };
       chromeStub._data['autoRules'] = [];
       const stats = await mod.getCacheStats();
-      expect(stats.entries).toBe(2);
+      expect(stats.tcEntries).toBe(2);
+      expect(stats.scEntries).toBe(1);
+      expect(stats.entries).toBe(3);
     });
 
-    it('空キャッシュでは 0 を返す', async () => {
+    it('空キャッシュでは全て 0 を返す', async () => {
       const stats = await mod.getCacheStats();
+      expect(stats.tcEntries).toBe(0);
+      expect(stats.scEntries).toBe(0);
       expect(stats.entries).toBe(0);
+    });
+  });
+
+  describe('要約キャッシュ（sc: プレフィックス）', () => {
+    it('buildSummaryCacheKey が sc: プレフィックスのキーを返す', async () => {
+      const key = await mod.buildSummaryCacheKey('claude', 'ja', 'テスト');
+      expect(key).toMatch(/^sc:claude:ja:[0-9a-f]{16}$/);
+    });
+
+    it('エンジンまたは言語が違えば異なるキーになる', async () => {
+      const k1 = await mod.buildSummaryCacheKey('claude', 'ja', 'テスト');
+      const k2 = await mod.buildSummaryCacheKey('gemini', 'ja', 'テスト');
+      const k3 = await mod.buildSummaryCacheKey('claude', 'en', 'テスト');
+      expect(k1).not.toBe(k2);
+      expect(k1).not.toBe(k3);
+    });
+
+    it('setCached → getCached で要約が取得できる', async () => {
+      const key = await mod.buildSummaryCacheKey('claude', 'ja', 'キャッシュテスト本文');
+      await mod.setCached(key, { summary: 'テスト要約' });
+      const entry = await mod.getCached(key, mod.SC_TTL_MS);
+      expect(entry).not.toBeNull();
+      expect(entry.summary).toBe('テスト要約');
+    });
+
+    it('TTL切れの要約エントリは miss 扱い', async () => {
+      const key = await mod.buildSummaryCacheKey('gemini', 'en', '古いテキスト');
+      const expired = Date.now() - (mod.SC_TTL_MS + 1000);
+      chromeStub._data[key] = { summary: '古い要約', ts: expired };
+      const entry = await mod.getCached(key, mod.SC_TTL_MS);
+      expect(entry).toBeNull();
+    });
+
+    it('clearTranslationCache が sc: プレフィックスも削除する', async () => {
+      chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
+      chromeStub._data['sc:claude:ja:abc'] = { ts: Date.now(), summary: '要約' };
+      chromeStub._data['autoRules'] = [];
+      const count = await mod.clearCache();
+      expect(count).toBe(2);
+      expect(chromeStub._data['autoRules']).toBeDefined();
+      expect(chromeStub._data['sc:claude:ja:abc']).toBeUndefined();
+    });
+
+    it('evictIfNeeded が sc: プレフィックスを独立して evict する（削除件数・削除順を検証）', async () => {
+      // SC_MAX_ENTRIES=500 を超える 505 件を追加（ts=0 が最古）
+      for (let i = 0; i < 505; i++) {
+        chromeStub._data[`sc:claude:ja:${String(i).padStart(3, '0')}`] = { ts: i };
+      }
+      await mod.evictIfNeeded();
+      const remaining = Object.keys(chromeStub._data).filter(k => k.startsWith('sc:'));
+      // 期待削除件数: ceil(505 * 0.1) = 51
+      expect(remaining.length).toBe(505 - Math.ceil(505 * mod.SC_EVICT_RATIO));
+      // 最古キー（ts=0〜50）が削除されていること
+      for (let i = 0; i < Math.ceil(505 * mod.SC_EVICT_RATIO); i++) {
+        expect(chromeStub._data[`sc:claude:ja:${String(i).padStart(3, '0')}`]).toBeUndefined();
+      }
+      // 最新キー（ts=504）は残っていること
+      expect(chromeStub._data['sc:claude:ja:504']).toBeDefined();
     });
   });
 });
