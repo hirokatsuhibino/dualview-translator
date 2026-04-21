@@ -39,7 +39,8 @@ LLM（Claude / Gemini）による要約機能も搭載。
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
-│   └── test-plan.md       #   テストプラン（74項目）
+│   ├── test-plan.md       #   テストプラン（74項目、Markdown表形式）
+│   └── manual-test-scenarios.yaml #  手動テストシナリオ（YAML、自動テスト補完）
 └── safari/                # Safari Web Extension（Xcode プロジェクト）
     ├── README.md          #   ビルド・インストール手順
     └── DualView Translator/ # macOS/iOS両対応のXcodeプロジェクト
@@ -139,6 +140,8 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - IIFEパターンのスクリプトは `tests/helpers.js` の `loadScript()` でグローバルにロード
 - `window.matchMedia` 等のjsdom未サポートAPIも `setup.js` でモック済み
 - 新規メッセージやユーティリティ関数を追加した場合は対応するテストも追加すること
+- 自動テストで拾えない領域（実ブラウザUX・a11y・ストレージ競合・クロスブラウザ差異・Safari/iOS固有挙動等）は `docs/manual-test-scenarios.yaml` に記述する
+  - p0: リリース前必須 / p1: リリーステスト推奨 / p2: 可能なら実施
 
 ## 既知の問題
 
