@@ -663,7 +663,125 @@ suites:
           - 翻訳対象テキスト等のユーザーコンテンツがログに出力されない
           - os_log level は .debug（Release では非出力）
 
-  # ━━━━━ 12. Claude スキル（開発ワークフロー） ━━━━━
+  # ━━━━━ 12. 翻訳キャッシュ ━━━━━
+  - id: translation-cache
+    title: 翻訳結果キャッシュ
+    description: "PR #56 で追加された chrome.storage.local ベースの翻訳キャッシュ"
+    related_prs: [56]
+    scenarios:
+
+      - id: TC-001
+        title: 同じ文を再翻訳するとキャッシュが効く
+        priority: p0
+        preconditions:
+          - 翻訳エンジン: Google
+          - 「設定」タブでキャッシュをクリア済み
+        steps:
+          - 英語のページを開いてページ全体翻訳を実行（API呼び出し発生）
+          - ポップアップで「設定」タブ → キャッシュ件数が増えていることを確認
+          - ブラウザタブを閉じて同じページを再度開く
+          - もう一度ページ全体翻訳を実行
+        expected:
+          - 2回目の翻訳は1回目より明らかに速い
+          - DevTools → Network で `translate.googleapis.com` への新規リクエストが殆ど無い
+          - キャッシュ件数が2回目で増加しない（ヒットのため）
+
+      - id: TC-002
+        title: DeepL でも同様にキャッシュが効く
+        priority: p1
+        preconditions:
+          - 翻訳エンジン: DeepL（有効な APIキー）
+        steps:
+          - キャッシュをクリア
+          - 英語ページを翻訳 → 再度翻訳
+        expected:
+          - 2回目は `api-free.deepl.com` / `api.deepl.com` への POST が発生しない
+          - DeepL API の文字数カウントが進まない
+
+      - id: TC-003
+        title: エンジン切替でキャッシュは別管理される
+        priority: p1
+        steps:
+          - 翻訳エンジン Google でページ翻訳
+          - 翻訳エンジンを DeepL に切替
+          - 同じページを翻訳
+        expected:
+          - DeepL では新規に API 呼び出しが発生（Google のキャッシュを DeepL が使わない）
+          - キャッシュ件数が両エンジン分だけ増える
+
+      - id: TC-004
+        title: ターゲット言語切替でキャッシュは別管理される
+        priority: p1
+        steps:
+          - 英語ページを日本語に翻訳
+          - ポップアップで翻訳先を中国語に変更
+          - 同じページを翻訳
+        expected:
+          - 中国語翻訳は新規API呼び出し（日本語キャッシュと混在しない）
+
+      - id: TC-005
+        title: "「設定」タブにキャッシュ件数が表示される"
+        priority: p0
+        steps:
+          - 翻訳を何度か実行してキャッシュを溜める
+          - ポップアップで「設定」タブを開く
+        expected:
+          - '「翻訳キャッシュ」セクションに現在の件数が表示される（例: "42 件"）'
+          - 'UI言語を変えると件数表記が翻訳される（"42 entries" 等）'
+
+      - id: TC-006
+        title: "「キャッシュをクリア」ボタンで一括削除"
+        priority: p0
+        steps:
+          - キャッシュが数十件溜まった状態
+          - 「設定」タブで「キャッシュをクリア」ボタンをクリック
+        expected:
+          - 'ボタン押下後、完了メッセージが一時表示される（例: "キャッシュを削除しました（42 件）"）'
+          - '2秒後に件数が "0 件" に更新される'
+          - 同じページを再翻訳すると今度はAPI呼び出しが発生する
+
+      - id: TC-007
+        title: キャッシュクリアは他のストレージに影響しない
+        priority: p1
+        steps:
+          - 自動翻訳ルール・翻訳先言語・APIキー等を設定した状態でキャッシュをクリア
+        expected:
+          - ルール・言語設定・APIキー等は維持される（tc: プレフィックスのキーのみ削除）
+
+      - id: TC-008
+        title: 要約はキャッシュ対象外
+        priority: p2
+        preconditions:
+          - Claude または Gemini APIキー設定済み
+        steps:
+          - 同じページで「ページ全体を翻訳＆要約」を2回実行
+        expected:
+          - 翻訳部分はキャッシュが効くが要約は毎回LLM呼び出しが発生
+          - キャッシュ件数は翻訳チャンク分だけ増える（要約の件数は増えない）
+
+      - id: TC-009
+        title: 長時間未使用のエントリは TTL（30日）で自然に削除
+        priority: p2
+        description: "自動テストでカバー済みのため手動検証は任意"
+        steps:
+          - DevTools → Application → Storage → chrome.storage.local を開く
+          - '`tc:` プレフィックスのエントリで `ts` を 31日前に書き換え'
+          - 同じ翻訳を実行
+        expected:
+          - 該当エントリが miss 扱いになり API 呼び出しが発生する
+          - 期限切れエントリは storage から削除される
+
+      - id: TC-010
+        title: 2000件超でも LRU で古い順に evict
+        priority: p2
+        description: "自動テストでカバー済み。実機確認は任意"
+        steps:
+          - 大量の翻訳を実行してキャッシュを 2000件 超にする
+        expected:
+          - 古い順（ts が小さい順）に 10% が自動削除される
+          - 最新のエントリは維持される
+
+  # ━━━━━ 13. Claude スキル（開発ワークフロー） ━━━━━
   - id: claude-skills
     title: Claude Code スキルの動作
     description: ".claude/skills/ 配下のプロジェクトスキル動作確認"

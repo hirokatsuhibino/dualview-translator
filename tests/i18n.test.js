@@ -70,6 +70,7 @@ describe('DVT_I18N', () => {
       'tabTranslate', 'tabRules', 'tabSettings',
       'translateAndSummarize', 'translateRegionSummarize',
       'autoRuleAdd', 'autoRuleUpdate', 'autoRuleCancel', 'autoRuleNotFound',
+      'cacheSectionLabel', 'cacheEntriesLabel', 'cacheClearBtn', 'cacheLoading', 'cacheClearedToast',
     ];
 
     for (const lang of langs) {
