@@ -142,6 +142,8 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - 新規メッセージやユーティリティ関数を追加した場合は対応するテストも追加すること
 - 自動テストで拾えない領域（実ブラウザUX・a11y・ストレージ競合・クロスブラウザ差異・Safari/iOS固有挙動等）は `docs/manual-test-scenarios.yaml` に記述する
   - p0: リリース前必須 / p1: リリーステスト推奨 / p2: 可能なら実施
+- 開発ワークフロー向けの Claude スキルは `.claude/skills/` 配下に配置
+  - `/pr-review-check` — オープンPRの未対応レビューを一括確認
 
 ## 既知の問題
 
