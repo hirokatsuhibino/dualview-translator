@@ -662,3 +662,46 @@ suites:
         expected:
           - 翻訳対象テキスト等のユーザーコンテンツがログに出力されない
           - os_log level は .debug（Release では非出力）
+
+  # ━━━━━ 12. Claude スキル（開発ワークフロー） ━━━━━
+  - id: claude-skills
+    title: Claude Code スキルの動作
+    description: ".claude/skills/ 配下のプロジェクトスキル動作確認"
+    related_prs: [54]
+    scenarios:
+
+      - id: CS-001
+        title: "/pr-review-check スキル — 未対応ありの表示"
+        priority: p1
+        preconditions:
+          - Copilot レビュー未返信が残っているオープンPRが1件以上ある
+        steps:
+          - Claude Code で `/pr-review-check` を実行
+        expected:
+          - 対象PRの番号・タイトル・未対応コメント件数が表示される
+          - 各コメントのファイル:行と本文抜粋が見える
+          - 最後に「.claude/rules/pr-review.md に従って対応」案内が出る
+          - スキルは勝手に返信・修正を行わない（確認を促すのみ）
+
+      - id: CS-002
+        title: "/pr-review-check スキル — 全対応済みの表示"
+        priority: p2
+        preconditions:
+          - 全オープンPRに未対応コメントが残っていない
+        steps:
+          - Claude Code で `/pr-review-check` を実行
+        expected:
+          - 「✓ 全PR対応済み」または同等のメッセージが表示される
+
+      - id: CS-003
+        title: "/pr-review-check スキル — オープンPR無し"
+        priority: p2
+        preconditions:
+          - hirokatsuhibino/dualview-translator にオープンPRが0件
+        steps:
+          - "環境変数 `GH_DEBUG=api` を設定した状態でターミナルを開く（例: `export GH_DEBUG=api`）"
+          - Claude Code で `/pr-review-check` を実行する
+          - ターミナルに出力される `gh` の API リクエストログを確認する
+        expected:
+          - 「未対応のPRはありません」と表示して終了する
+          - "デバッグログ上、オープンPR有無の確認（`gh pr list`）のみで終了し、PR詳細取得・インラインコメント取得などの追加 API 呼び出しが発生しない"
