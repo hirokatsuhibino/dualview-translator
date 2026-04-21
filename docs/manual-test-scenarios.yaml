@@ -699,7 +699,9 @@ suites:
         preconditions:
           - hirokatsuhibino/dualview-translator にオープンPRが0件
         steps:
-          - Claude Code で `/pr-review-check` を実行
+          - "環境変数 `GH_DEBUG=api` を設定した状態でターミナルを開く（例: `export GH_DEBUG=api`）"
+          - Claude Code で `/pr-review-check` を実行する
+          - ターミナルに出力される `gh` の API リクエストログを確認する
         expected:
-          - 「未対応のPRはありません」と表示して終了
-          - gh API を無駄に叩かない
+          - 「未対応のPRはありません」と表示して終了する
+          - "デバッグログ上、オープンPR有無の確認（`gh pr list`）のみで終了し、PR詳細取得・インラインコメント取得などの追加 API 呼び出しが発生しない"

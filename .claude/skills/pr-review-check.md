@@ -16,7 +16,7 @@ user_invocable: true
 
 ```bash
 gh pr list --state open --repo hirokatsuhibino/dualview-translator \
-  --json number,title,headRefName,updatedAt
+  --json number,title,headRefName,updatedAt,author
 ```
 
 1件も無ければ「未対応のPRはありません」と表示して終了。
@@ -30,8 +30,9 @@ gh pr list --state open --repo hirokatsuhibino/dualview-translator \
 gh pr view N --repo hirokatsuhibino/dualview-translator \
   --json reviews,comments
 
-# インラインコメント（ファイル・行への指摘と各返信）
+# インラインコメント（ファイル・行への指摘と各返信）— --paginate で全件取得
 gh api repos/hirokatsuhibino/dualview-translator/pulls/N/comments \
+  --paginate -F per_page=100 \
   --jq '.[] | {id, path, line: (.line // .original_line), user: .user.login, in_reply_to_id, created_at, body}'
 ```
 
@@ -40,7 +41,9 @@ gh api repos/hirokatsuhibino/dualview-translator/pulls/N/comments \
 インラインコメントを `in_reply_to_id` でスレッド化し、以下を「**未対応**」と判定する:
 
 - スレッドの**先頭**がレビュアー（`user.login` が PR 作成者以外、例: `Copilot` / `copilot-pull-request-reviewer`）で
-- スレッドの**末尾**コメントが PR 作成者（`hirokatsuhibino`）ではない
+- スレッドの**末尾**コメントが PR 作成者ではない
+
+PR 作成者の `user.login` は手順 1 の `author.login` フィールドから動的に取得する（固定値に依存しない）。
 
 また、overview レビュー（`pr view --json reviews`）についても、以下を追加で確認:
 
