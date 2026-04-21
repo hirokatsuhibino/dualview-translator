@@ -36,7 +36,7 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── background.test.js  #  background テスト（18件）
 │   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）
 │   ├── auto-rule-edit.test.js # 自動翻訳ルール編集テスト（10件）
-│   └── translation-cache.test.js # 翻訳キャッシュテスト（18件）
+│   └── translation-cache.test.js # 翻訳・要約キャッシュテスト（24件）
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
@@ -71,14 +71,14 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - **DeepL**: `api-free.deepl.com` / `api.deepl.com`（APIキー必要、Free/Pro自動判定）
 - 切り替え: `chrome.storage.local` の `translateEngine` / `deeplApiKey` で管理
 
-### 翻訳キャッシュ
+### 翻訳・要約キャッシュ
 
-- チャンク単位で翻訳結果を `chrome.storage.local` にキャッシュ
-- キー: `tc:<engine>:<sl>:<tl>:<sha256(text)[:16]>`
-- 値: `{ translated, detectedLang, ts }`（`ts` は最終アクセス時刻）
-- TTL 30日 / 最大 2000 件（超過時は LRU で 10% evict）
-- 要約（Claude/Gemini）は LLM 非決定出力なのでキャッシュしない
-- 「設定」タブに件数表示とクリアボタン（`cacheStats` / `clearTranslationCache` メッセージ）
+- 翻訳結果を `tc:` プレフィックス、要約結果を `sc:` プレフィックスで `chrome.storage.local` にキャッシュ
+- 翻訳キー: `tc:<engine>:<sl>:<tl>:<sha256(text)[:16]>` / 値: `{ translated, detectedLang, ts }`
+- 要約キー: `sc:<engine>:<tl>:<sha256(text)[:16]>` / 値: `{ summary, ts }`
+- 翻訳: TTL 30日 / 最大 2000 件 / LRU 10% evict
+- 要約: TTL 30日 / 最大 500 件 / LRU 10% evict（有料APIのコスト削減が主目的）
+- 「設定」タブに翻訳+要約の合計件数表示とクリアボタン（`cacheStats` / `clearCache` メッセージ）
 
 ### 要約エンジン（LLM）
 
