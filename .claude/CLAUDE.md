@@ -6,6 +6,10 @@ Issue対応の詳細ルールは `.claude/rules/issue.md` を参照。
 
 仕様の追加、変更があったときは、readme.md、リリースノートなどの関連ドキュメントを更新するようにしてください。
 
+# テスト
+
+テストプラン・自動テスト・手動テストシナリオ（`docs/manual-test-scenarios.yaml`）の更新ルールは `.claude/rules/test.md` を参照。
+
 # copyrightの記述
 
 ドキュメント、ソースにはcopyrightを記述してください。
