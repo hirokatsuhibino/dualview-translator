@@ -1,0 +1,664 @@
+# Copyright (c) Orangesoft Inc.
+# DualView Translator — 手動テストシナリオ
+#
+# 目的:
+#   docs/test-plan.md を補完する。自動テスト（Vitest）および既存 test-plan.md で
+#   カバーされていない領域、および直近のPR（#40 Safari/iOS、#48 AppIcon、
+#   #51 ルールタブ独立化＋編集機能）で追加された挙動を中心に、実ブラウザで
+#   確認が必要な手動シナリオを構造化して記述する。
+#
+# 使い方:
+#   リリース前に priority: p0 の全シナリオ、および直近変更に関連する p1 を実施する。
+#   実施結果は別途スプレッドシート等で記録する。
+
+version: "1.0"
+meta:
+  title: DualView Translator 手動テストシナリオ
+  updated: "2026-04-21"
+  complements: docs/test-plan.md
+  auto_tests: tests/  # Vitest 自動テスト — このYAMLはそれで拾えない領域を対象とする
+
+# ─── テスト環境 ──────────────────────────────────────────────────────
+environments:
+  browsers:
+    - id: chrome
+      name: Chrome
+      min_version: latest
+    - id: firefox
+      name: Firefox
+      min_version: "112"  # manifest.json の browser_specific_settings.gecko.strict_min_version と一致
+    - id: edge
+      name: Edge (Chromium)
+      min_version: latest
+    - id: safari-mac
+      name: Safari (macOS)
+      min_version: "16.4"
+      note: Xcode 経由でインストール。Safari → 開発メニュー → 未署名の拡張機能を許可
+    - id: safari-ios-sim
+      name: Safari (iOS Simulator)
+      min_version: "15"
+      note: iOS プラットフォーム SDK が必要
+    - id: safari-ios-real
+      name: Safari (iOS 実機)
+      min_version: "15"
+      note: 無料 Apple ID でも 7日お試しインストール可
+  themes:
+    - dark
+    - light
+  languages: [ja, en, zh-CN, zh-TW, ko, fr, de, es, pt, ru, ar]
+
+# ─── 優先度定義 ──────────────────────────────────────────────────────
+priority_levels:
+  p0: リリース前に必ず実施（致命的なリグレッション検知）
+  p1: リリーステストで実施（重要なUX・機能の回帰検知）
+  p2: 可能なら実施（パフォーマンス・エッジケース・長時間運用）
+
+# ─── スイート定義 ────────────────────────────────────────────────────
+suites:
+
+  # ━━━━━ 1. ルールタブ（3タブ構成） ━━━━━
+  - id: rules-tab
+    title: 「ルール」タブの基本動作
+    description: "PR #51 で追加された独立タブとしての挙動"
+    related_prs: [51]
+    scenarios:
+
+      - id: RT-001
+        title: 3タブ構成の確認
+        priority: p0
+        steps:
+          - 拡張のツールバーアイコンをクリックしてポップアップを開く
+        expected:
+          - タブバーに「翻訳」「ルール」「設定」の3タブが左から順に表示される
+          - デフォルトで「翻訳」タブがアクティブ
+          - 各タブ名が現在のUI言語で表示される
+
+      - id: RT-002
+        title: ポップアップ再オープン時の初期タブ
+        priority: p0
+        steps:
+          - 「ルール」タブに切替えてからポップアップを閉じる
+          - もう一度ポップアップを開く
+        expected:
+          - 「翻訳」タブから始まる（最後に選んだタブは記憶しない仕様）
+
+      - id: RT-003
+        title: 設定タブからルール関連が完全に除去されている
+        priority: p1
+        steps:
+          - 「設定」タブを開く
+        expected:
+          - 自動翻訳ルールの見出し・一覧・追加フォームが「設定」タブには表示されない
+          - 「設定」タブには UI言語 / 翻訳エンジン / 要約エンジン / ヒントのみ
+
+      - id: RT-004
+        title: ルール未登録時の空表示
+        priority: p1
+        preconditions:
+          - autoRules ストレージが空
+        steps:
+          - 「ルール」タブを開く
+        expected:
+          - 空状態メッセージ（autoRuleEmpty）が表示される
+          - 追加フォームは表示されている
+
+      - id: RT-005
+        title: UI言語切替でタブ名が追従
+        priority: p1
+        steps:
+          - 「設定」タブで表示言語を英語に変更
+          - タブバーを確認
+        expected:
+          - タブ名が "Translate" / "Rules" / "Settings" に切り替わる
+          - 11言語全てで確認（ja/en/zh-CN/zh-TW/ko/fr/de/es/pt/ru/ar）
+
+  # ━━━━━ 2. ルール編集（select-to-edit） ━━━━━
+  - id: rule-edit
+    title: 登録済みルールの編集
+    description: "PR #51 で追加された select-to-edit フロー"
+    related_prs: [51]
+    scenarios:
+
+      - id: RE-001
+        title: 項目クリックでフォームに値がセットされる
+        priority: p0
+        preconditions:
+          - ルールが1件以上登録済み（URLパターン・selector・mode を含むもの）
+        steps:
+          - 「ルール」タブを開く
+          - ルール一覧の項目をクリック
+        expected:
+          - 下部フォームの URLパターン / セレクタ / モード選択に既存値がセットされる
+          - 「追加」ボタンのラベルが「更新」に変わる
+          - 「キャンセル」ボタンが表示される
+          - クリックした項目にハイライト（.editing クラス、accent色の枠線）が付く
+
+      - id: RE-002
+        title: 更新ボタンでルールが上書きされる（IDは維持）
+        priority: p0
+        steps:
+          - RE-001 を実施して編集モードに入る
+          - URLパターンを別の値に変更
+          - 「更新」ボタンをクリック
+        expected:
+          - 同じ位置のルールが更新される（新規追加で2件にならない）
+          - ルールのIDは変わらない（検証: ポップアップを閉じて開き直して順序確認）
+          - フォームがクリアされ、編集モードが解除される
+
+      - id: RE-003
+        title: キャンセルで編集を取りやめ
+        priority: p0
+        steps:
+          - RE-001 を実施
+          - URLパターンを別の値に入力
+          - 「キャンセル」ボタンをクリック
+        expected:
+          - フォームがクリアされる
+          - 「追加」ボタンが元に戻る
+          - 「キャンセル」ボタンが非表示に戻る
+          - ルール自体は変更されない（一覧の値は元のまま）
+
+      - id: RE-004
+        title: 編集中の項目を再クリックで編集解除
+        priority: p1
+        steps:
+          - RE-001 で編集モードに入る
+          - 同じ項目をもう一度クリック
+        expected:
+          - フォームがクリアされ、追加モードに戻る
+
+      - id: RE-005
+        title: 編集中に別ルールをクリックすると編集対象が切替
+        priority: p0
+        preconditions:
+          - ルールを2件以上登録
+        steps:
+          - 1件目をクリックして編集モードに入る
+          - フォームを編集
+          - 「更新」をクリック
+          - 別のルールをクリック
+        expected:
+          - 別のルールが編集モードに入り、そのルールの値がフォームにセットされる
+          - 注:過去に存在したバグ（更新後に別項目をクリックしても編集モードにならない）が再発していないこと
+
+      - id: RE-006
+        title: URLパターンだけ変更 → 同じ値なら何も起きない
+        priority: p2
+        steps:
+          - 編集モードで何も変更せず「更新」クリック
+        expected:
+          - ルール内容は変化なし
+          - content script へ reapplyAutoRule は送信されない（Observer 不要な再起動が起きない）
+          - 編集モードは解除される
+
+      - id: RE-007
+        title: 編集中のルールを削除すると編集モードが解除される
+        priority: p1
+        steps:
+          - ルールAを編集モードに
+          - ルールAの×ボタンをクリック
+        expected:
+          - ルールAが削除される
+          - 編集モードが解除されフォームがクリアされる
+          - 他ルールの編集に影響しない
+
+      - id: RE-008
+        title: 編集中に他ルールのチェックボックス操作
+        priority: p1
+        steps:
+          - ルールAを編集モードに
+          - ルールBのチェックボックスをクリック（有効/無効切替）
+        expected:
+          - ルールBの enabled が切り替わる
+          - ルールAの編集モードは維持される（フォームと .editing 表示がそのまま）
+
+      - id: RE-009
+        title: 編集中にUI言語を切り替え → 更新ボタンラベルが追従
+        priority: p0
+        description: 過去のバグ（data-i18n未追従で「追加」に戻る）の回帰検証
+        steps:
+          - ルール編集モードに入る（「更新」ボタンが表示）
+          - 「設定」タブで UI言語を英語に変更
+          - 「ルール」タブに戻る
+        expected:
+          - ボタンラベルが "Update" のまま（"Add" に戻っていない）
+          - キャンセルボタンも翻訳される
+          - 全11言語で同様に動作
+
+      - id: RE-010
+        title: セレクタに特殊文字が含まれても表示が壊れない
+        priority: p1
+        description: "過去のバグ（二重エスケープで &gt; が表示）の回帰検証"
+        steps:
+          - 'セレクタに `div > p.content[data-role="main"]` のような記号を含むルールを追加'
+          - 一覧のサブテキスト表示を確認
+        expected:
+          - '`>` `&` `"` が生の文字として表示される（`&gt;` `&amp;` `&quot;` になっていない）'
+
+  # ━━━━━ 3. ルール更新の即時反映 ━━━━━
+  - id: rule-reapply
+    title: 開いているページへのルール更新反映
+    description: "PR #51 で追加された reapplyAutoRule メッセージ"
+    related_prs: [51]
+    scenarios:
+
+      - id: RA-001
+        title: selector変更が開いているページに即反映
+        priority: p0
+        preconditions:
+          - セレクタ指定のルールがマッチするページが開かれている
+        steps:
+          - 対象ページでルールが発火して翻訳済みなのを確認
+          - ポップアップを開き、同ルールの selector を別の有効なセレクタに変更
+          - 「更新」クリック
+          - 対象ページに戻る（リロードしない）
+        expected:
+          - 新しい selector の要素で翻訳が発火する
+          - 旧セレクタ要素への再翻訳は起きない（Observer停止済み）
+        known_limitations:
+          - 旧 selector 要素に入っていた翻訳済みブロックは残る（別Issue扱い）
+
+      - id: RA-002
+        title: URLパターン変更で開いているページがマッチしなくなる
+        priority: p1
+        steps:
+          - 対象ページでルールが発火中
+          - そのルールのURLパターンを別のURLに変更して更新
+          - 対象ページに戻る
+        expected:
+          - Observer が停止する（DOM変更しても再翻訳されない）
+        known_limitations:
+          - 既存の翻訳済みブロックは残る
+
+      - id: RA-003
+        title: URLパターン変更で開いているページが新たにマッチ
+        priority: p0
+        steps:
+          - 今開いているページにマッチしない URLパターンのルールを既存で持っている
+          - そのルールのURLパターンを現ページにマッチするように更新
+          - 「更新」クリック
+        expected:
+          - リロードせずに現ページで翻訳が発火する
+
+      - id: RA-004
+        title: mode変更（translate ↔ summarize）の反映
+        priority: p0
+        preconditions:
+          - Claude または Gemini API キーが設定されている
+        steps:
+          - 対象ページで translate モードのルールが発火
+          - ルールを summarize モードに変更して更新
+          - 対象ページに戻る
+        expected:
+          - 次の DOM 変更時に要約付きで翻訳される
+          - Observer が新モードで動作する
+
+  # ━━━━━ 4. 要素ピッカー連携 ━━━━━
+  - id: selector-picker
+    title: 要素ピッカーとルールフォームの連携
+    description: ルールタブ移動後にピッカー結果の復元先が正しいか
+    related_prs: [51]
+    scenarios:
+
+      - id: PK-001
+        title: ピッカー結果復元で「ルール」タブが開く
+        priority: p0
+        description: 過去のバグ（復元時に「設定」タブを開いていた）の回帰検証
+        steps:
+          - 「ルール」タブの「要素を選択」ボタンをクリック
+          - ページ上で要素を選んで確定
+          - ポップアップが再度開く
+        expected:
+          - 「ルール」タブがアクティブ（「設定」タブになっていない）
+          - セレクタフィールドにピックした値が入っている
+          - URLパターンも補完されている
+
+      - id: PK-002
+        title: ピッカーをEscでキャンセル
+        priority: p1
+        steps:
+          - 「要素を選択」をクリック
+          - ページ上で Esc キー
+          - ポップアップを再度開く
+        expected:
+          - セレクタフィールドは空のまま
+          - URLパターン入力欄は現在ページのものが補完されているだけ
+
+  # ━━━━━ 5. アクセシビリティ ━━━━━
+  - id: accessibility
+    title: キーボード操作・スクリーンリーダー対応
+    description: "PR #51 で追加された rule-item の a11y 属性"
+    related_prs: [51]
+    scenarios:
+
+      - id: A11Y-001
+        title: Tab キーでルール項目にフォーカス
+        priority: p1
+        steps:
+          - 「ルール」タブを開く
+          - Tab キーを繰り返し押す
+        expected:
+          - チェックボックス・URL表示・削除ボタン・追加フォーム入力が順にフォーカスされる
+          - ルール項目全体（.rule-item）がフォーカス可能（tabindex=0 / role=button）
+          - フォーカス時に可視的なインジケーター（アウトライン）が表示される
+
+      - id: A11Y-002
+        title: Enter / Space で編集モード
+        priority: p1
+        steps:
+          - ルール項目にフォーカスを当てる
+          - Enter キーを押す → 編集モードに入る
+          - もう一度 Enter → 編集解除
+          - 別項目にフォーカス → Space キー → 編集モードに入る
+        expected:
+          - Enter / Space どちらでもクリックと同じ挙動
+          - ページがスクロールしない（Spaceのデフォルト動作を preventDefault している）
+
+      - id: A11Y-003
+        title: スクリーンリーダーで role=button と aria-pressed が認識される
+        priority: p2
+        environment: macOS VoiceOver / Windows NVDA
+        steps:
+          - スクリーンリーダーを起動
+          - 「ルール」タブでルール項目にフォーカス
+        expected:
+          - 項目が「ボタン」として読み上げられる
+          - 編集中は「押されています」状態（aria-pressed=true）として読まれる
+
+  # ━━━━━ 6. Safari / iOS 対応 ━━━━━
+  - id: safari-ios
+    title: Safari / iOS 固有挙動
+    description: "PR #40 / PR #48 関連"
+    related_prs: [40, 48]
+    scenarios:
+
+      - id: SF-001
+        title: macOS Safari でのインストール
+        priority: p0
+        environment: safari-mac
+        steps:
+          - Xcode で safari/DualView Translator.xcodeproj を開く
+          - スキーム "DualView Translator (macOS)" で Run
+          - Safari → 設定 → 拡張機能で DualView Translator を有効化
+          - Safari の「開発」メニュー → 未署名の拡張機能を許可（初回のみ）
+        expected:
+          - Safari ツールバーに拡張アイコン（オレンジ）が表示
+          - アイコンクリックでポップアップが開く
+
+      - id: SF-002
+        title: macOS Safari で全翻訳モード動作
+        priority: p0
+        environment: safari-mac
+        steps:
+          - 英語ページを開く
+          - 選択翻訳 / ページ全体翻訳 / 領域選択翻訳 / 右クリック翻訳を順に試す
+        expected:
+          - 全モードで翻訳結果が表示される（Google 翻訳エンドポイントが Safari でブロックされないこと）
+
+      - id: SF-003
+        title: iOS Safari でショートカット表示が隠れる
+        priority: p0
+        environment: safari-ios-sim
+        description: Phase 2 で追加したfeature detection の動作確認
+        steps:
+          - iOS シミュレータで拡張ポップアップを開く
+        expected:
+          - 「ページ全体を翻訳」「領域を選択して翻訳」ボタン内の `Ctrl+Shift+T` 等の表示が無い
+          - 「設定」タブ最下部の「ショートカット：...」行も表示されない
+          - html 要素に dvt-no-shortcuts クラスが付く
+
+      - id: SF-004
+        title: iOS Safari で右クリックメニュー項目が無い
+        priority: p0
+        environment: safari-ios-real
+        steps:
+          - 実機 iPhone で Safari を開く
+          - ページ上で長押し
+        expected:
+          - DualView の「翻訳」メニュー項目が表示されない（contextMenus 非対応のため）
+          - 拡張自体は動作する（ポップアップから操作可）
+
+      - id: SF-005
+        title: iOS Safari でルール追加・編集
+        priority: p1
+        environment: safari-ios-sim
+        steps:
+          - 「ルール」タブでルールを追加
+          - 一覧項目をタップして編集
+        expected:
+          - タップで編集モードに入る（click イベントが通る）
+          - iOS Safari 特有の 300ms タップ遅延がないこと
+
+      - id: SF-006
+        title: iOS Safari でのストレージ永続化
+        priority: p1
+        environment: safari-ios-sim
+        steps:
+          - ルールを登録
+          - 拡張を無効化 → 再度有効化
+        expected:
+          - ルールが保持されている
+
+  # ━━━━━ 7. ストレージ永続化・競合 ━━━━━
+  - id: storage
+    title: 設定・ルールの永続化と競合
+    scenarios:
+
+      - id: ST-001
+        title: ポップアップ閉じて再度開いて設定保持
+        priority: p0
+        steps:
+          - 各設定（翻訳先言語・翻訳エンジン・要約エンジン・APIキー・ルール）を変更
+          - ポップアップを閉じて再度開く
+        expected:
+          - 全ての設定が保持されている
+
+      - id: ST-002
+        title: ブラウザ再起動後の設定保持
+        priority: p0
+        steps:
+          - 各設定を変更
+          - ブラウザを完全終了して再起動
+        expected:
+          - 全ての設定が保持されている（chrome.storage.local は永続）
+
+      - id: ST-003
+        title: 複数タブで同時に設定変更
+        priority: p1
+        steps:
+          - 2つのブラウザタブで同じ拡張のポップアップを開く
+          - タブAで翻訳先言語を変更
+          - タブBで翻訳エンジンを変更
+        expected:
+          - 両方の変更が最終的に保存される（最後の書き込みが勝つ）
+          - storage.onChanged が双方で発火してUIが更新される
+
+      - id: ST-004
+        title: 別タブでルールを削除 → 編集中のタブで更新失敗
+        priority: p1
+        description: findIndex -1 時の autoRuleNotFound アラート検証
+        steps:
+          - タブAのポップアップでルールを編集モードに
+          - タブBのポップアップで同じルールを削除
+          - タブAに戻り「更新」ボタンをクリック
+        expected:
+          - 「編集対象のルールが見つかりません」アラートが表示される
+          - 編集モードが維持される（フォーム内容が失われない）
+
+  # ━━━━━ 8. エラー処理 UX ━━━━━
+  - id: error-ux
+    title: エラー発生時のユーザー体験
+    scenarios:
+
+      - id: ER-001
+        title: ネットワーク切断時の翻訳エラー
+        priority: p1
+        steps:
+          - ネットワークをオフ
+          - テキスト選択→翻訳
+        expected:
+          - エラートースト（または翻訳パネル内メッセージ）が表示される
+          - ポップアップ全体がクラッシュしない
+
+      - id: ER-002
+        title: DeepL 無効キーで翻訳
+        priority: p1
+        steps:
+          - 翻訳エンジンを DeepL に、明らかに無効な APIキー を入力
+          - 「テスト」ボタンで検証
+          - 翻訳を実行
+        expected:
+          - テストボタンが「✗ 無効」表示
+          - 翻訳実行時もエラーメッセージが出る
+
+      - id: ER-003
+        title: Claude / Gemini レート制限
+        priority: p2
+        steps:
+          - 短時間に大量の要約リクエストを投げる
+        expected:
+          - 429 エラーがユーザーに伝わる（サイレントフェイルしない）
+          - 他の翻訳動作（Google翻訳）には影響しない
+
+      - id: ER-004
+        title: Google翻訳のレート制限
+        priority: p2
+        steps:
+          - 大量・大容量のページ翻訳を連続実行
+        expected:
+          - 一部失敗してもエラートーストで知らされる
+          - 既翻訳分は保持される
+
+  # ━━━━━ 9. パフォーマンス・長時間運用 ━━━━━
+  - id: performance
+    title: 大量データ・長時間セッションでの挙動
+    scenarios:
+
+      - id: PF-001
+        title: ルール100件での描画遅延
+        priority: p2
+        preconditions:
+          - 事前にスクリプトで 100件のルールを chrome.storage.local に流し込む
+        steps:
+          - 「ルール」タブを開く
+        expected:
+          - 体感的に描画が遅くない（1秒以内）
+          - スクロールがスムーズ
+
+      - id: PF-002
+        title: 大きなページの翻訳中のレスポンシブ性
+        priority: p2
+        steps:
+          - 長大な技術ドキュメント（数万語）でページ全体翻訳を実行
+        expected:
+          - 翻訳中もページのスクロールが可能
+          - ポップアップが開ける
+          - トーストで進捗が表示される
+
+      - id: PF-003
+        title: 長時間の Infinite scroll サイトでメモリリークなし
+        priority: p2
+        environment: chrome
+        steps:
+          - Twitter/X 等の infinite scroll ページで自動翻訳ルールを有効化
+          - 30分以上スクロールを続ける
+          - DevTools → Memory でヒープスナップショット比較
+        expected:
+          - MutationObserver のイベントリスナが蓄積しない
+          - 翻訳済み要素への二重登録がない
+          - メモリ使用量が線形に無限増加しない
+
+      - id: PF-004
+        title: ルール観測 Observer の適切な停止
+        priority: p1
+        steps:
+          - セレクタ指定ルールでページに適用
+          - ルールを無効化（チェックボックスオフ）
+          - 該当要素のコンテンツを書き換える（DevTools で直接編集など）
+        expected:
+          - 再翻訳が発火しない（Observer が停止している）
+
+  # ━━━━━ 10. クロスブラウザ特異挙動 ━━━━━
+  - id: cross-browser
+    title: ブラウザ固有の挙動
+    scenarios:
+
+      - id: CB-001
+        title: Firefox ポップアップのライトテーマ
+        priority: p2
+        environment: firefox
+        known_issue: true
+        steps:
+          - OS をライトテーマに
+          - Firefox で拡張ポップアップを開く
+        expected:
+          - ポップアップがライト配色になる
+          - ※既知問題: 反映されない場合がある（CLAUDE.md 既知問題欄参照）
+
+      - id: CB-002
+        title: Firefox の service_worker vs scripts 互換
+        priority: p1
+        environment: firefox
+        steps:
+          - Firefox 112-120 と 121+ でそれぞれ拡張をインストール
+          - ページ翻訳・要約機能を試す
+        expected:
+          - どちらのバージョンでも background が動作する
+          - （manifest の service_worker と scripts 両記述でカバー）
+
+      - id: CB-003
+        title: Edge (Chromium) での全機能確認
+        priority: p1
+        environment: edge
+        steps:
+          - Chrome と同じテストシナリオを実施
+        expected:
+          - Chrome と完全に同じ挙動
+
+      - id: CB-004
+        title: Safari 16.4 と 17 の差異確認
+        priority: p2
+        environment: safari-mac
+        steps:
+          - 可能なら Safari 16.4 と Safari 17+ で動作を比較
+        expected:
+          - 両方で service_worker が動く
+          - 17 以降は "type: module" が効く
+
+  # ━━━━━ 11. セキュリティ ━━━━━
+  - id: security
+    title: セキュリティ関連の手動検証
+    scenarios:
+
+      - id: SE-001
+        title: URLパターン / セレクタへのスクリプト文字列投入
+        priority: p1
+        steps:
+          - URLパターンに `<script>alert(1)</script>` と入力して追加
+          - セレクタに `<img src=x onerror=alert(1)>` と入力して追加
+          - ルール一覧の表示を確認
+        expected:
+          - 生文字列としてテキスト表示される（textContent 経由）
+          - alert が発火しない
+
+      - id: SE-002
+        title: APIキー漏洩チェック（ネットワーク）
+        priority: p1
+        steps:
+          - DevTools → Network でリクエストヘッダを確認
+          - Claude / Gemini / DeepL それぞれ翻訳・要約を実行
+        expected:
+          - APIキーが URL パラメータに露出していない（Gemini は key=パラメータだが必要最小限）
+          - リクエストボディやログに過剰に記録されていない
+
+      - id: SE-003
+        title: Safari 拡張ネイティブメッセージのログ
+        priority: p2
+        environment: safari-mac
+        description: "PR #40 レビューで指摘された os_log のプライバシー対応確認"
+        steps:
+          - macOS の Console.app で DualView の拡張プロセスのログを確認
+          - 拡張で翻訳を実行
+        expected:
+          - 翻訳対象テキスト等のユーザーコンテンツがログに出力されない
+          - os_log level は .debug（Release では非出力）
