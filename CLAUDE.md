@@ -36,7 +36,7 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── background.test.js  #  background テスト（18件）
 │   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）
 │   ├── auto-rule-edit.test.js # 自動翻訳ルール編集テスト（10件）
-│   └── translation-cache.test.js # 翻訳・要約キャッシュテスト（24件）
+│   └── translation-cache.test.js # 翻訳・要約キャッシュテスト（22件）
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
