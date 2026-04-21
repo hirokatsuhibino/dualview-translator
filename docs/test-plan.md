@@ -2,7 +2,7 @@
 
 ## テスト環境
 
-- **ブラウザ**: Chrome（最新）、Firefox（109+）、Edge（最新）
+- **ブラウザ**: Chrome（最新）、Firefox（112+）、Edge（最新）、Safari（macOS 16.4+ / iOS 15+）
 - **OS**: macOS / Windows / Linux
 - **テーマ**: ダークモード / ライトモード
 - **テスト用ページ例**:

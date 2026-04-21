@@ -26,7 +26,7 @@ environments:
       min_version: latest
     - id: firefox
       name: Firefox
-      min_version: "112"
+      min_version: "112"  # manifest.json の browser_specific_settings.gecko.strict_min_version と一致
     - id: edge
       name: Edge (Chromium)
       min_version: latest
@@ -59,7 +59,7 @@ suites:
   # ━━━━━ 1. ルールタブ（3タブ構成） ━━━━━
   - id: rules-tab
     title: 「ルール」タブの基本動作
-    description: PR #51 で追加された独立タブとしての挙動
+    description: "PR #51 で追加された独立タブとしての挙動"
     related_prs: [51]
     scenarios:
 
@@ -115,7 +115,7 @@ suites:
   # ━━━━━ 2. ルール編集（select-to-edit） ━━━━━
   - id: rule-edit
     title: 登録済みルールの編集
-    description: PR #51 で追加された select-to-edit フロー
+    description: "PR #51 で追加された select-to-edit フロー"
     related_prs: [51]
     scenarios:
 
@@ -228,17 +228,17 @@ suites:
       - id: RE-010
         title: セレクタに特殊文字が含まれても表示が壊れない
         priority: p1
-        description: 過去のバグ（二重エスケープで &gt; が表示）の回帰検証
+        description: "過去のバグ（二重エスケープで &gt; が表示）の回帰検証"
         steps:
-          - セレクタに `div > p.content[data-role="main"]` のような記号を含むルールを追加
+          - 'セレクタに `div > p.content[data-role="main"]` のような記号を含むルールを追加'
           - 一覧のサブテキスト表示を確認
         expected:
-          - `>` `&` `"` が生の文字として表示される（`&gt;` `&amp;` `&quot;` になっていない）
+          - '`>` `&` `"` が生の文字として表示される（`&gt;` `&amp;` `&quot;` になっていない）'
 
   # ━━━━━ 3. ルール更新の即時反映 ━━━━━
   - id: rule-reapply
     title: 開いているページへのルール更新反映
-    description: PR #51 で追加された reapplyAutoRule メッセージ
+    description: "PR #51 で追加された reapplyAutoRule メッセージ"
     related_prs: [51]
     scenarios:
 
@@ -327,7 +327,7 @@ suites:
   # ━━━━━ 5. アクセシビリティ ━━━━━
   - id: accessibility
     title: キーボード操作・スクリーンリーダー対応
-    description: PR #51 で追加された rule-item の a11y 属性
+    description: "PR #51 で追加された rule-item の a11y 属性"
     related_prs: [51]
     scenarios:
 
@@ -368,7 +368,7 @@ suites:
   # ━━━━━ 6. Safari / iOS 対応 ━━━━━
   - id: safari-ios
     title: Safari / iOS 固有挙動
-    description: PR #40 / PR #48 関連
+    description: "PR #40 / PR #48 関連"
     related_prs: [40, 48]
     scenarios:
 
@@ -655,7 +655,7 @@ suites:
         title: Safari 拡張ネイティブメッセージのログ
         priority: p2
         environment: safari-mac
-        description: PR #40 レビューで指摘された os_log のプライバシー対応確認
+        description: "PR #40 レビューで指摘された os_log のプライバシー対応確認"
         steps:
           - macOS の Console.app で DualView の拡張プロセスのログを確認
           - 拡張で翻訳を実行

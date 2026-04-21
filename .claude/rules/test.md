@@ -35,24 +35,33 @@ description: テスト実行・テストプラン更新の必須ルール
 suites:
   - id: <suite-id>       # kebab-case
     title: <日本語タイトル>
-    description: <補足>
-    related_prs: [<PR番号>]
+    description: "<補足>"  # # を含む場合は必ずクオート（YAMLコメント扱いを防ぐ）
+    related_prs: [<PR番号>]  # スイート内全シナリオに共通で紐づくPR
     scenarios:
       - id: <PREFIX-NNN>  # 大文字2-4字 + 連番3桁
         title: <日本語タイトル>
         priority: p0 | p1 | p2
         environment: <オプション: chrome / safari-mac / safari-ios-sim 等>
+        related_prs: [<PR番号>]  # オプション: シナリオ固有のPR紐付け（suite と別の場合）
         preconditions:
           - <前提条件>
         steps:
           - <操作手順>
         expected:
           - <期待結果>
-        description: <オプション: 過去バグの説明など>
+        description: "<オプション: 過去バグの説明など>"
         known_issue: true   # オプション: 既知問題として扱う場合
         known_limitations:  # オプション: スコープ外の制約
           - <制約>
 ```
+
+### YAML 記述時の注意
+
+- `#` / `"` / `'` / `:` / `` ` `` を含むスカラー値は**必ず引用符でクオート**する
+  - 例: `description: "PR #51 で..."` （クオートしないと `#` 以降がコメント扱い）
+  - 例: `- '\`>\` `&` \`"\`'` （バッククォート・ダブルクオート混在時はシングルクオート）
+- 編集後は YAML として実際にパースできることを確認（`js-yaml` 等）
+- 前後空白付きリスト要素（`  - ...`）のインデントは揃える
 
 ### 優先度
 
