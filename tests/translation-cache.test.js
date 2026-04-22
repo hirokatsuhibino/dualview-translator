@@ -12,7 +12,9 @@ function loadCacheModule() {
   const names = [
     'TC_PREFIX', 'TC_MAX_ENTRIES', 'TC_TTL_MS', 'TC_EVICT_RATIO',
     'SC_PREFIX', 'SC_MAX_ENTRIES', 'SC_TTL_MS', 'SC_EVICT_RATIO',
+    'HIT_STATS_KEY', 'CLAUDE_SUMMARY_MODEL',
     'storageGet', 'storageSet', 'storageRemove',
+    'recordCacheAccess', 'calcHitRate',
     'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
     'evictByPrefix', 'evictIfNeeded', 'clearCache', 'getCacheStats',
   ];
@@ -235,6 +237,31 @@ describe('翻訳・要約キャッシュ', () => {
     });
   });
 
+  describe('ヒット率統計', () => {
+    it('calcHitRate: ヒットのみの場合 100 を返す', () => {
+      expect(mod.calcHitRate(10, 0)).toBe(100);
+    });
+
+    it('calcHitRate: アクセスなし（hits=0, misses=0）は null を返す', () => {
+      expect(mod.calcHitRate(0, 0)).toBeNull();
+    });
+
+    it('calcHitRate: ミスのみの場合 0 を返す', () => {
+      expect(mod.calcHitRate(0, 5)).toBe(0);
+    });
+
+    it('calcHitRate: 3/4 ヒットは 75 を返す', () => {
+      expect(mod.calcHitRate(3, 1)).toBe(75);
+    });
+
+    it('getCacheStats がヒット率を返す', async () => {
+      chromeStub._data[mod.HIT_STATS_KEY] = { tcHits: 8, tcMisses: 2, scHits: 0, scMisses: 0 };
+      const stats = await mod.getCacheStats();
+      expect(stats.tcHitRate).toBe(80);
+      expect(stats.scHitRate).toBeNull();
+    });
+  });
+
   describe('要約キャッシュ（sc: プレフィックス）', () => {
     it('buildSummaryCacheKey が sc: プレフィックスのキーを返す', async () => {
       const key = await mod.buildSummaryCacheKey('claude', 'ja', 'テスト');
@@ -273,6 +300,13 @@ describe('翻訳・要約キャッシュ', () => {
       expect(count).toBe(2);
       expect(chromeStub._data['autoRules']).toBeDefined();
       expect(chromeStub._data['sc:claude:ja:abc']).toBeUndefined();
+    });
+
+    it('clearCache がヒット率統計（HIT_STATS_KEY）もリセットする', async () => {
+      chromeStub._data[mod.HIT_STATS_KEY] = { tcHits: 10, tcMisses: 2, scHits: 5, scMisses: 3 };
+      chromeStub._data['tc:google:en:ja:1'] = { ts: Date.now() };
+      await mod.clearCache();
+      expect(chromeStub._data[mod.HIT_STATS_KEY]).toBeUndefined();
     });
 
     it('evictIfNeeded が sc: プレフィックスを独立して evict する（削除件数・削除順を検証）', async () => {
