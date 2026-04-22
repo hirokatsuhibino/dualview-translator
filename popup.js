@@ -627,11 +627,48 @@ async function refreshCacheStats() {
     const res = await sendMsg({ action: 'cacheStats' });
     if (res?.ok) {
       label.textContent = t('cacheEntriesLabel', { count: res.entries });
+      updateHitRateDisplay(res);
     } else {
       label.textContent = '—';
     }
   } catch (e) {
     label.textContent = '—';
+  }
+}
+
+// ヒット率の表示を更新する
+function updateHitRateDisplay(stats) {
+  const container = document.getElementById('cacheHitRates');
+  const tcLabel = document.getElementById('tcHitRateLabel');
+  const scLabel = document.getElementById('scHitRateLabel');
+  const tcFill = document.getElementById('tcHitRateFill');
+  const scFill = document.getElementById('scHitRateFill');
+  if (!container || !tcLabel || !scLabel || !tcFill || !scFill) return;
+
+  const hasTcData = stats.tcHitRate !== null;
+  const hasScData = stats.scHitRate !== null;
+
+  if (!hasTcData && !hasScData) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'flex';
+
+  if (hasTcData) {
+    tcLabel.textContent = t('cacheHitRateTc', { rate: stats.tcHitRate });
+    tcFill.style.width = `${stats.tcHitRate}%`;
+    tcLabel.closest('.cache-hit-rate-item').style.display = 'flex';
+  } else {
+    tcLabel.closest('.cache-hit-rate-item').style.display = 'none';
+  }
+
+  if (hasScData) {
+    scLabel.textContent = t('cacheHitRateSc', { rate: stats.scHitRate });
+    scFill.style.width = `${stats.scHitRate}%`;
+    scLabel.closest('.cache-hit-rate-item').style.display = 'flex';
+  } else {
+    scLabel.closest('.cache-hit-rate-item').style.display = 'none';
   }
 }
 

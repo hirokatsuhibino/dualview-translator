@@ -238,17 +238,43 @@ async function buildSummaryCacheKey(engine, tl, text) {
   return `${SC_PREFIX}${engine}:${tl}:${hash}`;
 }
 
+// ─── ヒット率統計キー ─────────────────────────────────────────────────
+const HIT_STATS_KEY = 'cacheHitStats';
+
+// 統計更新を直列化するキュー（並行 read-modify-write の競合を防ぐ）
+let _hitStatsQueue = Promise.resolve();
+
+// ヒット率統計をインクリメント（キューで直列化して競合を防ぐ）
+function recordCacheAccess(isHit, key) {
+  _hitStatsQueue = _hitStatsQueue.then(() =>
+    storageGet(HIT_STATS_KEY).then(data => {
+      const s = data[HIT_STATS_KEY] || { tcHits: 0, tcMisses: 0, scHits: 0, scMisses: 0 };
+      if (key.startsWith(TC_PREFIX)) {
+        isHit ? s.tcHits++ : s.tcMisses++;
+      } else {
+        isHit ? s.scHits++ : s.scMisses++;
+      }
+      return storageSet({ [HIT_STATS_KEY]: s });
+    })
+  ).catch(() => {});
+}
+
 // キャッシュ読み出し。TTL 切れは miss として削除し、hit 時は ts を更新（LRU的挙動）
 async function getCached(key, ttl = TC_TTL_MS) {
   const data = await storageGet(key);
   const entry = data[key];
-  if (!entry) return null;
+  if (!entry) {
+    recordCacheAccess(false, key);
+    return null;
+  }
   if (Date.now() - entry.ts > ttl) {
     void storageRemove(key).catch(() => {});
+    recordCacheAccess(false, key);
     return null;
   }
   // LRU: 非同期で ts を更新（待たない）
   void storageSet({ [key]: { ...entry, ts: Date.now() } }).catch(() => {});
+  recordCacheAccess(true, key);
   return entry;
 }
 
@@ -278,13 +304,19 @@ async function evictIfNeeded() {
   await evictByPrefix(all, SC_PREFIX, SC_MAX_ENTRIES, SC_EVICT_RATIO);
 }
 
-// 翻訳・要約キャッシュを両方クリア（名称を clearCache に統一して挙動と一致させる）
+// 翻訳・要約キャッシュを両方クリア（ヒット率統計もリセット）
 async function clearCache() {
   const all = await storageGet(null);
   const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX));
-  if (cacheKeys.length === 0) return 0;
-  await storageRemove(cacheKeys);
+  const keysToRemove = cacheKeys.length > 0 ? [...cacheKeys, HIT_STATS_KEY] : [HIT_STATS_KEY];
+  await storageRemove(keysToRemove);
   return cacheKeys.length;
+}
+
+// ヒット率を計算するヘルパー（0〜100の整数。アクセスなしは null）
+function calcHitRate(hits, misses) {
+  const total = hits + misses;
+  return total === 0 ? null : Math.round((hits / total) * 100);
 }
 
 async function getCacheStats() {
@@ -292,7 +324,18 @@ async function getCacheStats() {
   const keys = Object.keys(all);
   const tcEntries = keys.filter(k => k.startsWith(TC_PREFIX)).length;
   const scEntries = keys.filter(k => k.startsWith(SC_PREFIX)).length;
-  return { tcEntries, scEntries, entries: tcEntries + scEntries };
+  const s = all[HIT_STATS_KEY] || { tcHits: 0, tcMisses: 0, scHits: 0, scMisses: 0 };
+  return {
+    tcEntries,
+    scEntries,
+    entries: tcEntries + scEntries,
+    tcHitRate: calcHitRate(s.tcHits, s.tcMisses),
+    scHitRate: calcHitRate(s.scHits, s.scMisses),
+    tcHits: s.tcHits,
+    tcMisses: s.tcMisses,
+    scHits: s.scHits,
+    scMisses: s.scMisses,
+  };
 }
 
 // ─── 翻訳ディスパッチャー ────────────────────────────────────────────
