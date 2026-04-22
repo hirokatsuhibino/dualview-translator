@@ -82,7 +82,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 ### 要約エンジン（LLM）
 
-- **Claude**: `api.anthropic.com/v1/messages`（model: claude-3-5-sonnet-20241022）
+- **Claude**: `api.anthropic.com/v1/messages`（model: claude-haiku-4-5-20251001）
 - **Gemini**: `generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash`
 - 切り替え: `chrome.storage.local` の `llmEngine` / `claudeApiKey` / `geminiApiKey` で管理
 - 選択エンジンのAPIキーが未設定の場合、もう一方に自動フォールバック

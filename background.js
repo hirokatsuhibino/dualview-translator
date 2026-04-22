@@ -481,7 +481,7 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       messages: [{
         role: 'user',
@@ -562,7 +562,7 @@ async function testApiKey(engine, apiKey) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1,
         messages: [{ role: 'user', content: 'Hi' }],
       }),
