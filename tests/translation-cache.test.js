@@ -13,6 +13,7 @@ function loadCacheModule() {
     'TC_PREFIX', 'TC_MAX_ENTRIES', 'TC_TTL_MS', 'TC_EVICT_RATIO',
     'SC_PREFIX', 'SC_MAX_ENTRIES', 'SC_TTL_MS', 'SC_EVICT_RATIO',
     'HIT_STATS_KEY', 'CLAUDE_SUMMARY_MODEL',
+    '_hitStatsQueue',
     'storageGet', 'storageSet', 'storageRemove',
     'recordCacheAccess', 'calcHitRate',
     'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
@@ -259,6 +260,34 @@ describe('翻訳・要約キャッシュ', () => {
       const stats = await mod.getCacheStats();
       expect(stats.tcHitRate).toBe(80);
       expect(stats.scHitRate).toBeNull();
+    });
+
+    // キューの非同期処理が完了するまで待つヘルパー
+    const flushQueue = () => new Promise(r => setTimeout(r, 0));
+
+    it('getCached: 未登録キーで miss → tcMisses が増える', async () => {
+      await mod.getCached('tc:google:en:ja:notexist');
+      await flushQueue();
+      const data = await mod.storageGet(mod.HIT_STATS_KEY);
+      expect(data[mod.HIT_STATS_KEY]?.tcMisses).toBeGreaterThanOrEqual(1);
+    });
+
+    it('getCached: TTL切れエントリで miss → tcMisses が増える', async () => {
+      const key = 'tc:google:en:ja:expired_test';
+      chromeStub._data[key] = { translated: 'old', ts: Date.now() - (mod.TC_TTL_MS + 1000) };
+      await mod.getCached(key);
+      await flushQueue();
+      const data = await mod.storageGet(mod.HIT_STATS_KEY);
+      expect(data[mod.HIT_STATS_KEY]?.tcMisses).toBeGreaterThanOrEqual(1);
+    });
+
+    it('getCached: 有効エントリで hit → tcHits が増える', async () => {
+      const key = 'tc:google:en:ja:valid_test';
+      chromeStub._data[key] = { translated: 'test', ts: Date.now() };
+      await mod.getCached(key);
+      await flushQueue();
+      const data = await mod.storageGet(mod.HIT_STATS_KEY);
+      expect(data[mod.HIT_STATS_KEY]?.tcHits).toBeGreaterThanOrEqual(1);
     });
   });
 

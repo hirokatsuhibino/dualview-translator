@@ -241,17 +241,22 @@ async function buildSummaryCacheKey(engine, tl, text) {
 // ─── ヒット率統計キー ─────────────────────────────────────────────────
 const HIT_STATS_KEY = 'cacheHitStats';
 
-// ヒット率統計をインクリメント（fire-and-forget）
+// 統計更新を直列化するキュー（並行 read-modify-write の競合を防ぐ）
+let _hitStatsQueue = Promise.resolve();
+
+// ヒット率統計をインクリメント（キューで直列化して競合を防ぐ）
 function recordCacheAccess(isHit, key) {
-  storageGet(HIT_STATS_KEY).then(data => {
-    const s = data[HIT_STATS_KEY] || { tcHits: 0, tcMisses: 0, scHits: 0, scMisses: 0 };
-    if (key.startsWith(TC_PREFIX)) {
-      isHit ? s.tcHits++ : s.tcMisses++;
-    } else {
-      isHit ? s.scHits++ : s.scMisses++;
-    }
-    return storageSet({ [HIT_STATS_KEY]: s });
-  }).catch(() => {});
+  _hitStatsQueue = _hitStatsQueue.then(() =>
+    storageGet(HIT_STATS_KEY).then(data => {
+      const s = data[HIT_STATS_KEY] || { tcHits: 0, tcMisses: 0, scHits: 0, scMisses: 0 };
+      if (key.startsWith(TC_PREFIX)) {
+        isHit ? s.tcHits++ : s.tcMisses++;
+      } else {
+        isHit ? s.scHits++ : s.scMisses++;
+      }
+      return storageSet({ [HIT_STATS_KEY]: s });
+    })
+  ).catch(() => {});
 }
 
 // キャッシュ読み出し。TTL 切れは miss として削除し、hit 時は ts を更新（LRU的挙動）
