@@ -212,6 +212,9 @@ const SC_MAX_ENTRIES = 500; // 要約は1件あたりのデータ量が多いた
 const SC_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30日
 const SC_EVICT_RATIO = 0.1; // 超過時に古い順 10% を削除
 
+// ─── Claude 要約モデル ────────────────────────────────────────────────
+const CLAUDE_SUMMARY_MODEL = 'claude-haiku-4-5-20251001';
+
 // chrome.storage.local の Promise ラッパー（callback-only 環境でも動作）
 const storageGet = (keys) => new Promise(resolve => chrome.storage.local.get(keys, resolve));
 const storageSet = (items) => new Promise(resolve => chrome.storage.local.set(items, resolve));
@@ -481,7 +484,7 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: CLAUDE_SUMMARY_MODEL,
       max_tokens: 512,
       messages: [{
         role: 'user',
@@ -562,15 +565,29 @@ async function testApiKey(engine, apiKey) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: CLAUDE_SUMMARY_MODEL,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'Hi' }],
       }),
     });
     if (!res.ok) {
-      // 401のみキー無効。400（残高不足等）や429（レート制限）は認証成功とみなす
       if (res.status === 401) throw new Error('APIキーが無効です');
-      if (res.status === 400 || res.status === 429) return;
+      if (res.status === 429) return; // レート制限はキー有効とみなす
+      if (res.status === 400) {
+        // レスポンスボディでモデル不明エラーを判別（それ以外の400は認証とは無関係なのでキー有効扱い）
+        let errType = '';
+        let errMsg = '';
+        try {
+          const errJson = await res.json();
+          errType = errJson.error?.type || '';
+          errMsg = errJson.error?.message || '';
+        } catch(e) {}
+        // model_not_found など、モデル名誤りが原因の場合はキー有効とみなさない
+        if (errType === 'not_found_error' || /model/i.test(errMsg)) {
+          throw new Error(`APIキー検証エラー: モデルが見つかりません (${errMsg})`);
+        }
+        return; // 残高不足・その他の400はキー有効とみなす
+      }
       let detail = '';
       try { const err = await res.json(); detail = err.error?.message || ''; } catch(e) {}
       throw new Error(`HTTP ${res.status}: ${detail}`);
