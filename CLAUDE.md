@@ -160,6 +160,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
   - `/pr-review-check` — オープンPRの未対応レビューを一括確認
   - `/release` — バージョン更新→リリースノート整備→PR→タグ→GitHub Release→zipアップロードのフルフロー
   - `/build-zip` — 公開用zip（拡張本体）とソースアーカイブ（Firefox審査用）を作成
+- 開発ワークフロー向けの Claude コマンドは `.claude/commands/` 配下に配置
   - `/pr-resume` — PR レビュー対応フローを手動再開
 
 ## 既知の問題
