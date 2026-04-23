@@ -90,8 +90,8 @@ jobs:
           fi
 
           # イベント条件
-          #  - review.state が changes_requested
-          #  - review_comment / issue_comment は @claude メンション必須
+          #  - review.state が changes_requested → 即 proceed
+          #  - それ以外（review body / review_comment / issue_comment）は @claude メンション必須
           if [ "${EVENT_STATE:-}" = "changes_requested" ]; then
             proceed=true
           elif echo "${COMMENT_BODY:-}" | grep -q "@claude"; then
@@ -111,12 +111,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
             # issue_comment は event から head.ref が取れないため gh で補完
             REF=$(gh pr view "${{ github.event.issue.number }}" --json headRefName --jq '.headRefName')
           else
             REF="${{ github.event.pull_request.head.ref }}"
           fi
+
+          if [ -z "${REF}" ]; then
+            echo "Failed to resolve PR head ref" >&2
+            exit 1
+          fi
+
           echo "ref=${REF}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout PR head
