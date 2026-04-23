@@ -36,7 +36,7 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── background.test.js  #  background テスト（18件）
 │   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）
 │   ├── auto-rule-edit.test.js # 自動翻訳ルール編集テスト（10件）
-│   └── translation-cache.test.js # 翻訳・要約キャッシュテスト（22件）
+│   └── translation-cache.test.js # 翻訳・要約キャッシュテスト（31件）
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
@@ -79,6 +79,10 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - 翻訳: TTL 30日 / 最大 2000 件 / LRU 10% evict
 - 要約: TTL 30日 / 最大 500 件 / LRU 10% evict（有料APIのコスト削減が主目的）
 - 「設定」タブに翻訳+要約の合計件数表示とクリアボタン（`cacheStats` / `clearCache` メッセージ）
+- ヒット率統計を `HIT_STATS_KEY='cacheHitStats'` キーに永続化（`{ tcHits, tcMisses, scHits, scMisses }`）
+- `getCached()` でヒット/ミスをカウント。`_hitStatsQueue` で直列化して競合を防ぐ
+- 「設定」タブに翻訳・要約それぞれのヒット率をバー付きで表示（未アクセス時は非表示）
+- `clearCache()` 実行時にヒット率統計もリセット
 
 ### 要約エンジン（LLM）
 
@@ -154,6 +158,9 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
   - p0: リリース前必須 / p1: リリーステスト推奨 / p2: 可能なら実施
 - 開発ワークフロー向けの Claude スキルは `.claude/skills/` 配下に配置
   - `/pr-review-check` — オープンPRの未対応レビューを一括確認
+  - `/release` — バージョン更新→リリースノート整備→PR→タグ→GitHub Release→zipアップロードのフルフロー
+  - `/build-zip` — 公開用zip（拡張本体）とソースアーカイブ（Firefox審査用）を作成
+  - `/pr-resume` — PR レビュー対応フローを手動再開
 
 ## 既知の問題
 
