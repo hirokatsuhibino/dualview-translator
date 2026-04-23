@@ -39,14 +39,22 @@ jobs:
       - id: gate
         name: Check trust & eligibility
         env:
+          GH_TOKEN: ${{ github.token }}
           ACTOR_ASSOC: ${{ github.event.review.author_association || github.event.comment.author_association }}
-          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
-          IS_DRAFT: ${{ github.event.pull_request.draft }}
           EVENT_STATE: ${{ github.event.review.state }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_BODY: ${{ github.event.comment.body || github.event.review.body }}
+          IS_ISSUE_COMMENT: ${{ github.event_name == 'issue_comment' }}
+          ISSUE_PR_URL: ${{ github.event.issue.pull_request.url }}
         run: |
           set -euo pipefail
           proceed=false
+
+          # issue_comment は PR に紐づくものだけ対象（通常Issueのコメントは除外）
+          if [ "${IS_ISSUE_COMMENT}" = "true" ] && [ -z "${ISSUE_PR_URL:-}" ]; then
+            echo "::notice::skip: issue_comment on non-PR issue"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # 信頼できる関係者チェック
           case "${ACTOR_ASSOC:-}" in
@@ -56,6 +64,16 @@ jobs:
               echo "proceed=false" >> "$GITHUB_OUTPUT"
               exit 0 ;;
           esac
+
+          # PR の fork / draft 状態を取得（issue_comment は event から直接取れないので gh で補完）
+          if [ "${IS_ISSUE_COMMENT}" = "true" ]; then
+            PR_NUM="${{ github.event.issue.number }}"
+            IS_FORK=$(gh pr view "${PR_NUM}" --json headRepository --jq '.headRepository.isFork // false')
+            IS_DRAFT=$(gh pr view "${PR_NUM}" --json isDraft --jq '.isDraft')
+          else
+            IS_FORK="${{ github.event.pull_request.head.repo.fork }}"
+            IS_DRAFT="${{ github.event.pull_request.draft }}"
+          fi
 
           # fork PR は弾く
           if [ "${IS_FORK:-false}" = "true" ]; then
@@ -73,11 +91,10 @@ jobs:
 
           # イベント条件
           #  - review.state が changes_requested
-          #  - review_comment の新規
-          #  - issue_comment に @claude メンション
-          if [ "${EVENT_STATE:-}" = "changes_requested" ] \
-             || [ "${GITHUB_EVENT_NAME}" = "pull_request_review_comment" ] \
-             || echo "${COMMENT_BODY:-}" | grep -q "@claude"; then
+          #  - review_comment / issue_comment は @claude メンション必須
+          if [ "${EVENT_STATE:-}" = "changes_requested" ]; then
+            proceed=true
+          elif echo "${COMMENT_BODY:-}" | grep -q "@claude"; then
             proceed=true
           fi
 
@@ -89,10 +106,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Resolve PR head ref
+        id: resolve_ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            # issue_comment は event から head.ref が取れないため gh で補完
+            REF=$(gh pr view "${{ github.event.issue.number }}" --json headRefName --jq '.headRefName')
+          else
+            REF="${{ github.event.pull_request.head.ref }}"
+          fi
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.event.issue.pull_request.head.ref }}
+          ref: ${{ steps.resolve_ref.outputs.ref }}
           fetch-depth: 0
           persist-credentials: true
 
