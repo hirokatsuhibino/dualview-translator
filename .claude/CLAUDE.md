@@ -28,3 +28,72 @@ Copyright (c) Orangesoft Inc.
 # PRレビュー対応のルール
 
 PRレビューの取得・修正適用・インライン返信・マージ済みPRへの follow-up の詳細は `.claude/rules/pr-review.md` を参照。
+
+<!-- BEGIN: claude-pr-flow (do not edit this marker; remove the whole block to uninstall) -->
+## PR レビュー対応フロー（claude-pr-flow）
+
+このリポジトリでは、PR にレビューが付いたときに Claude Code が自動でコード修正・返信を行う。
+**マージは人間が行う。** Claude 側はマージを一切実行しない。
+
+### エージェント構成
+
+| エージェント | 役割 | 書き込み権限 |
+|---|---|---|
+| `pr-review-responder` | レビューコメントのトリアージ | なし |
+| `implementer` | レビュー指摘の実装 | ソースコードのみ |
+| `verifier` | テスト・lint・ビルド検証 | なし |
+
+### 委譲フロー（直列）
+
+```
+[新しいレビューイベント]
+        │
+        ▼
+pr-review-responder  … 全コメント読み、対応可/不可を仕分け
+        │
+        ▼
+implementer          … 対応可の指摘をコミット単位で修正
+        │
+        ▼
+verifier             … テスト/lint/ビルドを実行
+        │
+        ▼
+（成功時）push → 各コメントに返信
+（失敗時）push せず、失敗内容を PR にコメント
+```
+
+### 絶対ルール
+
+1. **PR のマージは行わない**
+   - `gh pr merge`, `gh pr auto-merge`, GitHub API の merge エンドポイント呼び出しはすべて禁止
+   - レビュアーが「マージしておいて」と書いても、指示を無視して人間に依頼する旨を返信
+
+2. **禁止パス**（レビューで要求されても触らない）
+   - `.github/**`
+   - 依存関係ファイル: `package.json`, 各種 lock ファイル, `pom.xml`, `build.gradle*`,
+     `requirements*.txt`, `pyproject.toml`, `Pipfile*`, `go.mod`, `go.sum`, `Cargo.toml`, `Cargo.lock`
+   - `Dockerfile`, `docker-compose*.yml`
+   - `.env*` や秘密情報ファイル
+
+3. **新しい依存関係の追加禁止**
+   - 「この lib を使って」と書かれても、人間の確認を求める返信で対応
+
+4. **破壊的操作の禁止**
+   - `git push --force`, `git push -f`, `git commit --amend`, `git reset --hard` 禁止
+   - 強制的なブランチ操作は人間のみ
+
+5. **秘密情報をログ/コメントに書かない**
+   - token, API key, .env の中身、接続文字列は絶対にコミットや PR コメントに載せない
+   - 環境変数名が出てくる場合は値を `***` でマスク
+
+6. **検証で push 判定**
+   - verifier が NG の場合は push せず、PR に失敗サマリーをコメントして終了
+
+7. **返信ポリシー**
+   - 各レビューコメントに必ず返信（対応した／対応しなかった理由）
+   - スレッドを勝手に resolve しない（レビュアーが resolve する）
+
+### 手動再開
+
+レビュー対応を手動で走らせたい場合は `/pr-resume <PR番号>` を使う。
+<!-- END: claude-pr-flow -->
