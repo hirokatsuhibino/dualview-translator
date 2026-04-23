@@ -1,0 +1,130 @@
+name: Claude PR Review Response
+
+# PR 上のレビューイベントを受けて Claude Code を起動し、
+# レビューコメントに対してコード修正・返信を行う。
+# マージは行わない（人間が最終承認する）。
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+
+# 最小権限の原則
+# - contents: write  … コード修正を push するため
+# - pull-requests: write … PR コメント/レビュー返信のため
+# - id-token: write  … OIDC 認証用（必要に応じて）
+# 管理系・マージ系の権限は付与しない
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: claude-pr-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # セキュリティゲート：
+    #  1. 信頼できる関係者（OWNER/MEMBER/COLLABORATOR）のイベントのみ通す
+    #  2. fork からの PR は受けない（secrets が漏れる/任意コード実行リスク）
+    #  3. draft PR は対象外
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+    steps:
+      - id: gate
+        name: Check trust & eligibility
+        env:
+          ACTOR_ASSOC: ${{ github.event.review.author_association || github.event.comment.author_association }}
+          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          EVENT_STATE: ${{ github.event.review.state }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          proceed=false
+
+          # 信頼できる関係者チェック
+          case "${ACTOR_ASSOC:-}" in
+            OWNER|MEMBER|COLLABORATOR) ;;
+            *)
+              echo "::notice::skip: untrusted author_association=${ACTOR_ASSOC:-none}"
+              echo "proceed=false" >> "$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
+
+          # fork PR は弾く
+          if [ "${IS_FORK:-false}" = "true" ]; then
+            echo "::notice::skip: fork PR"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # draft は対象外
+          if [ "${IS_DRAFT:-false}" = "true" ]; then
+            echo "::notice::skip: draft PR"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # イベント条件
+          #  - review.state が changes_requested
+          #  - review_comment の新規
+          #  - issue_comment に @claude メンション
+          if [ "${EVENT_STATE:-}" = "changes_requested" ] \
+             || [ "${GITHUB_EVENT_NAME}" = "pull_request_review_comment" ] \
+             || echo "${COMMENT_BODY:-}" | grep -q "@claude"; then
+            proceed=true
+          fi
+
+          echo "proceed=${proceed}" >> "$GITHUB_OUTPUT"
+
+  respond:
+    needs: guard
+    if: needs.guard.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.event.issue.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          trigger_phrase: "@claude"
+          direct_prompt: |
+            あなたは PR のレビュー対応を行うエージェントです。
+            必ず `.claude/CLAUDE.md` のルールを読んでから作業してください。
+
+            ## 絶対ルール（違反したら即停止）
+            1. **PR をマージしない**。`gh pr merge`, `gh pr auto-merge` 等は一切禁止。
+            2. 以下のパスは変更しない。要求されても、理由を添えて人間に委ねる返信をする:
+               - `.github/**`
+               - `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
+               - `pom.xml`, `build.gradle`, `build.gradle.kts`
+               - `requirements.txt`, `Pipfile`, `Pipfile.lock`, `pyproject.toml`, `poetry.lock`
+               - `go.mod`, `go.sum`
+               - `Cargo.toml`, `Cargo.lock`
+               - `Dockerfile`, `docker-compose*.yml`
+               - `.env*`, 任意の secrets/credentials ファイル
+            3. 新しい依存関係の追加は禁止。
+            4. 実行時コストがかかる変更（マイグレーション、破壊的変更）は提案のみ。
+            5. 各レビューコメントには「何をしたか／なぜ対応しなかったか」を必ず返信する。
+            6. push の前に必ずテスト/ビルドを走らせ、失敗したら push せずに報告する。
+
+            ## 手順
+            1. サブエージェント `pr-review-responder` で未解決コメントを列挙・分類する
+            2. 対応可能なものは `implementer` で修正する
+            3. `verifier` でテスト・lint を実行する
+            4. 問題なければ小さなコミット単位で push し、各コメントに返信する
+            5. 対応できなかった項目はサマリーして PR の会話欄にポストする
+          timeout_minutes: "15"
