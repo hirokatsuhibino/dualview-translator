@@ -89,7 +89,7 @@ gh pr create \
   --body "$(cat <<'EOF'
 ## Summary
 
-- `manifest.json` / `package.json`: バージョンを <OLD> → **<VERSION>** に更新
+- `manifest.json` / `package.json`: バージョンを **<VERSION>** に更新
 - `docs/RELEASE_NOTES.md`: 未リリース機能を v<VERSION> としてまとめ
 
 ## v<VERSION> の主な変更
