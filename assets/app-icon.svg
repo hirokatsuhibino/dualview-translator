@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DualView Translator アプリアイコン マスター（編集用元データ）
+  Copyright (c) Orangesoft Inc.
+
+  - viewBox 1024x1024（フラット背景・角丸なし）
+  - 角丸（macOS squircle）はラスタライズ時にマスクで付与する
+  - iOS App Store 用 1024x1024 はマスクなしのフラット形状を使う
+  - 派生 PNG は assets/generate-icons.py で生成する
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- 背景: オレンジ -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#F5A623"/>
+
+  <g fill="#0C0C18">
+    <!-- 横線（左右ペア×3行） rx=32 で角丸線 -->
+    <!-- row1 cy=220 -->
+    <rect x="136" y="188" width="280" height="64" rx="32" opacity="0.92"/>
+    <rect x="608" y="188" width="256" height="64" rx="32" opacity="0.92"/>
+    <!-- row2 cy=380 -->
+    <rect x="192" y="348" width="224" height="64" rx="32" opacity="0.92"/>
+    <rect x="608" y="348" width="272" height="64" rx="32" opacity="0.92"/>
+    <!-- row3 cy=540 -->
+    <rect x="248" y="508" width="168" height="64" rx="32" opacity="0.92"/>
+    <rect x="608" y="508" width="208" height="64" rx="32" opacity="0.92"/>
+  </g>
+
+  <!-- 矢印軸: 半透明縦線 -->
+  <rect x="480" y="540" width="64" height="220" rx="32" fill="#0C0C18" opacity="0.43"/>
+  <!-- 矢印先: 下向き三角 -->
+  <polygon points="416,760 608,760 512,880" fill="#0C0C18" opacity="0.92"/>
+</svg>

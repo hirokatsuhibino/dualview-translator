@@ -439,6 +439,35 @@ suites:
         expected:
           - ルールが保持されている
 
+      - id: SF-007
+        title: HD アプリアイコンの表示確認（macOS）
+        priority: p1
+        environment: safari-mac
+        description: "Issue #49 で 1024px マスターから縮小生成した HD アイコンが各表示サイズで鮮明であることを確認。"
+        steps:
+          - macOS Safari 用ターゲットを再ビルド・再インストール
+          - Finder で safari/.../DualView Translator.app を Quick Look してアイコンを確認
+          - Safari 設定 → 拡張機能で表示されるアイコン（小サイズ）を確認
+          - macOS の Launchpad / Dock でアイコンを確認
+        expected:
+          - 16/32/128/256/512px いずれもぼやけ・ジャギーが無い
+          - squircle の角丸が他 macOS アプリと同等の比率で表示される
+          - 旧アイコン（128px から拡大した粗いもの）の残像がキャッシュされていないこと（必要なら sudo killall Dock; killall Finder で更新）
+
+      - id: SF-008
+        title: HD アプリアイコンの表示確認（iOS）
+        priority: p1
+        environment: safari-ios-sim
+        description: "Issue #49。iOS 1024 は角丸を焼き込まない設計。シミュレータ側のマスクで角丸が付く想定。"
+        steps:
+          - iOS シミュレータに拡張をインストール
+          - ホーム画面でアプリアイコンを確認
+          - 設定 → Safari → 機能拡張で拡張アイコンを確認
+        expected:
+          - アイコンの周囲に白枠／余白が出ない（角丸を焼き込んでいないため、システムマスクが正しく動作）
+          - iOS の他アプリと同じ角丸比率で表示される
+          - 拡大時もぼやけない（1024px ソース）
+
   # ━━━━━ 7. ストレージ永続化・競合 ━━━━━
   - id: storage
     title: 設定・ルールの永続化と競合
