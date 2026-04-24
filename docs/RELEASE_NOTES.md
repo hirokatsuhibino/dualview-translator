@@ -11,6 +11,18 @@
   - 拡張本体のブラウザ用アイコン（`icons/icon{16,32,48,128}.png`）も同じマスターから再生成
   - 元データを `assets/app-icon.svg` と再生成スクリプト `assets/generate-icons.py` としてリポジトリに保存
 
+- **Safari / iOS App Store 提出準備**（#75）
+  - macOS App / Extension に App Sandbox + Outgoing Connections capability を追加（Mac App Store 必須）
+  - iOS App Store ラージアイコンのアルファチャネルを削除（Apple のラージアイコン要件に対応）
+  - App Category を Productivity（仕事効率化）に設定
+  - 暗号化輸出規制申告（`ITSAppUsesNonExemptEncryption = NO`）を Info.plist に追加
+  - macOS / iOS ともに App Store Connect への Archive Upload が成功する状態に
+  - macOS Safari / iOS Safari 実機（TestFlight 経由）での動作確認完了
+
+- **プライバシーポリシーを GitHub Pages で公開**（#77）
+  - App Store 申請に必要な公開 URL を確保
+  - 公開 URL: `https://hirokatsuhibino.github.io/dualview-translator/privacy-policy.html`
+
 ---
 
 ## v1.3.0（2026-04-22）
