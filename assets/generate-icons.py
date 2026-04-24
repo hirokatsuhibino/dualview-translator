@@ -140,12 +140,13 @@ def main() -> None:
     master = draw_master()
     # アーカイブ用：マスターと2系統の1024px
     master.save(assets_dir / "app-icon-master-1024.png", "PNG", optimize=True)
-    ios_1024 = master.copy()  # iOS は角丸なし
+    # iOS App Store のラージアイコンは透過 / アルファチャネル禁止のため RGB で書き出す
+    ios_1024 = master.convert("RGB")
     mac_1024 = apply_squircle_mask(master)
     ios_1024.save(assets_dir / "app-icon-ios-1024.png", "PNG", optimize=True)
     mac_1024.save(assets_dir / "app-icon-mac-1024.png", "PNG", optimize=True)
 
-    # iOS App Store 用（角丸なし、ピンクパディング無し）
+    # iOS App Store 用（角丸なし・アルファなし、ピンクパディング無し）
     (appicon_dir / "universal-icon-1024@1x.png").write_bytes(
         (assets_dir / "app-icon-ios-1024.png").read_bytes()
     )
