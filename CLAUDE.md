@@ -42,9 +42,14 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── RELEASE_NOTES.md   #   リリースノート
 │   ├── test-plan.md       #   テストプラン（74項目、Markdown表形式）
 │   └── manual-test-scenarios.yaml #  手動テストシナリオ（YAML、自動テスト補完）
-└── safari/                # Safari Web Extension（Xcode プロジェクト）
-    ├── README.md          #   ビルド・インストール手順
-    └── DualView Translator/ # macOS/iOS両対応のXcodeプロジェクト
+├── safari/                # Safari Web Extension（Xcode プロジェクト）
+│   ├── README.md          #   ビルド・インストール手順
+│   └── DualView Translator/ # macOS/iOS両対応のXcodeプロジェクト
+└── assets/                # アプリアイコン元データ・再生成スクリプト
+    ├── README.md          #   再生成手順とデザイン仕様
+    ├── app-icon.svg       #   マスター SVG（編集起点）
+    ├── generate-icons.py  #   全サイズ PNG を Pillow で再生成
+    └── app-icon-{master,ios,mac}-1024.png # 1024x1024 派生
 ```
 
 ## アーキテクチャ
