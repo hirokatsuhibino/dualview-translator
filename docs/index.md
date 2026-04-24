@@ -1,3 +1,7 @@
+---
+title: DualView Translator
+permalink: /index.html
+---
 <!--
 Copyright (c) Orangesoft Inc.
 -->
