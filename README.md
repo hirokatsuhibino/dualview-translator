@@ -1,6 +1,6 @@
 # DualView Translator
 
-原文と翻訳を**並べて表示**するブラウザ翻訳拡張。Chrome / Firefox 対応（Safari / iOS 対応は開発中）。
+原文と翻訳を**並べて表示**するブラウザ翻訳拡張。Chrome / Firefox 対応（Safari / iOS は App Store 提出準備中）。
 
 翻訳しても原文が消えないので、原文を確認しながら読めます。
 

@@ -1,0 +1,23 @@
+# Copyright (c) Orangesoft Inc.
+# GitHub Pages (Jekyll) 設定
+# このディレクトリ内の公開対象を絞り込み、開発用ドキュメントを非公開にする。
+
+title: DualView Translator
+description: 原文と翻訳を並べて表示するブラウザ翻訳拡張
+url: https://hirokatsuhibino.github.io/dualview-translator
+
+# Jekyll のデフォルトテーマを有効化（Markdown を HTML にレンダリング）
+theme: jekyll-theme-cayman
+
+# 公開しないファイル（開発用ドキュメント）
+exclude:
+  - chrome-web-store.md
+  - firefox-add-ons.md
+  - permission-justification.md
+  - manual-test-scenarios.yaml
+  - test-plan.md
+  - store-icons
+  - sample-before.png
+  - sample-after.png
+  - sample-afterのコピー.png
+  - popup.png
