@@ -16,7 +16,7 @@
 """
 from __future__ import annotations
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 # ===== デザインパラメータ（1024px ベース） =====
 SIZE = 1024
@@ -113,6 +113,18 @@ def downscale(img: Image.Image, target: int) -> Image.Image:
     return img.resize((target, target), Image.LANCZOS)
 
 
+def render_mac_icon(master: Image.Image, size: int) -> Image.Image:
+    """マスターを target サイズへ先に縮小してから squircle マスクを適用。
+
+    透明境界を含む 1024px をいきなり縮小すると、縁の RGB(0,0,0) が
+    背景オレンジと混ざりダークなフリンジが出る（特に 16/32px で顕著）。
+    縮小→マスク順に変えることで境界フリンジを軽減する。
+    """
+    if size == master.size[0]:
+        return apply_squircle_mask(master)
+    return apply_squircle_mask(downscale(master, size))
+
+
 def main() -> None:
     repo_root = Path(__file__).resolve().parent.parent
     assets_dir = repo_root / "assets"
@@ -120,6 +132,10 @@ def main() -> None:
     appicon_dir = (
         repo_root / "safari" / "DualView Translator" / "Shared (App)" / "Assets.xcassets" / "AppIcon.appiconset"
     )
+
+    # 出力先が存在しなければ作成（初回実行時の FileNotFoundError を防ぐ）
+    for d in (assets_dir, icons_dir, appicon_dir):
+        d.mkdir(parents=True, exist_ok=True)
 
     master = draw_master()
     # アーカイブ用：マスターと2系統の1024px
@@ -135,6 +151,7 @@ def main() -> None:
     )
 
     # macOS 用（squircle 角丸あり、各サイズ）
+    # 先に縮小してからマスク適用することで、透明境界由来のフリンジを軽減する
     mac_sizes = {
         "mac-icon-16@1x.png": 16,
         "mac-icon-16@2x.png": 32,
@@ -148,11 +165,11 @@ def main() -> None:
         "mac-icon-512@2x.png": 1024,
     }
     for fname, size in mac_sizes.items():
-        downscale(mac_1024, size).save(appicon_dir / fname, "PNG", optimize=True)
+        render_mac_icon(master, size).save(appicon_dir / fname, "PNG", optimize=True)
 
-    # 拡張本体アイコン（ブラウザ用、角丸あり）
+    # 拡張本体アイコン（ブラウザ用、角丸あり）— 同様に縮小→マスク順
     for size in (16, 32, 48, 128):
-        downscale(mac_1024, size).save(icons_dir / f"icon{size}.png", "PNG", optimize=True)
+        render_mac_icon(master, size).save(icons_dir / f"icon{size}.png", "PNG", optimize=True)
 
     print("[ok] generated icons")
     print(f"  master: {assets_dir/'app-icon-master-1024.png'}")
