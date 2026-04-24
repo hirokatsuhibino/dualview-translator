@@ -1,3 +1,8 @@
+---
+title: Release Notes
+permalink: /RELEASE_NOTES.html
+---
+
 # リリースノート
 
 ## 未リリース

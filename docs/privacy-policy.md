@@ -1,3 +1,8 @@
+---
+title: Privacy Policy
+permalink: /privacy-policy.html
+---
+
 # Privacy Policy — DualView Translator
 
 Last updated: 2026-04-17
