@@ -98,6 +98,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7D0D5AC12F9C3DE1005F61FC /* DualView Translator (iOS).entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "DualView Translator (iOS).entitlements"; sourceTree = "<group>"; };
+		7D0D5AC22F9C3E04005F61FC /* DualView Translator (macOS).entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "DualView Translator (macOS).entitlements"; sourceTree = "<group>"; };
+		7D0D5AC32F9C3E1B005F61FC /* DualView Translator Extension (iOS).entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "DualView Translator Extension (iOS).entitlements"; sourceTree = "<group>"; };
+		7D0D5AC42F9C3E2F005F61FC /* DualView Translator Extension (macOS).entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "DualView Translator Extension (macOS).entitlements"; sourceTree = "<group>"; };
 		7D1D47C62F95AD9300B65F5F /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
 		7D1D47C72F95AD9300B65F5F /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		7D1D47C82F95AD9300B65F5F /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
@@ -168,6 +172,10 @@
 		7D1D47BE2F95AD9300B65F5F = {
 			isa = PBXGroup;
 			children = (
+				7D0D5AC42F9C3E2F005F61FC /* DualView Translator Extension (macOS).entitlements */,
+				7D0D5AC32F9C3E1B005F61FC /* DualView Translator Extension (iOS).entitlements */,
+				7D0D5AC22F9C3E04005F61FC /* DualView Translator (macOS).entitlements */,
+				7D0D5AC12F9C3DE1005F61FC /* DualView Translator (iOS).entitlements */,
 				7D1D47C32F95AD9300B65F5F /* Shared (App) */,
 				7D1D47CC2F95AD9500B65F5F /* Shared (Extension) */,
 				7D1D47D42F95AD9500B65F5F /* iOS (App) */,
@@ -678,6 +686,7 @@
 		7D1D48112F95AD9500B65F5F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator Extension (iOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -712,6 +721,7 @@
 		7D1D48122F95AD9500B65F5F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator Extension (iOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -749,6 +759,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator (iOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -791,6 +802,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator (iOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -832,6 +844,7 @@
 		7D1D48182F95AD9500B65F5F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator Extension (macOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -865,6 +878,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.Extension";
 				PRODUCT_NAME = "DualView Translator Extension";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -878,6 +892,7 @@
 		7D1D48192F95AD9500B65F5F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator Extension (macOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -911,6 +926,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.Extension";
 				PRODUCT_NAME = "DualView Translator Extension";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -926,6 +942,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator (macOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
@@ -970,6 +987,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "DualView Translator (macOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
