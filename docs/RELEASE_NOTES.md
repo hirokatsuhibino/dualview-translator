@@ -7,6 +7,13 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### バグ修正
+
+- **macOS Safari で API キーや設定が保存されない問題を修正**（#81）
+  - PR #76 で App Sandbox を有効化した際、App Group entitlement が未設定だったため `storage.local` が `Disk I/O error` で失敗していた
+  - App / Extension 両方に App Group `group.jp.co.orangesoft.dualview-translator` を追加し、共有 Container にアクセスできるよう修正
+  - iOS 側にも予防的に同じ App Group を追加
+
 ### 改善
 
 - **App Store 提出向けの HD アプリアイコンを制作**（#49）
