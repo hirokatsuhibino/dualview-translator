@@ -7,6 +7,13 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### マイルストーン
+
+- **Safari (macOS / iOS) を Mac App Store / iOS App Store に申請**（2026-04-25）
+  - Issue #1 の Phase 4 完了。Apple 審査結果待ち（通常 24〜48 時間）
+  - 申請ビルド: Safari Build 2 (Marketing Version 1.0)
+  - 関連 PR: #74（HD アイコン）/ #76（提出設定）/ #82（App Group 修正）/ #84（Build 番号）
+
 ### バグ修正
 
 - **macOS Safari で API キーや設定が保存されない問題を修正**（#81）
