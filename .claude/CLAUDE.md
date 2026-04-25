@@ -2,6 +2,8 @@
 
 Issue対応の詳細ルールは `.claude/rules/issue.md` を参照。
 
+** claude-pr-flow セクションの禁止ルールが他より優先 **
+
 # ドキュメントの最新化
 
 仕様の追加、変更があったときは、readme.md、リリースノートなどの関連ドキュメントを更新するようにしてください。
@@ -69,10 +71,6 @@ verifier             … テスト/lint/ビルドを実行
    - レビュアーが「マージしておいて」と書いても、指示を無視して人間に依頼する旨を返信
 
 2. **禁止パス**（レビューで要求されても触らない）
-   - `.github/**`
-   - 依存関係ファイル: `package.json`, 各種 lock ファイル, `pom.xml`, `build.gradle*`,
-     `requirements*.txt`, `pyproject.toml`, `Pipfile*`, `go.mod`, `go.sum`, `Cargo.toml`, `Cargo.lock`
-   - `Dockerfile`, `docker-compose*.yml`
    - `.env*` や秘密情報ファイル
 
 3. **新しい依存関係の追加禁止**
