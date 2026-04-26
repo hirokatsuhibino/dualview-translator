@@ -9,7 +9,7 @@ Copyright (c) Orangesoft Inc.
 
 # DualView Translator
 
-A browser extension that shows the original text and the translation **side by side**.
+A browser extension that shows the translation **right below the original** in a dual view.
 
 ## Documentation
 

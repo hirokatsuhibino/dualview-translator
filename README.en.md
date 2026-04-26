@@ -2,7 +2,7 @@
 
 [日本語](README.md) | English
 
-A browser translation extension that shows the original and the translation **side by side**. Chrome / Firefox supported (Safari / iOS in App Store review).
+A browser translation extension that shows the translation **right below the original** in a dual view. Chrome / Firefox supported (Safari / iOS in App Store review).
 
 The original text doesn't disappear when you translate, so you can always read with full context.
 
@@ -117,9 +117,9 @@ Get it from Firefox Add-ons:
 
 https://addons.mozilla.org/en-US/firefox/addon/dualview-translator/
 
-### Safari / iOS (in development)
+### Safari / iOS (in App Store review)
 
-The Safari Web Extension Xcode project lives under `safari/`. Build instructions are in [safari/README.md](safari/README.md). App Store release is on the way.
+Submitted to Mac App Store / iOS App Store on 2026-04-25, currently awaiting Apple's review. The Safari Web Extension Xcode project lives under `safari/` if you want to build locally. Build instructions are in [safari/README.md](safari/README.md).
 
 ## How to use
 
@@ -128,7 +128,7 @@ The Safari Web Extension Xcode project lives under `safari/`. Build instructions
 1. Highlight the text you want translated
 2. A floating panel pops up
 3. Pick a target language and click "Translate"
-4. Original and translation appear side by side
+4. Original and translation appear stacked together (translation right below)
 
 ### Full-page translation
 

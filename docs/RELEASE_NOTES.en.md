@@ -185,7 +185,7 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Initial Release
 
-- Dual-view display (original text and translation side by side)
+- Dual-view display (original text with translation right below)
 - 7 translation modes (selection, full page & summary, region selection, right-click, element & summary)
 - 2 translation engines (Google Translate / DeepL)
 - AI summary (Claude / Gemini)

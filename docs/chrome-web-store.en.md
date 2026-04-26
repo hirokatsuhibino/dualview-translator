@@ -6,11 +6,11 @@ DualView Translator
 
 ## Short Description (132 characters max)
 
-Side-by-side translation that keeps the original visible. Google Translate / DeepL ready, with AI summaries on tap.
+Dual-view translation: keeps the original visible with the translation right below. Google Translate / DeepL ready, with AI summaries on tap.
 
 ## Detailed Description
 
-Tired of translation tools that swallow the original text? DualView Translator keeps it right there — the translation just slides in next to it, so you never lose the context.
+Tired of translation tools that swallow the original text? DualView Translator keeps it right there — the translation slides in **right under** the original, so you never lose the context.
 
 Great for language learners, anyone reading foreign articles, or when you just want to double-check what a translator gave you.
 
