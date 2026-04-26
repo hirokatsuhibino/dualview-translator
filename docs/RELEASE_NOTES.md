@@ -7,6 +7,12 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### ドキュメント
+
+- **拡張機能の説明文に英語版を追加**（#91）
+  - `docs/chrome-web-store.en.md` / `docs/firefox-add-ons.en.md` / `README.en.md` を新規追加
+  - 既存の日本語版とは別に、英語圏ユーザー / Chrome Web Store / Firefox AMO 海外配信向けの説明文を整備
+
 ### マイルストーン
 
 - **Safari (macOS / iOS) を Mac App Store / iOS App Store に申請**（2026-04-25）
