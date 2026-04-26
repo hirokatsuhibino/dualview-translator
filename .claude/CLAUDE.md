@@ -6,7 +6,17 @@ Issue対応の詳細ルールは `.claude/rules/issue.md` を参照。
 
 # ドキュメントの最新化
 
-仕様の追加、変更があったときは、readme.md、リリースノートなどの関連ドキュメントを更新するようにしてください。
+仕様の追加、変更があったときは、関連ドキュメントを更新するようにしてください。
+**日本語版・英語版の両方が存在するドキュメントは、必ず両方を更新する**。
+
+| 日本語 | 英語 |
+|---|---|
+| `README.md` | `README.en.md` |
+| `docs/RELEASE_NOTES.md` | `docs/RELEASE_NOTES.en.md` |
+| `docs/chrome-web-store.md` | `docs/chrome-web-store.en.md` |
+| `docs/firefox-add-ons.md` | `docs/firefox-add-ons.en.md` |
+
+英語版のトーンは**カジュアル**（"you" 主体、contractions 使用、口語表現可）。
 
 # テスト
 

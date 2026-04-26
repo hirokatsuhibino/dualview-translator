@@ -10,8 +10,9 @@ permalink: /RELEASE_NOTES.html
 ### ドキュメント
 
 - **拡張機能の説明文に英語版を追加**（#91）
-  - `docs/chrome-web-store.en.md` / `docs/firefox-add-ons.en.md` / `README.en.md` を新規追加
+  - `docs/chrome-web-store.en.md` / `docs/firefox-add-ons.en.md` / `README.en.md` / `docs/RELEASE_NOTES.en.md` を新規追加
   - 既存の日本語版とは別に、英語圏ユーザー / Chrome Web Store / Firefox AMO 海外配信向けの説明文を整備
+  - `.claude/CLAUDE.md` に「日英両方のドキュメントを必ず更新する」ルールを明記
 
 ### マイルストーン
 
