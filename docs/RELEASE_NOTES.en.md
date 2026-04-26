@@ -3,6 +3,8 @@ title: Release Notes
 permalink: /RELEASE_NOTES.en.html
 ---
 
+[日本語](RELEASE_NOTES.html) | English
+
 # Release Notes
 
 ## Unreleased
