@@ -66,10 +66,12 @@ jobs:
           esac
 
           # PR の fork / draft 状態を取得（issue_comment は event から直接取れないので gh で補完）
+          # guard ジョブは軽量化のため actions/checkout を実行していないので、
+          # gh pr view には --repo を明示してリポジトリコンテキストを与える
           if [ "${IS_ISSUE_COMMENT}" = "true" ]; then
             PR_NUM="${{ github.event.issue.number }}"
-            IS_FORK=$(gh pr view "${PR_NUM}" --json headRepository --jq '.headRepository.isFork // false')
-            IS_DRAFT=$(gh pr view "${PR_NUM}" --json isDraft --jq '.isDraft')
+            IS_FORK=$(gh pr view "${PR_NUM}" --repo "${{ github.repository }}" --json headRepository --jq '.headRepository.isFork // false')
+            IS_DRAFT=$(gh pr view "${PR_NUM}" --repo "${{ github.repository }}" --json isDraft --jq '.isDraft')
           else
             IS_FORK="${{ github.event.pull_request.head.repo.fork }}"
             IS_DRAFT="${{ github.event.pull_request.draft }}"
@@ -115,7 +117,8 @@ jobs:
 
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
             # issue_comment は event から head.ref が取れないため gh で補完
-            REF=$(gh pr view "${{ github.event.issue.number }}" --json headRefName --jq '.headRefName')
+            # checkout 前に実行するので --repo でリポジトリコンテキストを明示
+            REF=$(gh pr view "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --json headRefName --jq '.headRefName')
           else
             REF="${{ github.event.pull_request.head.ref }}"
           fi
