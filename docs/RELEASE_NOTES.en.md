@@ -30,7 +30,7 @@ permalink: /RELEASE_NOTES.en.html
   - Dropped the cross-language release-notes link from `docs/index.md` / `docs/index.en.md`
   - You can still hop between languages from the language toggle at the top of each release-notes page
 - **Added a "Developer" section to the GitHub Pages landing pages** (#98)
-  - New "Developer" section on `docs/index.md` / `docs/index.en.md` linking to Orangesoft Inc. and our other products (safeAttach / xgate4)
+  - New "Developer" section on `docs/index.md` / `docs/index.en.md` linking to Orangesoft Inc. and other products (safeAttach / xgate4)
 
 ### Milestones
 
