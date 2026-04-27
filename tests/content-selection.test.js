@@ -258,4 +258,28 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     expect(btn.getAttribute('aria-label')).toBe('Translate selection');
     expect(btn.getAttribute('title')).toBe('Translate selection');
   });
+
+  it('ミニアイコンをクリックするとフルパネルが展開し、ミニアイコンは消える', () => {
+    DVT_I18N.setLang('ja');
+    const p = document.createElement('p');
+    p.textContent = 'Hello world';
+    document.body.appendChild(p);
+
+    selectTextOf(p, 0, 11);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+
+    const btn = document.querySelector('.dvt-sel-mini-btn');
+    expect(btn).toBeTruthy();
+
+    // 実 DOM でクリック → showSelectionPanelAtRect が呼ばれフルパネルが生成される
+    btn.click();
+
+    expect(document.querySelector('.dvt-sel-mini-btn')).toBeNull();
+    const panel = document.querySelector('.dvt-sel-panel');
+    expect(panel).toBeTruthy();
+    // パネル内に主要な構成要素が揃っていること
+    expect(panel.querySelector('.dvt-sel-header')).toBeTruthy();
+    expect(panel.querySelector('.dvt-sel-lang')).toBeTruthy();
+    expect(panel.querySelector('.dvt-sel-btn')).toBeTruthy();
+  });
 });

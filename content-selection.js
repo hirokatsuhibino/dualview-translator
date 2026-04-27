@@ -87,7 +87,7 @@ var DVT_SEL = (function () {
   const MINI_BTN_SIZE = 28;
   const MINI_BTN_GAP = 4;
 
-  // rect 上端基準でミニアイコンの top/left を決め、ビューポート内にクランプする
+  // rect の右下端基準でミニアイコンの top/left を決め、ビューポート内にクランプする
   function computeMiniBtnPosition(rect) {
     const top = rect.bottom + window.scrollY + MINI_BTN_GAP;
     const rawLeft = rect.right + window.scrollX + MINI_BTN_GAP;
@@ -107,7 +107,7 @@ var DVT_SEL = (function () {
     const range = sel.getRangeAt(0).cloneRange();
     const rect = range.getBoundingClientRect();
 
-    // 翻訳アイコンだけの小さな丸ボタン
+    // 翻訳アイコンだけの小さな角丸正方形ボタン
     const btn = document.createElement('button');
     btn.className = 'dvt-sel-mini-btn';
     btn.setAttribute('data-dvt', 'true');
