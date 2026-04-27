@@ -14,8 +14,7 @@ A browser extension that shows the translation **right below the original** in a
 ## Documentation
 
 - [Privacy Policy](privacy-policy.html)
-- [Release Notes (English)](RELEASE_NOTES.en.html)
-- [リリースノート (Japanese)](RELEASE_NOTES.html)
+- [Release Notes](RELEASE_NOTES.en.html)
 
 ## Repository
 
@@ -25,5 +24,5 @@ Source code is on GitHub:
 ## Distribution
 
 - Chrome: Chrome Web Store (coming soon)
-- Firefox: Firefox Add-ons (coming soon)
+- Firefox: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/dualview-translator/)
 - macOS / iOS Safari: Mac App Store / iOS App Store (coming soon)

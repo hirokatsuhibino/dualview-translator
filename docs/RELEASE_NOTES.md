@@ -25,6 +25,11 @@ permalink: /RELEASE_NOTES.html
   - `docs/chrome-web-store.en.md` / `docs/firefox-add-ons.en.md` / `README.en.md` / `docs/RELEASE_NOTES.en.md` を新規追加
   - 既存の日本語版とは別に、英語圏ユーザー / Chrome Web Store / Firefox AMO 海外配信向けの説明文を整備
   - `.claude/CLAUDE.md` に「日英両方のドキュメントを必ず更新する」ルールを明記
+- **GitHub Pages のトップページに Firefox Add-ons の公開リンクを掲載**（#94）
+  - `docs/index.md` / `docs/index.en.md` の「配布」セクションで、Firefox を「準備中」表記から AMO ページへのリンクに更新
+- **GitHub Pages のリリースノートリンクを自言語版に統一**（#95）
+  - `docs/index.md` / `docs/index.en.md` から他言語版リリースノートへのリンクを削除し、自言語版のみ表示
+  - 他言語版へはリリースノート冒頭の言語切り替えリンクから遷移できる
 
 ### マイルストーン
 

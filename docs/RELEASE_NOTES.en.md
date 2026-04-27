@@ -24,6 +24,11 @@ permalink: /RELEASE_NOTES.en.html
 - **English versions of extension descriptions** (#91)
   - Added `docs/chrome-web-store.en.md` / `docs/firefox-add-ons.en.md` / `README.en.md`
   - Targets English-speaking users and overseas distribution on Chrome Web Store / Firefox AMO
+- **Linked the published Firefox Add-ons page from the GitHub Pages landing pages** (#94)
+  - The "Distribution" section in `docs/index.md` / `docs/index.en.md` now points to the AMO page instead of saying "coming soon"
+- **Cleaned up release-notes links on the GitHub Pages landing pages so each language only shows its own** (#95)
+  - Dropped the cross-language release-notes link from `docs/index.md` / `docs/index.en.md`
+  - You can still hop between languages from the language toggle at the top of each release-notes page
 
 ### Milestones
 
