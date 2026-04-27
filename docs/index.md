@@ -14,8 +14,7 @@ Copyright (c) Orangesoft Inc.
 ## ドキュメント
 
 - [Privacy Policy](privacy-policy.html)（英語）
-- [リリースノート（日本語）](RELEASE_NOTES.html)
-- [Release Notes (English)](RELEASE_NOTES.en.html)
+- [リリースノート](RELEASE_NOTES.html)
 
 ## リポジトリ
 
@@ -25,5 +24,5 @@ Copyright (c) Orangesoft Inc.
 ## 配布
 
 - Chrome: Chrome Web Store（準備中）
-- Firefox: Firefox Add-ons（準備中）
+- Firefox: [Firefox Add-ons](https://addons.mozilla.org/ja/firefox/addon/dualview-translator/)
 - macOS / iOS Safari: Mac App Store / iOS App Store（準備中）
