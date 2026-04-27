@@ -7,6 +7,10 @@ permalink: /RELEASE_NOTES.en.html
 
 # Release Notes
 
+## Unreleased
+
+---
+
 ## v1.4.0 (2026-04-27)
 
 ### Improvements
