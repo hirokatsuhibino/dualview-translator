@@ -9,6 +9,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.4.0 (2026-04-27)
+
 ### Improvements
 
 - **Selection translation now starts from a tiny icon instead of an instant full panel** (#102)
