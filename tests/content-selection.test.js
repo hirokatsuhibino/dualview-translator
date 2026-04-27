@@ -102,7 +102,8 @@ describe('選択翻訳 — ミニアイコン方式', () => {
 
   it('CSS にミニアイコンのスタイルが定義されている', () => {
     expect(cssCode).toContain('.dvt-sel-mini-btn');
-    expect(cssCode).toContain('border-radius: 50%');
+    // 角丸正方形（白背景 + 軽い影）。border-radius は丸ではなく数 px の角丸
+    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,400}border-radius:\s*\d+px/);
   });
 
   it('CSS にミニアイコン表示アニメーションが定義されている', () => {
