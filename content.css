@@ -72,6 +72,10 @@
   cursor: pointer !important;
   box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12) !important;
   animation: dvt-mini-in 0.15s ease-out !important;
+  /* ホストページのフォント設定の影響を受けないよう明示 */
+  font-family: -apple-system, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
 }
 .dvt-sel-mini-btn:hover {
   background: #e8950e !important;
@@ -82,22 +86,16 @@
   outline-offset: 2px !important;
   box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 3px rgba(212,135,10,0.55) !important;
 }
-/* ホストページの `svg { stroke: none }` 等で打ち消されないよう、stroke / fill / stroke-width を明示する */
-.dvt-sel-mini-btn svg {
-  display: block !important;
-  width: 14px !important;
-  height: 14px !important;
-  color: #ffffff !important;
-  stroke: currentColor !important;
-  fill: none !important;
-  stroke-width: 2.5px !important;
-  stroke-linecap: round !important;
+/* アイコン（絵文字）は親ボタンへのクリックを邪魔しないよう pointer-events: none */
+.dvt-sel-mini-icon {
+  display: inline-block !important;
   pointer-events: none !important;
-}
-.dvt-sel-mini-btn svg path {
-  stroke: currentColor !important;
-  fill: none !important;
-  stroke-width: 2.5px !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  /* ホストページの text-transform / letter-spacing 等の影響を排除 */
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  user-select: none !important;
 }
 
 @keyframes dvt-mini-in {

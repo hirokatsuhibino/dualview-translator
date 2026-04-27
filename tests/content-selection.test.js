@@ -129,8 +129,13 @@ describe('選択翻訳 — ミニアイコン方式', () => {
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('SVG に aria-hidden を付与してスクリーンリーダーでの二重読み上げを防いでいる', () => {
-    expect(jsCode).toMatch(/svg\.setAttribute\('aria-hidden'/);
+  it('アイコン要素に aria-hidden を付与してスクリーンリーダーでの二重読み上げを防いでいる', () => {
+    expect(jsCode).toMatch(/iconSpan\.setAttribute\('aria-hidden'|aria-hidden.*true/);
+  });
+
+  it('ホストページの SVG 関連 CSS の影響を避けるため絵文字ベースのアイコンを使用している', () => {
+    expect(jsCode).toContain('dvt-sel-mini-icon');
+    expect(jsCode).toMatch(/textContent\s*=\s*['"]🌐['"]/);
   });
 
   it('縦方向もビューポート内にクランプしている', () => {
@@ -177,10 +182,11 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     const btn = document.querySelector('.dvt-sel-mini-btn');
     expect(btn).toBeTruthy();
     expect(document.querySelector('.dvt-sel-panel')).toBeNull();
-    // ホストページの CSS で消えても DOM には SVG が挿入されていること（描画レイヤーの保証は CSS で別途対応）
-    const svg = btn.querySelector('svg');
-    expect(svg).toBeTruthy();
-    expect(svg.querySelector('path')).toBeTruthy();
+    // ホストページの CSS で消えにくい絵文字ベースのアイコンが入っていること
+    const icon = btn.querySelector('.dvt-sel-mini-icon');
+    expect(icon).toBeTruthy();
+    expect(icon.textContent).toBe('🌐');
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('右クリックの mouseup ではミニアイコンが出ない', () => {

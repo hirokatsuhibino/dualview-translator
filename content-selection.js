@@ -114,11 +114,14 @@ var DVT_SEL = (function () {
     btn.setAttribute('type', 'button');
     btn.setAttribute('aria-label', t('translateSelection'));
     btn.setAttribute('title', t('translateSelection'));
-    // SVG はラベルとして読み上げないよう aria-hidden を付ける（aria-label がボタン側にあるため）
-    const svg = parseSvg(SVG_TRANSLATE);
-    svg.setAttribute('aria-hidden', 'true');
-    svg.setAttribute('focusable', 'false');
-    btn.appendChild(svg);
+    // ホストページの SVG 関連 CSS（例: `svg path { stroke: none !important }`）で
+    // SVG ストロークが描画されないサイトがあるため、フォントベースの絵文字を使用する。
+    // 絵文字はフォントレンダリングを通るので CSS による消失リスクが極めて低い。
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'dvt-sel-mini-icon';
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = '🌐';
+    btn.appendChild(iconSpan);
 
     const pos = computeMiniBtnPosition(rect);
     btn.style.top = pos.top + 'px';
