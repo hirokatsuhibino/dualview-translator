@@ -1,5 +1,6 @@
 ---
 title: DualView Translator
+description: A browser translation extension that shows the translation right below the original.
 permalink: /index.en.html
 ---
 <!--

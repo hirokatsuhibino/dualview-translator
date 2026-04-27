@@ -1,5 +1,6 @@
 ---
 title: Release Notes
+description: DualView Translator のリリースノート。
 permalink: /RELEASE_NOTES.html
 ---
 

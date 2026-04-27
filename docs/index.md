@@ -1,5 +1,6 @@
 ---
 title: DualView Translator
+description: 原文と翻訳を並べて表示するブラウザ翻訳拡張。
 permalink: /index.html
 ---
 <!--
