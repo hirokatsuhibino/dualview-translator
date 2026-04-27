@@ -26,7 +26,8 @@ Source code is on GitHub:
 
 - Chrome: Chrome Web Store (coming soon)
 - Firefox: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/dualview-translator/)
-- macOS / iOS Safari: Mac App Store / iOS App Store (coming soon)
+- iOS Safari: [App Store](https://apps.apple.com/app/dualview-translator/id6763488360)
+- macOS Safari: Mac App Store (in review)
 
 ## Developer
 

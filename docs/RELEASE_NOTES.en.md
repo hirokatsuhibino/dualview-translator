@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Milestones
+
+- **iOS Safari extension is now live on the App Store** (2026-04-28)
+  - Public URL: https://apps.apple.com/app/dualview-translator/id6763488360
+  - Submitted build: Safari Build 2 (Marketing Version 1.0)
+  - macOS Safari is still in Mac App Store review
+
 ---
 
 ## v1.4.0 (2026-04-27)
