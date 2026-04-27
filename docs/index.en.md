@@ -26,3 +26,7 @@ Source code is on GitHub:
 - Chrome: Chrome Web Store (coming soon)
 - Firefox: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/dualview-translator/)
 - macOS / iOS Safari: Mac App Store / iOS App Store (coming soon)
+
+## Developer
+
+DualView Translator is developed by [Orangesoft Inc.](https://www.orangesoft.co.jp/) — also makers of [safeAttach](https://www.orangesoft.co.jp/safeattach) and [xgate4](https://www.orangesoft.co.jp/xgate).
