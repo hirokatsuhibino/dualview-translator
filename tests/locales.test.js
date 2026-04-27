@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(import.meta.dirname, '..');
 const LOCALES_DIR = join(ROOT, '_locales');
 const MANIFEST_PATH = join(ROOT, 'manifest.json');
 
@@ -93,9 +93,13 @@ describe('_locales — 拡張機能の i18n 化', () => {
     for (const locale of locales) {
       const messages = loadMessages(locale);
       for (const [key, value] of Object.entries(messages)) {
+        // toBeTypeOf('object') は null も通すため、null でないことを明示的に検証する
+        expect(value, `${locale}.${key} が null`).not.toBeNull();
         expect(value, `${locale}.${key} がオブジェクトでない`).toBeTypeOf('object');
-        expect(value.message, `${locale}.${key}.message が空`).toBeTruthy();
-        expect(typeof value.message, `${locale}.${key}.message が文字列でない`).toBe('string');
+        // toBeTruthy() だと空白のみの文字列も通ってしまうため、文字列として trim 後の長さで検証する
+        const message = value.message;
+        expect(typeof message, `${locale}.${key}.message が文字列でない`).toBe('string');
+        expect(message.trim().length, `${locale}.${key}.message が空または空白のみ`).toBeGreaterThan(0);
       }
     }
   });
