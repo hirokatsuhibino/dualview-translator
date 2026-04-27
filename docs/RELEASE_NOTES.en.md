@@ -11,6 +11,11 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Improvements
 
+- **Selection translation now starts from a tiny icon instead of an instant full panel** (#102)
+  - Highlighting text used to pop the entire translate panel right under your selection — handy, but in the way when you were just trying to copy something
+  - Now you only get a small translate icon next to your selection. Click it and the full panel slides in like before
+  - Right-click "Translate" and `Ctrl+Shift+Y` are explicit triggers, so they still open the full panel directly (no extra click)
+  - Added an i18n key `translateSelection` (used as the icon's aria-label / title) across all 11 languages
 - **Localized store description & shortcut hints via the browser's built-in i18n (`_locales/`)** (#93)
   - Replaced `manifest.json`'s `description` and `commands.*.description` with `__MSG_<key>__` placeholders
     and shipped 11 language packs (ar / de / en / es / fr / ja / ko / pt_BR / ru / zh_CN / zh_TW) under `_locales/`

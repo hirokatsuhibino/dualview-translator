@@ -930,3 +930,153 @@ suites:
         expected:
           - "`_locales/<lang>/messages.json` が 11 言語分（ar / de / en / es / fr / ja / ko / pt_BR / ru / zh_CN / zh_TW）すべて含まれる"
           - "`manifest.json` 内の `description` および `commands.*.description` が `__MSG_*__` 形式になっている"
+
+  # ━━━━━ N. 選択翻訳ミニアイコン（#102） ━━━━━
+  - id: selection-mini-btn
+    title: テキスト選択時のミニアイコン UI
+    description: "#102 で選択直後の挙動をフルパネル即表示からミニアイコン経由に変更したことに対応"
+    related_prs: [102]
+    scenarios:
+
+      - id: SMI-001
+        title: 選択直後にミニアイコンだけ表示される
+        priority: p0
+        preconditions:
+          - 拡張がインストール・有効化された任意のページを開く
+        steps:
+          - 任意の段落のテキストを 2 文字以上ドラッグ選択する
+        expected:
+          - 選択範囲の右下隣に 28px 程度の丸い翻訳アイコン（オレンジ系）が表示される
+          - フルサイズの翻訳パネル（言語セレクタ・翻訳ボタン・結果欄を含むもの）は表示されない
+
+      - id: SMI-002
+        title: ミニアイコンクリックでフルパネルが展開する
+        priority: p0
+        steps:
+          - SMI-001 の状態でミニアイコンをクリックする
+        expected:
+          - ミニアイコンが消え、その位置の近傍にフローティング翻訳パネルが展開する
+          - パネルには言語セレクタ・「翻訳する」ボタン・原文プレビューが表示される
+          - 「翻訳する」を押すと翻訳結果が下に表示される
+
+      - id: SMI-003
+        title: コピー目的の選択を妨げない
+        priority: p0
+        description: "選択中にミニアイコンが出ても、Ctrl+C / Cmd+C のコピー操作が正常に動作することを確認する回帰防止項目"
+        steps:
+          - テキストを選択（ミニアイコンが出る）
+          - そのまま Ctrl+C（macOS は Cmd+C）でコピー
+          - 別の入力欄に Ctrl+V（Cmd+V）で貼り付ける
+        expected:
+          - 選択したテキストがそのままコピー＆ペーストされる
+          - ミニアイコンは選択範囲が解除されたタイミング（別箇所クリックなど）で消える
+
+      - id: SMI-004
+        title: Escape キーでミニアイコンが消える
+        priority: p1
+        steps:
+          - テキストを選択（ミニアイコンが出る）
+          - Escape キーを押す
+        expected:
+          - ミニアイコンが即座に消える
+
+      - id: SMI-005
+        title: 連続選択でミニアイコンが追従する
+        priority: p1
+        steps:
+          - テキスト A を選択（アイコン表示）
+          - すぐ別のテキスト B を選択
+        expected:
+          - 旧アイコンが消え、新しい選択範囲の隣に新アイコンが表示される
+          - フルパネルが二重に開かれない
+
+      - id: SMI-006
+        title: 画面右端での選択ではみ出さない
+        priority: p1
+        steps:
+          - 画面右端にあるテキストをドラッグ選択
+        expected:
+          - ミニアイコンが画面外（横スクロール領域）にはみ出さず、ビューポート内に収まる
+
+      - id: SMI-007
+        title: "右クリック→「DualView: 翻訳」は従来通り直接フルパネル"
+        priority: p0
+        steps:
+          - テキストを選択
+          - "そのまま右クリック → コンテキストメニューの「DualView: 翻訳」を選ぶ"
+        expected:
+          - ミニアイコンを介さず、フローティング翻訳パネルが直接開く
+          - 翻訳が即座に開始される
+
+      - id: SMI-008
+        title: ショートカット Ctrl+Shift+Y は従来通り直接フルパネル
+        priority: p0
+        steps:
+          - テキストを選択した状態で Ctrl+Shift+Y（macOS は Cmd+Shift+Y）を押す
+        expected:
+          - ミニアイコンを経由せずフルパネルが開く
+
+      - id: SMI-009
+        title: ライト／ダークテーマ両方で視認できる
+        priority: p1
+        steps:
+          - OS 設定でダークモードのページにて選択 → アイコンを目視
+          - OS 設定でライトモードに切り替えてから別ページで選択 → アイコンを目視
+        expected:
+          - どちらのモードでも背景に対して十分なコントラストでアイコンが視認できる
+
+      - id: SMI-010
+        title: aria-label / title が UI 言語に追従する
+        priority: p2
+        environment: chrome
+        steps:
+          - ポップアップの「設定」タブから UI 言語を「English」に変更
+          - 任意のページでテキストを選択してミニアイコンを表示
+          - 'DevTools でアイコン要素の `aria-label` を確認'
+        expected:
+          - '`aria-label` および `title` 属性が選択言語の文言（例: 英語の場合 "Translate selection"）になっている'
+
+      - id: SMI-011
+        title: ミニアイコン表示後にスクロールしてもパネルが正しい位置に開く
+        priority: p1
+        description: クリック時に Range から rect を再取得する実装の検証（PR #102 のレビュー指摘の回帰防止）
+        steps:
+          - 縦に長いページで、画面中央付近のテキストを選択してミニアイコンを表示
+          - そのままマウスホイール / トラックパッドでページを下方向にスクロール
+          - 表示されたままのミニアイコンをクリック
+        expected:
+          - フルパネルが選択範囲の現在位置（スクロール後の見える位置）の近傍に開く
+          - 古い座標のままビューポート外に開いてしまわない
+
+      - id: SMI-012
+        title: prefers-reduced-motion 有効時にアニメーションが抑制される
+        priority: p1
+        environment: chrome
+        steps:
+          - OS の「視差効果を減らす」「アニメーションを減らす」設定を有効化（macOS: システム設定 → アクセシビリティ → 表示 → 視差効果を減らす）
+          - ブラウザを再起動してから任意のページでテキストを選択
+        expected:
+          - ミニアイコンが scale アニメーションなしで即座に表示される
+          - ホバーしてもボタンが拡大しない
+
+      - id: SMI-013
+        title: キーボード選択（Shift + 矢印キー）ではミニアイコンは出ない
+        priority: p2
+        description: mouseup ベースの実装のため、キーボード選択でアイコンは出ない仕様。代替として Ctrl+Shift+Y ショートカットを案内する
+        steps:
+          - 任意のページにフォーカスを当てる
+          - キャレットを置いてから Shift + → / Shift + Ctrl + → でテキスト選択
+        expected:
+          - ミニアイコンは表示されない（仕様通り）
+          - 代わりに `Ctrl+Shift+Y`（macOS は `Cmd+Shift+Y`）で選択翻訳パネルを直接開ける
+
+      - id: SMI-014
+        title: フォーカスリングが :focus-visible で表示される
+        priority: p2
+        environment: chrome
+        steps:
+          - テキストを選択してミニアイコンを表示
+          - キーボードの Tab キーでフォーカスをミニアイコンに合わせる
+        expected:
+          - 白色（ライトテーマでは黒色）のアウトラインがアイコン外周に表示される
+          - マウスクリックではフォーカスリングは出ない（:focus-visible の意図通り）

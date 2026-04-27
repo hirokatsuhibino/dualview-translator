@@ -54,6 +54,51 @@
   color: #e57373;
 }
 
+/* ── Selection Mini Button (選択直後の小アイコン) ──────────────────── */
+.dvt-sel-mini-btn {
+  position: absolute !important;
+  z-index: 2147483647 !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: #d4870a !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12) !important;
+  animation: dvt-mini-in 0.15s ease-out !important;
+}
+.dvt-sel-mini-btn:hover {
+  background: #e8950e !important;
+  transform: scale(1.08) !important;
+}
+.dvt-sel-mini-btn:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 3px rgba(212,135,10,0.55) !important;
+}
+.dvt-sel-mini-btn svg {
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+@keyframes dvt-mini-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* prefers-reduced-motion ユーザーへの配慮: アニメーション・hover スケールを抑制 */
+@media (prefers-reduced-motion: reduce) {
+  .dvt-sel-mini-btn { animation: none !important; }
+  .dvt-sel-mini-btn:hover { transform: none !important; }
+}
+
 /* ── Selection Floating Panel ─────────────────────────────────────────── */
 .dvt-sel-panel {
   position: absolute !important;
@@ -444,6 +489,14 @@
     box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.08) !important;
   }
 
+  /* ── Selection Mini Button (light) ── */
+  .dvt-sel-mini-btn {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08) !important;
+  }
+  .dvt-sel-mini-btn:focus-visible {
+    outline-color: #1a1a2e !important;
+  }
+
   .dvt-sel-header {
     border-bottom-color: rgba(0,0,0,0.08) !important;
   }
@@ -632,6 +685,9 @@
 .dvt-light .dvt-sel-lang:focus { border-color: #d4870a !important; }
 .dvt-light .dvt-sel-btn { background: #d4870a !important; color: #ffffff !important; }
 .dvt-light .dvt-sel-btn:hover { background: #e8950e !important; }
+/* ライトテーマ: ミニアイコンの周辺コントラストを高めるためにシャドウを濃くする */
+.dvt-light .dvt-sel-mini-btn { box-shadow: 0 2px 6px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08) !important; }
+.dvt-light .dvt-sel-mini-btn:focus-visible { outline-color: #1a1a2e !important; }
 .dvt-light .dvt-sel-result { border-top-color: rgba(0,0,0,0.06) !important; }
 .dvt-light .dvt-sel-trans-text { color: #1a1a2e !important; }
 .dvt-light .dvt-copy-btn { color: rgba(0,0,0,0.4) !important; border-color: rgba(0,0,0,0.12) !important; }

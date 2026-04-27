@@ -11,6 +11,12 @@ permalink: /RELEASE_NOTES.html
 
 ### 改善
 
+- **テキスト選択時の翻訳 UI を「ミニアイコン → クリックで展開」方式に変更**（#102）
+  - 選択直後にフルサイズの翻訳パネルが即座に出る挙動を見直し、選択範囲の隣に小さな翻訳アイコンだけを表示するように変更
+  - アイコンをクリックすると初めて従来のフローティングパネルが展開する
+  - コピー目的でテキストを選択しただけのときに翻訳 UI が邪魔にならなくなった
+  - 右クリック翻訳・`Ctrl+Shift+Y`（選択翻訳ショートカット）は明示トリガーのため、従来通りミニアイコンを介さず直接フルパネルを開く
+  - aria-label / title 用の i18n キー `translateSelection` を全 11 言語に追加
 - **ストア掲載文・ショートカット説明をブラウザ標準 i18n（`_locales/`）で多言語化**（#93）
   - `manifest.json` の `description` と `commands.*.description` を `__MSG_<key>__` 化し
     `_locales/<lang>/messages.json` に 11 言語分（ar / de / en / es / fr / ja / ko / pt_BR / ru / zh_CN / zh_TW）の翻訳を追加
