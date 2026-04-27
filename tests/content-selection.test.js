@@ -103,7 +103,12 @@ describe('選択翻訳 — ミニアイコン方式', () => {
   it('CSS にミニアイコンのスタイルが定義されている', () => {
     expect(cssCode).toContain('.dvt-sel-mini-btn');
     // 角丸正方形（白背景 + 軽い影）。border-radius は丸ではなく数 px の角丸
-    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,400}border-radius:\s*\d+px/);
+    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,600}border-radius:\s*\d+px/);
+  });
+
+  it('ホストページの幅指定で横に伸びないよう min/max-width を固定している', () => {
+    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,800}min-width:\s*28px[\s\S]{0,400}max-width:\s*28px/);
+    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,800}flex:\s*0\s+0\s+28px/);
   });
 
   it('CSS にミニアイコン表示アニメーションが定義されている', () => {

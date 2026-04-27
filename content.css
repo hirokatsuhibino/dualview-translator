@@ -59,8 +59,16 @@
 .dvt-sel-mini-btn {
   position: absolute !important;
   z-index: 2147483647 !important;
+  /* ホストページの `button { width: 100% }` などで横に伸びないよう、
+     min-width / max-width / flex も含めてサイズを完全固定する */
   width: 28px !important;
   height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  flex: 0 0 28px !important;
+  box-sizing: border-box !important;
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 8px !important;
