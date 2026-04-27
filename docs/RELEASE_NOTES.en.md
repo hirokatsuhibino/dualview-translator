@@ -9,6 +9,16 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **Localized store description & shortcut hints via the browser's built-in i18n (`_locales/`)** (#93)
+  - Replaced `manifest.json`'s `description` and `commands.*.description` with `__MSG_<key>__` placeholders
+    and shipped 11 language packs (ar / de / en / es / fr / ja / ko / pt_BR / ru / zh_CN / zh_TW) under `_locales/`
+  - Now the description in Chrome Web Store / Firefox Add-ons / Mac App Store / iOS App Store listings
+    and the shortcut hints in `chrome://extensions/shortcuts` show up in the user's browser language
+  - `default_locale` is `en` — anything we haven't translated falls back here
+  - The Safari Web Extension Xcode project also picks up `_locales/` as a build resource
+
 ### Documentation
 
 - **English versions of extension descriptions** (#91)

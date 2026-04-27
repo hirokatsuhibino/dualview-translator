@@ -47,6 +47,7 @@ Chrome Web Store / Firefox Add-ons への提出用。
 - `popup-init.js`
 - `popup.js`
 - `icons/`
+- `_locales/`
 - `LICENSE`
 
 ```bash
@@ -63,6 +64,7 @@ zip -r dualview-translator-<VERSION>.zip \
   popup-init.js \
   popup.js \
   icons/ \
+  _locales/ \
   LICENSE
 ```
 

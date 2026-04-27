@@ -852,3 +852,81 @@ suites:
         expected:
           - 「未対応のPRはありません」と表示して終了する
           - "デバッグログ上、オープンPR有無の確認（`gh pr list`）のみで終了し、PR詳細取得・インラインコメント取得などの追加 API 呼び出しが発生しない"
+
+  # ━━━━━ 14. manifest.json の i18n 化（_locales） ━━━━━
+  - id: manifest-i18n
+    title: "manifest.json の description / commands ローカライズ"
+    description: "PR #93 で `_locales/<lang>/messages.json` + `default_locale` 方式に切替えた挙動の確認"
+    related_prs: [93]
+    scenarios:
+
+      - id: MI-001
+        title: "ブラウザ言語=日本語で description / commands が日本語表示される"
+        priority: p1
+        environment: chrome
+        preconditions:
+          - "Chrome の言語設定で日本語を最優先にして再起動済み"
+          - "拡張をデベロッパーモードでインストール済み（または Web Store 公開版）"
+        steps:
+          - "`chrome://extensions/` を開く"
+          - "DualView Translator のカードを確認"
+          - "`chrome://extensions/shortcuts` を開いて DualView Translator のセクションを確認"
+        expected:
+          - "拡張一覧の説明文が `原文と翻訳を並べて表示するブラウザ翻訳拡張...` と日本語で表示される"
+          - "`shortcuts` ページの 3 ショートカット説明が `ページ全体翻訳のトグル` / `選択テキストを翻訳` / `領域選択モードを開始` と日本語表示される"
+
+      - id: MI-002
+        title: "ブラウザ言語=英語で英語表示される"
+        priority: p1
+        environment: chrome
+        preconditions:
+          - "Chrome の言語設定で English を最優先にして再起動済み"
+        steps:
+          - "`chrome://extensions/` および `chrome://extensions/shortcuts` を確認"
+        expected:
+          - "description が `Browser translation extension that shows the original and translation side by side. ...` と英語表示"
+          - "ショートカット説明が `Toggle full-page translation` / `Translate selected text` / `Enter region selection mode` と英語表示"
+
+      - id: MI-003
+        title: "未対応 locale で default_locale (en) にフォールバック"
+        priority: p2
+        environment: chrome
+        preconditions:
+          - "Chrome の言語設定を `_locales/` に存在しない言語（例: hi / th / vi）にして再起動"
+        steps:
+          - "`chrome://extensions/` を確認"
+        expected:
+          - "description が英語で表示される（`default_locale: en` のフォールバックが効く）"
+
+      - id: MI-004
+        title: "Firefox の about:addons 上で description が表示言語に追従する"
+        priority: p1
+        environment: firefox
+        preconditions:
+          - "Firefox の言語パックを切替えて再起動（例: 日本語版）"
+        steps:
+          - "`about:addons` の拡張機能タブで DualView Translator のカードをクリック"
+        expected:
+          - "詳細パネルの説明文が選択中の Firefox 言語で表示される"
+
+      - id: MI-005
+        title: "Safari (macOS) の機能拡張ペインで description が表示される"
+        priority: p2
+        environment: safari-mac
+        preconditions:
+          - "macOS のシステム言語を切替えて再ログイン（または再起動）"
+          - "Safari Web Extension を有効化済み"
+        steps:
+          - "Safari → 設定 → 拡張機能 → DualView Translator を選択"
+        expected:
+          - "右ペインの説明文が macOS のシステム言語に対応した翻訳で表示される（未対応なら英語フォールバック）"
+
+      - id: MI-006
+        title: "拡張ビルドの `_locales/` がパッケージに含まれている"
+        priority: p0
+        steps:
+          - "`/skill build-zip` または `npm run` 経由でリリース zip を作成"
+          - "`unzip -l dualview-translator-<VERSION>.zip` を実行"
+        expected:
+          - "`_locales/<lang>/messages.json` が 11 言語分（ar / de / en / es / fr / ja / ko / pt_BR / ru / zh_CN / zh_TW）すべて含まれる"
+          - "`manifest.json` 内の `description` および `commands.*.description` が `__MSG_*__` 形式になっている"

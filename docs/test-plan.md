@@ -207,4 +207,16 @@
 
 ---
 
+## 13. ストア掲載文・ショートカット説明（`_locales/`）
+
+| # | テスト項目 | 手順 | 期待結果 |
+|---|----------|------|---------|
+| 75 | 説明文の言語追従（Chrome / 日本語） | ブラウザ言語を日本語にして `chrome://extensions/` を開く | 拡張一覧の説明文が日本語版で表示される |
+| 76 | 説明文の言語追従（Chrome / 英語） | ブラウザ言語を英語にして `chrome://extensions/` を開く | 説明文が英語版で表示される |
+| 77 | ショートカット説明の言語追従 | ブラウザ言語を日本語にして `chrome://extensions/shortcuts` を開く | 3 ショートカットの説明が日本語表示 |
+| 78 | 未対応 locale のフォールバック | ブラウザ言語を未対応の言語（hi 等）にして拡張一覧を開く | `default_locale: en` に従って英語で表示される |
+| 79 | パッケージに `_locales/` が含まれる | `unzip -l dualview-translator-<VERSION>.zip` で確認 | 11 言語分の `messages.json` が梱包されている |
+
+---
+
 Copyright (c) Orangesoft Inc

@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "并排显示原文和译文的浏览器翻译扩展。支持划词翻译和整页翻译。",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "切换整页翻译",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "翻译选定的文本",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "进入区域选择模式",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}

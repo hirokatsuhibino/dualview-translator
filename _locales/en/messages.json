@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Browser translation extension that shows the original and translation side by side. Supports text selection and full-page translation.",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "Toggle full-page translation",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "Translate selected text",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "Enter region selection mode",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}

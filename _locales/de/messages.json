@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Browser-Übersetzungserweiterung, die Original und Übersetzung nebeneinander anzeigt. Unterstützt Auswahl- und Ganzseitenübersetzung.",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "Ganzseitenübersetzung umschalten",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "Ausgewählten Text übersetzen",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "Bereichsauswahlmodus aktivieren",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}
