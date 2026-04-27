@@ -26,3 +26,8 @@ Copyright (c) Orangesoft Inc.
 - Chrome: Chrome Web Store（準備中）
 - Firefox: [Firefox Add-ons](https://addons.mozilla.org/ja/firefox/addon/dualview-translator/)
 - macOS / iOS Safari: Mac App Store / iOS App Store（準備中）
+
+## 開発元
+
+DualView Translator は[株式会社オレンジソフト](https://www.orangesoft.co.jp/)が開発しています。
+他にも [safeAttach](https://www.orangesoft.co.jp/safeattach)、[xgate4](https://www.orangesoft.co.jp/xgate) などのソフトウェアを提供しています。

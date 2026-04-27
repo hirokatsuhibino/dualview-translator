@@ -30,6 +30,9 @@ permalink: /RELEASE_NOTES.html
 - **GitHub Pages のリリースノートリンクを自言語版に統一**（#95）
   - `docs/index.md` / `docs/index.en.md` から他言語版リリースノートへのリンクを削除し、自言語版のみ表示
   - 他言語版へはリリースノート冒頭の言語切り替えリンクから遷移できる
+- **GitHub Pages のトップページに開発元（オレンジソフト）情報を追加**（#98）
+  - `docs/index.md` / `docs/index.en.md` に「開発元 / Developer」セクションを新規追加
+  - 開発元（株式会社オレンジソフト）と関連製品（safeAttach / xgate4）へのリンクを掲載
 
 ### マイルストーン
 
