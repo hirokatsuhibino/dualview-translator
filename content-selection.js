@@ -40,18 +40,32 @@ var DVT_SEL = (function () {
   }
 
   // ─── テキスト選択イベント ───────────────────────────────────────────
+  // 選択直後はフルパネルを開かず、小さなアイコンだけを表示する。
+  // クリックすると初めてフルパネルに展開する（コピー目的の選択を妨げないため）。
   document.addEventListener('mouseup', (e) => {
+    // 左クリック以外（右クリックや中クリックの mouseup）は無視。
+    // 右クリックでミニアイコンが出てしまうとコンテキストメニュー操作の邪魔になる
+    if (e.button !== 0) return;
+    // ミニアイコン or パネル内のクリックは無視（クリックで展開／操作するため）
+    if (DVT.state.selectionMiniBtn && DVT.state.selectionMiniBtn.contains(e.target)) return;
+    if (DVT.state.selectionPanel && DVT.state.selectionPanel.contains(e.target)) return;
+
     const sel = window.getSelection();
     const text = sel?.toString().trim();
-    if (DVT.state.selectionPanel && DVT.state.selectionPanel.contains(e.target)) return;
+
     removeSelectionPanel();
+    removeSelectionMiniBtn();
+
     if (text && text.length > 1) {
-      showSelectionPanel(sel, text);
+      showSelectionMiniBtn(sel, text);
     }
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') removeSelectionPanel();
+    if (e.key === 'Escape') {
+      removeSelectionPanel();
+      removeSelectionMiniBtn();
+    }
   });
 
   function removeSelectionPanel() {
@@ -61,11 +75,86 @@ var DVT_SEL = (function () {
     }
   }
 
-  // ─── 選択パネル表示 ────────────────────────────────────────────────
-  function showSelectionPanel(sel, text) {
-    const range = sel.getRangeAt(0);
+  function removeSelectionMiniBtn() {
+    if (DVT.state.selectionMiniBtn) {
+      DVT.state.selectionMiniBtn.remove();
+      DVT.state.selectionMiniBtn = null;
+    }
+  }
+
+  // ─── ミニアイコン表示（選択直後） ────────────────────────────────
+  // ミニアイコンサイズ（CSS の width/height と一致させること）
+  const MINI_BTN_SIZE = 28;
+  const MINI_BTN_GAP = 4;
+
+  // rect の右下端基準でミニアイコンの top/left を決め、ビューポート内にクランプする
+  function computeMiniBtnPosition(rect) {
+    const top = rect.bottom + window.scrollY + MINI_BTN_GAP;
+    const rawLeft = rect.right + window.scrollX + MINI_BTN_GAP;
+    const maxLeft = window.scrollX + window.innerWidth - MINI_BTN_SIZE - MINI_BTN_GAP;
+    const minLeft = window.scrollX + MINI_BTN_GAP;
+    const maxTop = window.scrollY + window.innerHeight - MINI_BTN_SIZE - MINI_BTN_GAP;
+    const minTop = window.scrollY + MINI_BTN_GAP;
+    return {
+      top: Math.max(minTop, Math.min(top, maxTop)),
+      left: Math.max(minLeft, Math.min(rawLeft, maxLeft)),
+    };
+  }
+
+  function showSelectionMiniBtn(sel, text) {
+    // クリック時にスクロール／リサイズで位置がずれないよう、Range を保持して
+    // クリック時点で再度 getBoundingClientRect() を呼べるようにする
+    const range = sel.getRangeAt(0).cloneRange();
     const rect = range.getBoundingClientRect();
 
+    // 翻訳アイコンだけの小さな角丸正方形ボタン
+    const btn = document.createElement('button');
+    btn.className = 'dvt-sel-mini-btn';
+    btn.setAttribute('data-dvt', 'true');
+    btn.setAttribute('type', 'button');
+    btn.setAttribute('aria-label', t('translateSelection'));
+    btn.setAttribute('title', t('translateSelection'));
+    // ホストページの SVG 関連 CSS（例: `svg path { stroke: none !important }`）で
+    // SVG ストロークが描画されないサイトがあるため、フォントベースの絵文字を使用する。
+    // 絵文字はフォントレンダリングを通るので CSS による消失リスクが極めて低い。
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'dvt-sel-mini-icon';
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = '🌐';
+    btn.appendChild(iconSpan);
+
+    const pos = computeMiniBtnPosition(rect);
+    btn.style.top = pos.top + 'px';
+    btn.style.left = pos.left + 'px';
+
+    // 左クリック以外は無視（右クリック後の click 連鎖などで誤発火しないよう）
+    btn.addEventListener('mousedown', (ev) => {
+      if (ev.button !== 0) return;
+      // ミニアイコン上での mousedown は document の mouseup を即座に通すと
+      // 選択解除→消去となってしまうため、mousedown 段階で停止させる
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+
+    btn.addEventListener('click', (ev) => {
+      if (ev.button !== 0) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      removeSelectionMiniBtn();
+      // クリック時点でスクロール・リサイズが発生している可能性があるため、
+      // 保持していた Range から rect を再取得する
+      const freshRect = range.getBoundingClientRect();
+      // 選択が完全に解除されて Range が無効化された場合のフォールバック
+      const safeRect = (freshRect.width === 0 && freshRect.height === 0) ? rect : freshRect;
+      showSelectionPanelAtRect(safeRect, text);
+    });
+
+    document.body.appendChild(btn);
+    DVT.state.selectionMiniBtn = btn;
+  }
+
+  // ─── 選択パネル表示（ミニアイコンクリックから呼ばれる） ───────────
+  function showSelectionPanelAtRect(rect, text) {
     const panel = document.createElement('div');
     panel.className = 'dvt-sel-panel';
     panel.setAttribute('data-dvt', 'true');
@@ -85,6 +174,7 @@ var DVT_SEL = (function () {
   // ─── コンテキストメニューからの翻訳パネル表示 ──────────────────────
   function showContextMenuPanel(text) {
     removeSelectionPanel();
+    removeSelectionMiniBtn();
 
     const panel = document.createElement('div');
     panel.className = 'dvt-sel-panel';
@@ -271,5 +361,5 @@ var DVT_SEL = (function () {
     });
   }
 
-  return { showContextMenuPanel, removeSelectionPanel };
+  return { showContextMenuPanel, removeSelectionPanel, removeSelectionMiniBtn };
 })();

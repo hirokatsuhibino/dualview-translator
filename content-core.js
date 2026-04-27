@@ -9,6 +9,7 @@ var DVT = (function () {
   const state = {
     targetLang: 'ja',
     selectionPanel: null,
+    selectionMiniBtn: null,
     pageTranslateActive: false,
     translateBar: null,
     lastContextMenuTarget: null,

@@ -25,7 +25,7 @@ The original text doesn't disappear when you translate, so you can always read w
 
 | Mode | How | What for |
 |------|-----|----------|
-| **Selection translation** | Highlight text | Quick translate of one phrase |
+| **Selection translation** | Highlight text → click the small icon that appears | Quick translate of one phrase |
 | **Full-page translation** | From the popup | Translate an entire article or document |
 | **Full-page + AI summary** | From the popup | Translation plus an AI overview |
 | **Element selection** | Click an element via popup | Translate just one part of the page |
@@ -126,9 +126,10 @@ Submitted to Mac App Store / iOS App Store on 2026-04-25, currently awaiting App
 ### Selection translation (the easy one)
 
 1. Highlight the text you want translated
-2. A floating panel pops up
-3. Pick a target language and click "Translate"
-4. Original and translation appear stacked together (translation right below)
+2. A small translate icon shows up next to your selection — click it
+3. The floating panel pops open
+4. Pick a target language and click "Translate"
+5. Original and translation appear stacked together (translation right below)
 
 ### Full-page translation
 

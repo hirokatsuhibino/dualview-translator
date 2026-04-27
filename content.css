@@ -54,6 +54,71 @@
   color: #e57373;
 }
 
+/* ── Selection Mini Button (選択直後の小アイコン) ──────────────────── */
+/* 他の翻訳拡張（Google Translate 等）に近いニュートラルな白背景 + 角丸正方形 + 軽い影 */
+.dvt-sel-mini-btn {
+  position: absolute !important;
+  z-index: 2147483647 !important;
+  /* ホストページの `button { width: 100% }` などで横に伸びないよう、
+     min-width / max-width / flex も含めてサイズを完全固定する */
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  flex: 0 0 28px !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: #ffffff !important;
+  color: #1a1a2e !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.10) !important;
+  animation: dvt-mini-in 0.15s ease-out !important;
+  /* ホストページのフォント設定の影響を受けないよう明示 */
+  font-family: -apple-system, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  transition: box-shadow 0.15s ease, transform 0.15s ease !important;
+}
+.dvt-sel-mini-btn:hover {
+  background: #f5f5f7 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.10) !important;
+  transform: translateY(-1px) !important;
+}
+.dvt-sel-mini-btn:focus-visible {
+  outline: 2px solid #1a73e8 !important;
+  outline-offset: 2px !important;
+}
+/* アイコン（絵文字）は親ボタンへのクリックを邪魔しないよう pointer-events: none */
+.dvt-sel-mini-icon {
+  display: inline-block !important;
+  pointer-events: none !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  /* ホストページの text-transform / letter-spacing 等の影響を排除 */
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  user-select: none !important;
+}
+
+@keyframes dvt-mini-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* prefers-reduced-motion ユーザーへの配慮: アニメーション・hover スケールを抑制 */
+@media (prefers-reduced-motion: reduce) {
+  .dvt-sel-mini-btn { animation: none !important; }
+  .dvt-sel-mini-btn:hover { transform: none !important; }
+}
+
 /* ── Selection Floating Panel ─────────────────────────────────────────── */
 .dvt-sel-panel {
   position: absolute !important;
@@ -443,6 +508,8 @@
     color: #1a1a2e !important;
     box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.08) !important;
   }
+
+  /* Selection Mini Button: ベーススタイルが既にニュートラル白背景なので light での override は不要 */
 
   .dvt-sel-header {
     border-bottom-color: rgba(0,0,0,0.08) !important;

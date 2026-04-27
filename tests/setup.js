@@ -13,6 +13,19 @@ globalThis.window.matchMedia = vi.fn((query) => ({
   dispatchEvent: vi.fn(),
 }));
 
+// jsdom は Range.getBoundingClientRect() / getClientRects() を実装していない
+// content-selection.js のミニアイコン位置決めなどで参照されるためダミーを返す
+if (typeof Range !== 'undefined' && !Range.prototype.getBoundingClientRect) {
+  Range.prototype.getBoundingClientRect = function () {
+    return { top: 0, right: 0, bottom: 0, left: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) };
+  };
+}
+if (typeof Range !== 'undefined' && !Range.prototype.getClientRects) {
+  Range.prototype.getClientRects = function () {
+    return [];
+  };
+}
+
 const storageData = {};
 
 globalThis.chrome = {
