@@ -177,6 +177,10 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     const btn = document.querySelector('.dvt-sel-mini-btn');
     expect(btn).toBeTruthy();
     expect(document.querySelector('.dvt-sel-panel')).toBeNull();
+    // ホストページの CSS で消えても DOM には SVG が挿入されていること（描画レイヤーの保証は CSS で別途対応）
+    const svg = btn.querySelector('svg');
+    expect(svg).toBeTruthy();
+    expect(svg.querySelector('path')).toBeTruthy();
   });
 
   it('右クリックの mouseup ではミニアイコンが出ない', () => {

@@ -82,10 +82,22 @@
   outline-offset: 2px !important;
   box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 3px rgba(212,135,10,0.55) !important;
 }
+/* ホストページの `svg { stroke: none }` 等で打ち消されないよう、stroke / fill / stroke-width を明示する */
 .dvt-sel-mini-btn svg {
   display: block !important;
   width: 14px !important;
   height: 14px !important;
+  color: #ffffff !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  stroke-width: 2.5px !important;
+  stroke-linecap: round !important;
+  pointer-events: none !important;
+}
+.dvt-sel-mini-btn svg path {
+  stroke: currentColor !important;
+  fill: none !important;
+  stroke-width: 2.5px !important;
 }
 
 @keyframes dvt-mini-in {
