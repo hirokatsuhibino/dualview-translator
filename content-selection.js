@@ -43,6 +43,9 @@ var DVT_SEL = (function () {
   // 選択直後はフルパネルを開かず、小さなアイコンだけを表示する。
   // クリックすると初めてフルパネルに展開する（コピー目的の選択を妨げないため）。
   document.addEventListener('mouseup', (e) => {
+    // 左クリック以外（右クリックや中クリックの mouseup）は無視。
+    // 右クリックでミニアイコンが出てしまうとコンテキストメニュー操作の邪魔になる
+    if (e.button !== 0) return;
     // ミニアイコン or パネル内のクリックは無視（クリックで展開／操作するため）
     if (DVT.state.selectionMiniBtn && DVT.state.selectionMiniBtn.contains(e.target)) return;
     if (DVT.state.selectionPanel && DVT.state.selectionPanel.contains(e.target)) return;

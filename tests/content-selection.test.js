@@ -70,7 +70,13 @@ describe('選択翻訳 — ミニアイコン方式', () => {
   });
 
   it('ミニアイコンのクリックで showSelectionPanelAtRect が呼ばれる', () => {
-    expect(jsCode).toContain('showSelectionPanelAtRect(rect, text)');
+    // click リスナー登録から showSelectionPanelAtRect 呼び出しまでがハンドラ内に存在することを正規表現で確認
+    // （単純な toContain では関数定義文字列にもマッチしてしまうため）
+    expect(jsCode).toMatch(/btn\.addEventListener\(\s*['"]click['"][\s\S]*?showSelectionPanelAtRect\(/);
+  });
+
+  it('document の mouseup ハンドラが左クリック以外を早期 return している', () => {
+    expect(jsCode).toMatch(/document\.addEventListener\(\s*['"]mouseup['"][\s\S]{0,200}e\.button !== 0/);
   });
 
   it('ミニアイコン上の mousedown は伝播停止する（document mouseup での消去を防ぐ）', () => {
@@ -171,6 +177,18 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     const btn = document.querySelector('.dvt-sel-mini-btn');
     expect(btn).toBeTruthy();
     expect(document.querySelector('.dvt-sel-panel')).toBeNull();
+  });
+
+  it('右クリックの mouseup ではミニアイコンが出ない', () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world';
+    document.body.appendChild(p);
+
+    selectTextOf(p, 0, 11);
+    // button=2 は右クリック
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 2 }));
+
+    expect(document.querySelector('.dvt-sel-mini-btn')).toBeNull();
   });
 
   it('1 文字以下の選択ではミニアイコンが出ない', () => {
