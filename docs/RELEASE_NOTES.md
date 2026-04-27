@@ -7,7 +7,7 @@ permalink: /RELEASE_NOTES.html
 
 # リリースノート
 
-## 未リリース
+## v1.4.0（2026-04-27）
 
 ### 改善
 
