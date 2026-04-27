@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Расширение браузера для перевода, отображающее оригинал и перевод рядом. Поддерживает перевод выделенного текста и всей страницы.",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "Переключить перевод страницы",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "Перевести выделенный текст",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "Войти в режим выбора области",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}

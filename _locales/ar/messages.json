@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "إضافة ترجمة للمتصفح تعرض النص الأصلي والترجمة جنبًا إلى جنب. تدعم ترجمة التحديد وترجمة الصفحة بأكملها.",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "تبديل ترجمة الصفحة بأكملها",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "ترجمة النص المحدد",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "الدخول إلى وضع تحديد المنطقة",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}

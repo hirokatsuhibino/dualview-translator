@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Extensión de traducción del navegador que muestra el original y la traducción en paralelo. Admite traducción de selección y de página completa.",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "Alternar la traducción de la página",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "Traducir el texto seleccionado",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "Entrar en el modo de selección de región",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Extension de traduction qui affiche l'original et la traduction côte à côte. Prend en charge la traduction de la sélection et de la page entière.",
+    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "Activer/désactiver la traduction de la page",
+    "description": "Description for the keyboard shortcut that toggles full-page translation."
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "Traduire le texte sélectionné",
+    "description": "Description for the keyboard shortcut that translates the currently selected text."
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "Activer le mode de sélection de zone",
+    "description": "Description for the keyboard shortcut that enters the region (element) selection mode."
+  }
+}

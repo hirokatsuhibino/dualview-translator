@@ -53,6 +53,8 @@
 		7D1D48622F95AD9600B65F5F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48322F95AD9500B65F5F /* manifest.json */; };
 		7D1D48642F95AD9600B65F5F /* i18n.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48342F95AD9500B65F5F /* i18n.js */; };
 		7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48352F95AD9500B65F5F /* popup-init.js */; };
+		7DA0CA1F2F95AD9500B65F5F /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 7DA0CA1E2F95AD9500B65F5F /* _locales */; };
+		7DA0CA202F95AD9500B65F5F /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 7DA0CA1E2F95AD9500B65F5F /* _locales */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -135,6 +137,7 @@
 		7D1D48322F95AD9500B65F5F /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../manifest.json; sourceTree = "<group>"; };
 		7D1D48342F95AD9500B65F5F /* i18n.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = i18n.js; path = ../../../i18n.js; sourceTree = "<group>"; };
 		7D1D48352F95AD9500B65F5F /* popup-init.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "popup-init.js"; path = "../../../popup-init.js"; sourceTree = "<group>"; };
+		7DA0CA1E2F95AD9500B65F5F /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../../_locales; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -276,6 +279,7 @@
 				7D1D48252F95AD9500B65F5F /* background.js */,
 				7D1D48262F95AD9500B65F5F /* popup.html */,
 				7D1D48302F95AD9500B65F5F /* icons */,
+				7DA0CA1E2F95AD9500B65F5F /* _locales */,
 				7D1D48312F95AD9500B65F5F /* content-bar.js */,
 				7D1D48322F95AD9500B65F5F /* manifest.json */,
 				7D1D48342F95AD9500B65F5F /* i18n.js */,
@@ -449,6 +453,7 @@
 				7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */,
 				7D1D48562F95AD9500B65F5F /* popup.html in Resources */,
 				7D1D48602F95AD9600B65F5F /* icons in Resources */,
+				7DA0CA1F2F95AD9500B65F5F /* _locales in Resources */,
 				7D1D484F2F95AD9500B65F5F /* content-page.js in Resources */,
 				7D1D48552F95AD9500B65F5F /* background.js in Resources */,
 				7D1D48642F95AD9600B65F5F /* i18n.js in Resources */,
@@ -468,6 +473,7 @@
 				7D1D484D2F95AD9500B65F5F /* popup-init.js in Resources */,
 				7D1D483E2F95AD9500B65F5F /* popup.html in Resources */,
 				7D1D48482F95AD9500B65F5F /* icons in Resources */,
+				7DA0CA202F95AD9500B65F5F /* _locales in Resources */,
 				7D1D48372F95AD9500B65F5F /* content-page.js in Resources */,
 				7D1D483D2F95AD9500B65F5F /* background.js in Resources */,
 				7D1D484C2F95AD9500B65F5F /* i18n.js in Resources */,

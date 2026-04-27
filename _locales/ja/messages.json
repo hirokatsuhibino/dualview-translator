@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "原文と翻訳を並べて表示するブラウザ翻訳拡張。選択翻訳・ページ全体翻訳に対応。",
+    "description": "Chrome Web Store / Firefox Add-ons の掲載やブラウザの拡張一覧に表示される説明文。"
+  },
+  "cmdTogglePageTranslateDescription": {
+    "message": "ページ全体翻訳のトグル",
+    "description": "ページ全体翻訳をトグルするキーボードショートカットの説明。"
+  },
+  "cmdTranslateSelectionDescription": {
+    "message": "選択テキストを翻訳",
+    "description": "選択中のテキストを翻訳するキーボードショートカットの説明。"
+  },
+  "cmdEnterRegionModeDescription": {
+    "message": "領域選択モードを開始",
+    "description": "領域（要素）選択モードに入るキーボードショートカットの説明。"
+  }
+}

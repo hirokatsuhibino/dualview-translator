@@ -9,6 +9,16 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### 改善
+
+- **ストア掲載文・ショートカット説明をブラウザ標準 i18n（`_locales/`）で多言語化**（#93）
+  - `manifest.json` の `description` と `commands.*.description` を `__MSG_<key>__` 化し
+    `_locales/<lang>/messages.json` に 11 言語分（ar / de / en / es / fr / ja / ko / pt_BR / ru / zh_CN / zh_TW）の翻訳を追加
+  - これにより Chrome Web Store / Firefox Add-ons / Mac App Store / iOS App Store の拡張一覧説明文と
+    `chrome://extensions/shortcuts` のショートカット説明がユーザーのブラウザ言語で表示される
+  - `default_locale` は `en`（未対応 locale はここにフォールバック）
+  - Safari Web Extension の Xcode プロジェクトにも `_locales/` をビルドリソースとして追加
+
 ### ドキュメント
 
 - **拡張機能の説明文に英語版を追加**（#91）

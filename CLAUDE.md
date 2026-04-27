@@ -21,6 +21,8 @@ LLM（Claude / Gemini）による要約機能も搭載。
 ├── popup-init.js          # ポップアップ初期化（テーマ適用・ショートカット表示）
 ├── popup.js               # ポップアップのイベント処理・タブ切り替え
 ├── icons/                 # 拡張アイコン（16/32/48/128px）
+├── _locales/              # ブラウザ標準 i18n（manifest description / commands）
+│   └── <lang>/messages.json #   11言語分（ar/de/en/es/fr/ja/ko/pt_BR/ru/zh_CN/zh_TW）
 ├── LICENSE                # MIT License
 ├── README.md              # ユーザー向けドキュメント
 ├── package.json           # npm設定（テスト用）
@@ -36,11 +38,12 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── background.test.js  #  background テスト（18件）
 │   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）
 │   ├── auto-rule-edit.test.js # 自動翻訳ルール編集テスト（10件）
-│   └── translation-cache.test.js # 翻訳・要約キャッシュテスト（31件）
+│   ├── translation-cache.test.js # 翻訳・要約キャッシュテスト（31件）
+│   └── locales.test.js    #   _locales 整合性テスト（7件）
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
-│   ├── test-plan.md       #   テストプラン（74項目、Markdown表形式）
+│   ├── test-plan.md       #   テストプラン（79項目、Markdown表形式）
 │   └── manual-test-scenarios.yaml #  手動テストシナリオ（YAML、自動テスト補完）
 ├── safari/                # Safari Web Extension（Xcode プロジェクト）
 │   ├── README.md          #   ビルド・インストール手順
@@ -142,6 +145,11 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - popup.htmlは `data-i18n` / `data-i18n-html` / `data-i18n-placeholder` 属性で自動翻訳
 - 新規メッセージ追加時は `i18n.js` の全11言語ブロックに追加すること
 - background.jsのコンテキストメニュータイトルは `CONTEXT_MENU_TITLES` に別途定義
+- ストア掲載文・ショートカット説明（`manifest.json` の `description` / `commands.*.description`）は
+  ブラウザ標準の `_locales/<lang>/messages.json` で管理し `__MSG_<key>__` で参照する
+  - 言語ディレクトリ命名は Chrome の locale 命名規則（`zh_CN` / `pt_BR` 等）
+  - `default_locale` は `en`（未対応 locale はここにフォールバック）
+  - `_locales/` の整合性は `tests/locales.test.js` で検証
 
 ## テーマ対応
 
