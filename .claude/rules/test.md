@@ -10,6 +10,20 @@ description: テスト実行・テストプラン更新の必須ルール
 2. **自動テストの追加/更新** — `tests/` 配下に Vitest で実装し `npm test` が全件パスすること
 3. **手動テストシナリオの追加/更新** — 自動テストで拾えない領域を `docs/manual-test-scenarios.yaml` に記述
 
+## 自動テストの方針
+
+**純粋な文字列マッチに偏らない**。以下を意識する:
+
+- `expect(jsCode).toContain('someFn(...)')` のようなソース文字列 grep だけで済ませると、リファクタで簡単に通らなくなる一方、ロジックバグは検知できない
+- ハンドラやイベント駆動の挙動は、**jsdom 上で実 DOM 動作を検証する統合テスト**を 1〜2 件は加える（`tests/helpers.js` の `loadScript()` で DVT / DVT_SEL 等をロード後、`document.dispatchEvent(new MouseEvent(...))` で発火し、生成された DOM をアサート）
+- jsdom が未実装の API（`Range.getBoundingClientRect` 等）は `tests/setup.js` でモック追加
+
+文字列マッチは「コメント・命名規約・存在確認」程度の補助として使い、挙動の検証は実 DOM テストに寄せる。
+
+## Node バージョン
+
+`npm test` は **Node 22 以降** で実行する（`vitest@4.x` の要件）。ローカルでは `nvm use`（リポジトリ直下の `.nvmrc` を参照）で切り替える。
+
 ## 手動テストシナリオ（YAML）の更新タイミング
 
 `docs/manual-test-scenarios.yaml` には、自動テストで検証できない以下の領域を記述する:

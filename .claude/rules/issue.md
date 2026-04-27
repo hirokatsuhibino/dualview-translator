@@ -7,10 +7,13 @@ description: GitHub Issue対応時の必須ルール
 ## 実装前
 
 - 対応するIssueがない場合は、必ずIssueを発行してから着手する
-- Issueには内容に応じて適切なラベルを設定する
+- Issueには内容に応じて適切なラベルを設定する。**このリポジトリで使用可能なラベルは以下のみ**（存在しないラベルを指定すると `gh issue create --label` がエラーになる）:
   - `bug`: バグ修正
   - `enhancement`: 新機能・改善
   - `documentation`: ドキュメントのみの変更
+  - `duplicate` / `good first issue` / `help wanted` / `invalid` / `question` / `wontfix`（メタ）
+- 上記の３つ（bug / enhancement / documentation）に当てはまらない作業（例: ビルド設定変更・リリース準備・スキル整理など）はラベルなしで OK
+- 利用可能ラベルの最新一覧は `gh label list --repo hirokatsuhibino/dualview-translator` で確認できる
 - 実装方針が決まったらIssueにコメントして記録する
 
 ## 実装後

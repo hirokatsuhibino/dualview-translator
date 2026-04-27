@@ -103,14 +103,12 @@ EOF
 )"
 ```
 
-### 8. PRをマージしてブランチを削除
+### 8. 人間にマージを依頼してクリーンアップ
 
-```bash
-gh pr merge <PR番号> --repo hirokatsuhibino/dualview-translator --merge
-git checkout main && git pull
-git branch -d release/v<VERSION>
-git push origin --delete release/v<VERSION>
-```
+`.claude/CLAUDE.md` の絶対ルールにより **Claude は PR をマージしない**。
+人間がレビュー・マージを完了するまで待つ。
+
+人間がマージしたら `/skill pr-cleanup` でローカル・リモートのブランチを片付ける（main への切替・pull・作業ブランチ削除を自動化）。
 
 ### 9. git タグを打つ
 
