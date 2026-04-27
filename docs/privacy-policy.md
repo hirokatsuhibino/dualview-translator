@@ -1,5 +1,6 @@
 ---
 title: Privacy Policy
+description: Privacy policy for DualView Translator.
 permalink: /privacy-policy.html
 ---
 
