@@ -12,6 +12,9 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Improvements
 
+- **Skip the translation block when the result is identical to the original** (#138)
+  - For things like symbol-only text, numbers, URLs, or emoji strings, the translation engine often returns the input unchanged. Now we just don't render the empty-looking translation block in those cases.
+  - Applies to full-page / region / context-menu translation. Selection translation is left as-is since the user triggered it explicitly.
 - **Summary blocks created by region / context-menu translation can now be dismissed** (#134)
   - Each summary block now has a small × button in its top-right corner — click it to remove just that summary
   - The popup's "Reset translations" button now also clears every `.dvt-summary` block (not only the page-summary one), so region-translation summaries are cleaned up too
