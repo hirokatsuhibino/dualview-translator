@@ -1,7 +1,7 @@
 {
   "extDescription": {
     "message": "Browser translation extension that shows the original and translation side by side. Supports text selection and full-page translation.",
-    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+    "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
     "message": "Toggle full-page translation",

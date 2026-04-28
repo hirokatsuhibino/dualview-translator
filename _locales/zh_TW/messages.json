@@ -1,7 +1,7 @@
 {
   "extDescription": {
     "message": "並排顯示原文和譯文的瀏覽器翻譯擴充功能。支援選取翻譯和整頁翻譯。",
-    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+    "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
     "message": "切換整頁翻譯",

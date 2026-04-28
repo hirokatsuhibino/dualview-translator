@@ -117,4 +117,19 @@ describe('_locales — 拡張機能の i18n 化', () => {
         .toMatch(/^__MSG_\w+__$/);
     }
   });
+
+  // Apple Safari Web Extension のアップロードバリデーションは
+  // _locales/<lang>/messages.json の各エントリの description を必須かつ 112 文字以下に制限する。
+  // Chrome / Firefox では optional / 制限なしのため、これを超えても気付きにくい（実際 #119 で発覚）。
+  it('全 locale の全エントリに 112 文字以下の description プロパティがある（Apple Safari 制限）', () => {
+    const APPLE_DESCRIPTION_LIMIT = 112;
+    for (const locale of locales) {
+      const messages = loadMessages(locale);
+      for (const [key, value] of Object.entries(messages)) {
+        expect(typeof value.description, `${locale}.${key}.description が文字列でない`).toBe('string');
+        expect(value.description.length, `${locale}.${key}.description が ${APPLE_DESCRIPTION_LIMIT} 文字を超えている (${value.description.length} chars)`)
+          .toBeLessThanOrEqual(APPLE_DESCRIPTION_LIMIT);
+      }
+    }
+  });
 });

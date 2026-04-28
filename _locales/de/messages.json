@@ -1,7 +1,7 @@
 {
   "extDescription": {
     "message": "Browser-Übersetzungserweiterung, die Original und Übersetzung nebeneinander anzeigt. Unterstützt Auswahl- und Ganzseitenübersetzung.",
-    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+    "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
     "message": "Ganzseitenübersetzung umschalten",

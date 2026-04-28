@@ -1,7 +1,7 @@
 {
   "extDescription": {
     "message": "Extension de traduction qui affiche l'original et la traduction côte à côte. Prend en charge la traduction de la sélection et de la page entière.",
-    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+    "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
     "message": "Activer/désactiver la traduction de la page",
