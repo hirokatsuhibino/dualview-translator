@@ -1,7 +1,7 @@
 {
   "extDescription": {
     "message": "إضافة ترجمة للمتصفح تعرض النص الأصلي والترجمة جنبًا إلى جنب. تدعم ترجمة التحديد وترجمة الصفحة بأكملها.",
-    "description": "Extension description shown in the Chrome Web Store / Firefox Add-ons listing and in the browser's extension list."
+    "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
     "message": "تبديل ترجمة الصفحة بأكملها",
