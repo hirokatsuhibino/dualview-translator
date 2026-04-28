@@ -10,6 +10,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.4.1 (2026-04-28)
+
 ### Bug fixes
 
 - **Fix: mini translate icon didn't show up on iOS Safari** (#127)
