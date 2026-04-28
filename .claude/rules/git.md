@@ -76,32 +76,32 @@ test: content-bar の waitForElement テストを追加
 
 ## ストア掲載文の文字数制限
 
-`_locales/<lang>/messages.json` および `manifest.json` から参照されるストア掲載文（特に拡張機能の説明本文）は、**全 11 言語で 112 文字以下** に揃える。
+`_locales/<lang>/messages.json` および `manifest.json` から参照されるストア掲載文（特に拡張機能の説明本文）は、**全言語で 112 文字以下** に揃える。
 
 ### 制限の根拠
 
 | ストア | 上限 | 実害 |
 |---|---|---|
-| **Apple App Store**（Safari Web Extension）| **112** | これを超えると \`xcrun altool\`/Xcode のアップロードが \`code 90862\` で **失敗する** |
+| **Apple App Store**（Safari Web Extension）| **112** | これを超えると `xcrun altool`/Xcode のアップロードが `code 90862` で **失敗する** |
 | Chrome Web Store | 132 | 超えると Web Store ダッシュボードで弾かれる |
 | Firefox AMO | 132（要約欄）| 同上 |
 
-最小公倍数は Apple の **112 文字**。これを越えると iOS / macOS Safari のリリースが完全にブロックされる。
+最も厳しい上限は Apple の **112 文字**。これを超えると iOS / macOS Safari のリリースが完全にブロックされる。
 
 ### 対象フィールド
 
-- `_locales/<lang>/messages.json` の **`extDescription.message`**（\`manifest.json\` の \`description\` から \`__MSG_extDescription__\` で参照される本文）
+- `_locales/<lang>/messages.json` の **`extDescription.message`**（`manifest.json` の `description` から `__MSG_extDescription__` で参照される本文）
 - `_locales/<lang>/messages.json` の各エントリの **`description`** フィールド（翻訳者向け注記。Apple は注記もこの 112 制限を要求する）
 
 ### 自動チェック
 
 `tests/locales.test.js` に下記のテストが含まれており、`npm test` でガードされる:
 
-- 「全 locale の \`extDescription.message\` が 112 文字以下」
-- 「全 locale の全エントリの \`description\` が 112 文字以下」
+- 「全 locale の `extDescription.message` が 112 文字以下」
+- 「全 locale の全エントリの `description` が 112 文字以下」
 
 新言語追加・文言改訂時は CI で自動検出される。
 
 ### 経緯
 
-PR #119 / #121 で 2 連続でこの制限を踏んで iOS Safari v1.4 のアップロードが失敗した。Chrome / Firefox では超過しても気付けないため、必ず Apple の 112 を上限ルールにする。
+Issue #119 / #121（PR #120 / #122）で 2 連続でこの制限を踏んで iOS Safari v1.4 のアップロードが失敗した。Chrome / Firefox では超過しても気付けないため、必ず Apple の 112 を上限ルールにする。
