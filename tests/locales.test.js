@@ -136,12 +136,17 @@ describe('_locales — 拡張機能の i18n 化', () => {
   // Apple は \"description field\" として extDescription.message そのものも 112 文字以下に制限する
   // （manifest.json の description: \"__MSG_extDescription__\" が参照する本文）。
   // Chrome Web Store / Firefox AMO では 132 文字許容のため気付きにくい（実際 #121 で発覚）。
-  it('全 locale の extDescription.message が 112 文字以下である（Apple Safari 制限）', () => {
+  it('全 locale の extDescription.message が存在し 112 文字以下である（Apple Safari 制限）', () => {
     const APPLE_MESSAGE_LIMIT = 112;
     for (const locale of locales) {
       const messages = loadMessages(locale);
-      const msg = messages.extDescription?.message ?? '';
-      expect(typeof msg, `${locale}.extDescription.message が文字列でない`).toBe('string');
+      // optional chaining + ?? '' だと extDescription が欠けても通ってしまうため、
+      // 「存在 → 非 null → object → message が文字列 → 長さ <= 112」を明示的に検証
+      expect(messages.extDescription, `${locale}.extDescription が存在しない`).toBeDefined();
+      expect(messages.extDescription, `${locale}.extDescription が null`).not.toBeNull();
+      expect(typeof messages.extDescription, `${locale}.extDescription がオブジェクトでない`).toBe('object');
+      expect(typeof messages.extDescription.message, `${locale}.extDescription.message が文字列でない`).toBe('string');
+      const msg = messages.extDescription.message;
       expect(msg.length, `${locale}.extDescription.message が ${APPLE_MESSAGE_LIMIT} 文字を超えている (${msg.length} chars)`)
         .toBeLessThanOrEqual(APPLE_MESSAGE_LIMIT);
     }
