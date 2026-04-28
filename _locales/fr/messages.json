@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Extension de traduction qui affiche l'original et la traduction côte à côte. Prend en charge la traduction de la sélection et de la page entière.",
+    "message": "Traduction qui affiche l'original et la traduction côte à côte. Modes sélection et page entière.",
     "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {

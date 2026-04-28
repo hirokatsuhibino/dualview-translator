@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Расширение браузера для перевода, отображающее оригинал и перевод рядом. Поддерживает перевод выделенного текста и всей страницы.",
+    "message": "Браузерный перевод с оригиналом и переводом рядом. Поддерживает выделение и всю страницу.",
     "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
