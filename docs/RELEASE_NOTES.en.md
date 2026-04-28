@@ -10,6 +10,11 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Bug fixes
+
+- **Fix: mini translate icon didn't show up on iOS Safari** (#127)
+  - The selection detection was `mouseup`-only, which doesn't fire predictably for iOS text selection (long-press + range handles). Added a debounced `selectionchange` listener (300ms) so iOS picks up the selection too. Desktop behavior (Chrome / Firefox / macOS Safari) is unchanged.
+
 ### Milestones
 
 - **iOS Safari extension is now live on the App Store** (2026-04-28)

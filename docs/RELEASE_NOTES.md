@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### バグ修正
+
+- **iOS Safari でテキスト選択時にミニアイコンが表示されない問題を修正**（#127）
+  - `mouseup` イベントベースの検知だけでは iOS のテキスト選択（長押し → 範囲ハンドル操作）に対応できなかったため、`selectionchange` イベント + 300ms デバウンスでも検知するように変更
+  - デスクトップ系（Chrome / Firefox / macOS Safari）の挙動は維持
+
 ### マイルストーン
 
 - **iOS Safari 拡張が App Store で配信開始**（2026-04-28）

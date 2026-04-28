@@ -42,6 +42,20 @@ var DVT_SEL = (function () {
   // ─── テキスト選択イベント ───────────────────────────────────────────
   // 選択直後はフルパネルを開かず、小さなアイコンだけを表示する。
   // クリックすると初めてフルパネルに展開する（コピー目的の選択を妨げないため）。
+
+  // 共通: 現在の選択テキストを評価してミニアイコンを再表示する
+  function handleSelectionForMiniBtn() {
+    const sel = window.getSelection();
+    const text = sel?.toString().trim();
+
+    removeSelectionMiniBtn();
+
+    if (text && text.length > 1) {
+      showSelectionMiniBtn(sel, text);
+    }
+  }
+
+  // デスクトップ系（Chrome / Firefox / macOS Safari）: mouseup ベース
   document.addEventListener('mouseup', (e) => {
     // 左クリック以外（右クリックや中クリックの mouseup）は無視。
     // 右クリックでミニアイコンが出てしまうとコンテキストメニュー操作の邪魔になる
@@ -50,15 +64,23 @@ var DVT_SEL = (function () {
     if (DVT.state.selectionMiniBtn && DVT.state.selectionMiniBtn.contains(e.target)) return;
     if (DVT.state.selectionPanel && DVT.state.selectionPanel.contains(e.target)) return;
 
-    const sel = window.getSelection();
-    const text = sel?.toString().trim();
-
+    // mouseup は「別箇所をクリックして選択を解除」したケースも兼ねるので、
+    // フルパネルが開いていれば閉じる
     removeSelectionPanel();
-    removeSelectionMiniBtn();
+    handleSelectionForMiniBtn();
+  });
 
-    if (text && text.length > 1) {
-      showSelectionMiniBtn(sel, text);
-    }
+  // iOS Safari など mouseup が期待通り発火しない環境向けに selectionchange でも検知。
+  // selectionchange は選択中の連続発火が頻繁なため 300ms デバウンスして「選択完了後」に判定する。
+  let selectionChangeTimer = null;
+  document.addEventListener('selectionchange', () => {
+    if (selectionChangeTimer) clearTimeout(selectionChangeTimer);
+    selectionChangeTimer = setTimeout(() => {
+      selectionChangeTimer = null;
+      // フルパネルが開いている間（パネル内テキスト選択など）は無視
+      if (DVT.state.selectionPanel) return;
+      handleSelectionForMiniBtn();
+    }, 300);
   });
 
   document.addEventListener('keydown', (e) => {
