@@ -217,9 +217,9 @@ var DVT_PAGE = (function () {
     DVT.state.pageTranslateActive = false;
     // 動的コンテンツ監視を停止
     stopPageObserver();
-    // ページ要約ブロックを削除
-    const pageSummary = document.getElementById('dvt-page-summary');
-    if (pageSummary) pageSummary.remove();
+    // 要約ブロックを全削除（ページ全体翻訳の #dvt-page-summary だけでなく、
+    // 領域選択翻訳・右クリック翻訳由来の .dvt-summary もまとめて撤去する）
+    document.querySelectorAll('.dvt-summary').forEach(el => el.remove());
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
       const origEl = el.querySelector('.dvt-orig');
       if (origEl) {
@@ -437,6 +437,21 @@ var DVT_PAGE = (function () {
     badge.className = 'dvt-badge dvt-badge-summary';
     badge.textContent = t('summaryBadge');
     summaryBlock.appendChild(badge);
+
+    // 要約ブロック個別の × ボタン（要約だけ消したいときに使う）
+    // 翻訳要素の dvt-undo-btn と動作対称: クリックでこのブロックだけ remove する
+    const summaryUndoBtn = document.createElement('button');
+    summaryUndoBtn.className = 'dvt-summary-undo-btn';
+    summaryUndoBtn.setAttribute('data-dvt', 'true');
+    summaryUndoBtn.title = t('undoSummary');
+    summaryUndoBtn.textContent = '×';
+    summaryUndoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      summaryBlock.remove();
+    });
+    summaryBlock.appendChild(summaryUndoBtn);
+
     const summaryText = document.createElement('div');
     summaryText.className = 'dvt-summary-text';
     const summarySpinner = document.createElement('span');

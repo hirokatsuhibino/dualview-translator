@@ -106,6 +106,7 @@ var DVT_I18N = (function () {
       selectorPickDone: '要素を選択しました。ポップアップを開いて保存してください',
       btnSelectElement: '要素を選択',
       undoElement: 'この翻訳を元に戻す',
+      undoSummary: 'この要約を消す',
     },
     en: {
       uiLangLabel: 'Display Language',
@@ -197,6 +198,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'Element selected. Open the popup to save.',
       btnSelectElement: 'Pick element',
       undoElement: 'Undo this translation',
+      undoSummary: 'Remove this summary',
     },
     'zh-CN': {
       uiLangLabel: '显示语言',
@@ -283,6 +285,7 @@ var DVT_I18N = (function () {
       selectorPickDone: '已选择元素，请打开弹出窗口保存',
       btnSelectElement: '选择元素',
       undoElement: '撤销此翻译',
+      undoSummary: '移除此摘要',
     },
     'zh-TW': {
       uiLangLabel: '顯示語言',
@@ -369,6 +372,7 @@ var DVT_I18N = (function () {
       selectorPickDone: '已選擇元素，請開啟彈出視窗儲存',
       btnSelectElement: '選擇元素',
       undoElement: '復原此翻譯',
+      undoSummary: '移除此摘要',
     },
     ko: {
       uiLangLabel: '표시 언어',
@@ -455,6 +459,7 @@ var DVT_I18N = (function () {
       selectorPickDone: '요소를 선택했습니다. 팝업을 열어 저장하세요.',
       btnSelectElement: '요소 선택',
       undoElement: '이 번역 되돌리기',
+      undoSummary: '이 요약 제거',
     },
     fr: {
       uiLangLabel: "Langue d'affichage",
@@ -541,6 +546,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'Élément sélectionné. Ouvrez le popup pour sauvegarder.',
       btnSelectElement: 'Choisir',
       undoElement: 'Annuler cette traduction',
+      undoSummary: 'Supprimer ce résumé',
     },
     de: {
       uiLangLabel: 'Anzeigesprache',
@@ -627,6 +633,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'Element gewählt. Öffnen Sie das Popup zum Speichern.',
       btnSelectElement: 'Element wählen',
       undoElement: 'Diese Übersetzung rückgängig machen',
+      undoSummary: 'Diese Zusammenfassung entfernen',
     },
     es: {
       uiLangLabel: 'Idioma de la interfaz',
@@ -713,6 +720,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'Elemento seleccionado. Abra el popup para guardar.',
       btnSelectElement: 'Elegir',
       undoElement: 'Deshacer esta traducción',
+      undoSummary: 'Quitar este resumen',
     },
     pt: {
       uiLangLabel: 'Idioma da interface',
@@ -799,6 +807,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'Elemento selecionado. Abra o popup para salvar.',
       btnSelectElement: 'Escolher',
       undoElement: 'Desfazer esta tradução',
+      undoSummary: 'Remover este resumo',
     },
     ru: {
       uiLangLabel: 'Язык интерфейса',
@@ -885,6 +894,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'Элемент выбран. Откройте всплывающее окно для сохранения.',
       btnSelectElement: 'Выбрать',
       undoElement: 'Отменить этот перевод',
+      undoSummary: 'Удалить эту сводку',
     },
     ar: {
       uiLangLabel: 'لغة العرض',
@@ -971,6 +981,7 @@ var DVT_I18N = (function () {
       selectorPickDone: 'تم تحديد العنصر. افتح النافذة المنبثقة للحفظ.',
       btnSelectElement: 'اختر عنصرًا',
       undoElement: 'التراجع عن هذه الترجمة',
+      undoSummary: 'إزالة هذا الملخص',
     },
   };
 

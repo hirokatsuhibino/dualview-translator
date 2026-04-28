@@ -72,6 +72,7 @@ describe('DVT_I18N', () => {
       'autoRuleAdd', 'autoRuleUpdate', 'autoRuleCancel', 'autoRuleNotFound',
       'cacheSectionLabel', 'cacheEntriesLabel', 'cacheClearBtn', 'cacheLoading', 'cacheClearedToast',
       'translateSelection',
+      'undoElement', 'undoSummary',
     ];
 
     for (const lang of langs) {

@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **Summary blocks created by region / context-menu translation can now be dismissed** (#134)
+  - Each summary block now has a small × button in its top-right corner — click it to remove just that summary
+  - The popup's "Reset translations" button now also clears every `.dvt-summary` block (not only the page-summary one), so region-translation summaries are cleaned up too
+  - Added an `undoSummary` i18n key across all 11 languages for the new button's aria-label / title
+
 ---
 
 ## v1.4.1 (2026-04-28)
