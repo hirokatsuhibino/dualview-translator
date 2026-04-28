@@ -31,4 +31,19 @@ Source code is on GitHub:
 
 ## Developer
 
-DualView Translator is developed by [Orangesoft Inc.](https://www.orangesoft.co.jp/) — also makers of [safeAttach](https://www.orangesoft.co.jp/safeattach) and [xgate4](https://www.orangesoft.co.jp/xgate).
+DualView Translator is developed by [Orangesoft Inc.](https://www.orangesoft.co.jp/)
+
+## More from Orangesoft
+
+<div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin:1.5rem 0;">
+  <div style="flex:1; min-width:240px; border:1px solid #ddd; border-radius:8px; padding:1.25rem; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+    <h3 style="margin-top:0; color:#e67e00;">🔒 safeAttach</h3>
+    <p style="margin-bottom:1rem;">Stop accidental email leaks before they happen — secure attachment encryption and recipient verification built right in.</p>
+    <a href="https://www.orangesoft.co.jp/safeattach" style="display:inline-block; padding:0.5em 1.1em; background:#e67e00; color:#fff; border-radius:5px; text-decoration:none; font-weight:bold;">Learn more →</a>
+  </div>
+  <div style="flex:1; min-width:240px; border:1px solid #ddd; border-radius:8px; padding:1.25rem; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+    <h3 style="margin-top:0; color:#e67e00;">✉️ xgate4</h3>
+    <p style="margin-bottom:1rem;">A webmail solution for business — access your email securely from any browser, anywhere.</p>
+    <a href="https://www.orangesoft.co.jp/xgate" style="display:inline-block; padding:0.5em 1.1em; background:#e67e00; color:#fff; border-radius:5px; text-decoration:none; font-weight:bold;">Learn more →</a>
+  </div>
+</div>
