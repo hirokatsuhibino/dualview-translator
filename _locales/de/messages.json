@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Browser-Übersetzungserweiterung, die Original und Übersetzung nebeneinander anzeigt. Unterstützt Auswahl- und Ganzseitenübersetzung.",
+    "message": "Browser-Übersetzung mit Original und Übersetzung nebeneinander. Auswahl- und Ganzseitenmodus.",
     "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {

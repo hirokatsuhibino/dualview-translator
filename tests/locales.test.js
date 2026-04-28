@@ -132,4 +132,18 @@ describe('_locales — 拡張機能の i18n 化', () => {
       }
     }
   });
+
+  // Apple は \"description field\" として extDescription.message そのものも 112 文字以下に制限する
+  // （manifest.json の description: \"__MSG_extDescription__\" が参照する本文）。
+  // Chrome Web Store / Firefox AMO では 132 文字許容のため気付きにくい（実際 #121 で発覚）。
+  it('全 locale の extDescription.message が 112 文字以下である（Apple Safari 制限）', () => {
+    const APPLE_MESSAGE_LIMIT = 112;
+    for (const locale of locales) {
+      const messages = loadMessages(locale);
+      const msg = messages.extDescription?.message ?? '';
+      expect(typeof msg, `${locale}.extDescription.message が文字列でない`).toBe('string');
+      expect(msg.length, `${locale}.extDescription.message が ${APPLE_MESSAGE_LIMIT} 文字を超えている (${msg.length} chars)`)
+        .toBeLessThanOrEqual(APPLE_MESSAGE_LIMIT);
+    }
+  });
 });

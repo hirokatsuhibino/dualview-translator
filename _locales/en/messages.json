@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Browser translation extension that shows the original and translation side by side. Supports text selection and full-page translation.",
+    "message": "Browser translation that shows the original and translation side by side. Selection and full-page modes.",
     "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {

@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Extensión de traducción del navegador que muestra el original y la traducción en paralelo. Admite traducción de selección y de página completa.",
+    "message": "Extensión que muestra el original y la traducción lado a lado. Modos de selección y página completa.",
     "description": "Description shown in store listings and the browser's extension list."
   },
   "cmdTogglePageTranslateDescription": {
