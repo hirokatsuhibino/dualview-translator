@@ -26,6 +26,17 @@ if (typeof Range !== 'undefined' && !Range.prototype.getClientRects) {
   };
 }
 
+// content-selection.js は selectionchange リスナーをタッチデバイスのみで登録するため、
+// jsdom 環境を「タッチデバイス」と判定させて selectionchange 経路もテストできるようにする。
+// (`'ontouchstart' in document.documentElement` の判定で true を返させる)
+if (typeof document !== 'undefined' && !('ontouchstart' in document.documentElement)) {
+  Object.defineProperty(document.documentElement, 'ontouchstart', {
+    value: null,
+    configurable: true,
+    writable: true,
+  });
+}
+
 const storageData = {};
 
 globalThis.chrome = {

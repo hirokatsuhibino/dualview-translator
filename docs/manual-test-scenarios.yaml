@@ -1061,9 +1061,10 @@ suites:
           - ホバーしてもボタンが拡大しない
 
       - id: SMI-013
-        title: キーボード選択（Shift + 矢印キー）ではミニアイコンは出ない
+        title: デスクトップでキーボード選択（Shift + 矢印キー）してもミニアイコンは出ない
         priority: p2
-        description: mouseup ベースの実装のため、キーボード選択でアイコンは出ない仕様。代替として Ctrl+Shift+Y ショートカットを案内する
+        environment: chrome
+        description: "#127 で selectionchange 経路を追加した際、タッチデバイス限定で登録するようゲートして本シナリオの仕様（デスクトップでキーボード選択ではアイコン非表示）を維持している"
         steps:
           - 任意のページにフォーカスを当てる
           - キャレットを置いてから Shift + → / Shift + Ctrl + → でテキスト選択

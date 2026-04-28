@@ -14,7 +14,8 @@ permalink: /RELEASE_NOTES.html
 
 - **iOS Safari でテキスト選択時にミニアイコンが表示されない問題を修正**（#127）
   - `mouseup` イベントベースの検知だけでは iOS のテキスト選択（長押し → 範囲ハンドル操作）に対応できなかったため、`selectionchange` イベント + 300ms デバウンスでも検知するように変更
-  - デスクトップ系（Chrome / Firefox / macOS Safari）の挙動は維持
+  - `selectionchange` の登録は **タッチデバイスのみ** に限定（`'ontouchstart' in document.documentElement` で判定）。デスクトップ系（Chrome / Firefox / macOS Safari）では Shift+Arrow キーボード選択でアイコンが出ないという既存仕様を維持
+  - 副次的に Escape 押下でデバウンスタイマーをクリアし、閉じた後にアイコンが意図せず再表示されないようにした
 
 ### マイルストーン
 
