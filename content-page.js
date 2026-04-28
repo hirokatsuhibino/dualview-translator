@@ -68,10 +68,15 @@ var DVT_PAGE = (function () {
     if (transEl) {
       transEl.textContent = result;
       // 個別リセットボタン（×）を翻訳テキストの末尾に追加
+      const undoLabel = t('undoElement');
       const undoBtn = document.createElement('button');
       undoBtn.className = 'dvt-undo-btn';
       undoBtn.setAttribute('data-dvt', 'true');
-      undoBtn.title = t('undoElement');
+      // form 内に挿入されたページでもデフォルト submit が走らないよう type を明示
+      undoBtn.setAttribute('type', 'button');
+      undoBtn.title = undoLabel;
+      // SR 利用者向けに aria-label も明示（"×" だけだと記号名で読み上げられる可能性）
+      undoBtn.setAttribute('aria-label', undoLabel);
       undoBtn.textContent = '×';
       undoBtn.addEventListener('click', (e) => {
         e.stopPropagation();

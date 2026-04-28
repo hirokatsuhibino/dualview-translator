@@ -216,10 +216,6 @@ describe('DVT_PAGE (content-page)', () => {
     const { resolve } = require('path');
     const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
 
-    // jsdom は innerText を完全サポートしていないため、翻訳パイプライン全体を
-    // jsdom 統合テストでは動かしにくい。ここでは applyTranslation 内のロジック
-    // 存在を文字列マッチで担保する。
-
     it('applyTranslation 内で原文と翻訳結果の完全一致をチェックする分岐がある', () => {
       expect(code).toMatch(/translatedText\s*===\s*originalText/);
     });
@@ -234,8 +230,73 @@ describe('DVT_PAGE (content-page)', () => {
     });
 
     it('一致しない場合は従来通り transEl.textContent = result が呼ばれる', () => {
-      // applyTranslation 内に「remove → return」の早期 return 後、textContent 代入が来る
       expect(code).toMatch(/transEl\.textContent\s*=\s*result/);
+    });
+
+    it('翻訳要素の × ボタンは type=\"button\" + aria-label が設定される（要約 × と一貫）', () => {
+      // dvt-undo-btn 生成箇所に type=\"button\" と aria-label 設定が含まれる
+      expect(code).toMatch(/dvt-undo-btn[\s\S]{0,400}setAttribute\(\s*['"]type['"]\s*,\s*['"]button['"]/);
+      expect(code).toMatch(/dvt-undo-btn[\s\S]{0,400}setAttribute\(\s*['"]aria-label['"]\s*,\s*undoLabel/);
+    });
+  });
+
+  describe('applyTranslation — jsdom 統合（#138 PR レビュー対応）', () => {
+    // jsdom は innerText を完全サポートしないため、HTMLElement.prototype.innerText を
+    // textContent で代用するモックを差し込んで translatePage パイプラインを実走させる。
+    let innerTextDescriptor;
+    let originalTranslate;
+    let originalLangMatches;
+
+    beforeEach(() => {
+      innerTextDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerText');
+      Object.defineProperty(HTMLElement.prototype, 'innerText', {
+        configurable: true,
+        get() { return this.textContent; },
+        set(v) { this.textContent = v; },
+      });
+
+      originalTranslate = DVT.translate;
+      originalLangMatches = DVT.langMatches;
+      // 同一言語パスを通さず、純粋に「文字列一致での remove」を検証する
+      DVT.langMatches = () => false;
+    });
+
+    afterEach(() => {
+      if (innerTextDescriptor) {
+        Object.defineProperty(HTMLElement.prototype, 'innerText', innerTextDescriptor);
+      } else {
+        delete HTMLElement.prototype.innerText;
+      }
+      DVT.translate = originalTranslate;
+      DVT.langMatches = originalLangMatches;
+      DVT.state.pageTranslateActive = false;
+    });
+
+    it('翻訳結果が原文と完全一致した場合、.dvt-trans が DOM から remove される', async () => {
+      DVT.translate = async (text) => ({ text, detectedLang: 'auto' });
+      chrome.storage.local.set({ translateEngine: 'google' });
+      document.body.innerHTML = '<p id="target">&gt;***********</p>';
+      DVT.state.targetLang = 'ja';
+
+      await DVT_PAGE.translatePage('ja');
+
+      const target = document.getElementById('target');
+      expect(target).toBeTruthy();
+      expect(target.querySelector('.dvt-trans')).toBeNull();
+    });
+
+    it('翻訳結果が原文と異なる場合、.dvt-trans に結果が反映される', async () => {
+      DVT.translate = async () => ({ text: 'こんにちは世界', detectedLang: 'en' });
+      chrome.storage.local.set({ translateEngine: 'google' });
+      document.body.innerHTML = '<p id="target">Hello world</p>';
+      DVT.state.targetLang = 'ja';
+
+      await DVT_PAGE.translatePage('ja');
+
+      const target = document.getElementById('target');
+      const trans = target?.querySelector('.dvt-trans');
+      expect(trans).toBeTruthy();
+      expect(trans.textContent).toContain('こんにちは世界');
     });
   });
 
