@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### マイルストーン
+
+- **iOS Safari 拡張が App Store で配信開始**（2026-04-28）
+  - 公開 URL: https://apps.apple.com/jp/app/dualview-translator/id6763488360
+  - 申請ビルド: Safari Build 2 (Marketing Version 1.0)
+  - macOS Safari 版は引き続き Mac App Store 審査中
+
 ---
 
 ## v1.4.0（2026-04-27）
