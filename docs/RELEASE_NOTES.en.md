@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Bug fixes
+
+- **Fix: mini translate icon didn't show up on iOS Safari** (#127)
+  - The selection detection was `mouseup`-only, which doesn't fire predictably for iOS text selection (long-press + range handles). Added a debounced `selectionchange` listener (300ms) so iOS picks up the selection too.
+  - The `selectionchange` listener is only registered on **touch devices** (`'ontouchstart' in document.documentElement`), so desktop (Chrome / Firefox / macOS Safari) keeps its existing behavior of not showing the icon for keyboard selections (Shift+Arrow).
+  - As a side fix, pressing Escape now also cancels any pending debounce timer so the icon won't unexpectedly reappear after dismissal.
+
 ### Milestones
 
 - **iOS Safari extension is now live on the App Store** (2026-04-28)

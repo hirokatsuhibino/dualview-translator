@@ -1,5 +1,5 @@
 // content-selection.js のドラッグ移動・リサイズ機能テスト
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { loadScript } from './helpers.js';
@@ -77,6 +77,21 @@ describe('選択翻訳 — ミニアイコン方式', () => {
 
   it('document の mouseup ハンドラが左クリック以外を早期 return している', () => {
     expect(jsCode).toMatch(/document\.addEventListener\(\s*['"]mouseup['"][\s\S]{0,200}e\.button !== 0/);
+  });
+
+  it('selectionchange イベントもデバウンス付きで購読している（iOS Safari 対応）', () => {
+    expect(jsCode).toMatch(/document\.addEventListener\(\s*['"]selectionchange['"]/);
+    expect(jsCode).toMatch(/setTimeout\([\s\S]{0,200}300\)/);
+  });
+
+  it('selectionchange はタッチデバイス判定でゲートされている（デスクトップで Shift+Arrow と衝突しない）', () => {
+    // `'ontouchstart' in document.documentElement` の判定で true のときだけ登録される
+    expect(jsCode).toMatch(/['"]ontouchstart['"][\s\S]{0,80}document\.documentElement/);
+    expect(jsCode).toMatch(/if\s*\(\s*isTouchDevice\s*\)[\s\S]{0,200}selectionchange/);
+  });
+
+  it('Escape ハンドラで保留中の selectionchange タイマーをクリアしている', () => {
+    expect(jsCode).toMatch(/Escape[\s\S]{0,400}clearSelectionChangeTimer/);
   });
 
   it('ミニアイコン上の mousedown は伝播停止する（document mouseup での消去を防ぐ）', () => {
@@ -281,5 +296,99 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     expect(panel.querySelector('.dvt-sel-header')).toBeTruthy();
     expect(panel.querySelector('.dvt-sel-lang')).toBeTruthy();
     expect(panel.querySelector('.dvt-sel-btn')).toBeTruthy();
+  });
+
+  it('selectionchange イベント経路でもミニアイコンが生成される（iOS Safari 対応の動作保証）', () => {
+    vi.useFakeTimers();
+    try {
+      const p = document.createElement('p');
+      p.textContent = 'Hello world';
+      document.body.appendChild(p);
+
+      selectTextOf(p, 0, 11);
+      // iOS Safari ではテキスト選択完了で selectionchange が発火する。
+      // mouseup を発火させずに selectionchange だけを送る → デバウンス後にアイコンが生成されるはず。
+      document.dispatchEvent(new Event('selectionchange'));
+      // デバウンス完了まで時間を進める
+      vi.advanceTimersByTime(300);
+
+      const btn = document.querySelector('.dvt-sel-mini-btn');
+      expect(btn).toBeTruthy();
+      expect(btn.querySelector('.dvt-sel-mini-icon')?.textContent).toBe('🌐');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('selectionchange のデバウンス中は連続発火を 1 回にまとめる', () => {
+    vi.useFakeTimers();
+    try {
+      const p = document.createElement('p');
+      p.textContent = 'Hello world translation';
+      document.body.appendChild(p);
+
+      selectTextOf(p, 0, 5);
+      document.dispatchEvent(new Event('selectionchange'));
+      // デバウンス内で再選択 → 旧タイマーがクリアされて新タイマー開始
+      vi.advanceTimersByTime(100);
+      selectTextOf(p, 6, 11);
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(300);
+
+      const btns = document.querySelectorAll('.dvt-sel-mini-btn');
+      expect(btns.length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('フルパネル展開中は selectionchange を無視してアイコンを再生成しない', () => {
+    DVT_I18N.setLang('ja');
+    const p = document.createElement('p');
+    p.textContent = 'Hello world translation';
+    document.body.appendChild(p);
+
+    // 1) 選択 → mouseup でミニアイコン → クリックでフルパネル展開
+    selectTextOf(p, 0, 5);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+    document.querySelector('.dvt-sel-mini-btn').click();
+    expect(document.querySelector('.dvt-sel-panel')).toBeTruthy();
+
+    // 2) パネル展開中に別範囲を選択 → selectionchange
+    vi.useFakeTimers();
+    try {
+      selectTextOf(p, 6, 11);
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(300);
+
+      // パネルは閉じず、ミニアイコンも生成されないこと
+      expect(document.querySelector('.dvt-sel-panel')).toBeTruthy();
+      expect(document.querySelector('.dvt-sel-mini-btn')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('Escape は保留中の selectionchange タイマーもキャンセルする', () => {
+    vi.useFakeTimers();
+    try {
+      const p = document.createElement('p');
+      p.textContent = 'Hello world';
+      document.body.appendChild(p);
+
+      // selectionchange でタイマー予約（まだ満了させない）
+      selectTextOf(p, 0, 11);
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(100); // 300ms 未満
+
+      // Escape を押す
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      // 残り時間を進めても、Escape でクリアされたタイマーは発火しない
+      vi.advanceTimersByTime(500);
+
+      expect(document.querySelector('.dvt-sel-mini-btn')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

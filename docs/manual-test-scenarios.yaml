@@ -1061,9 +1061,10 @@ suites:
           - ホバーしてもボタンが拡大しない
 
       - id: SMI-013
-        title: キーボード選択（Shift + 矢印キー）ではミニアイコンは出ない
+        title: デスクトップでキーボード選択（Shift + 矢印キー）してもミニアイコンは出ない
         priority: p2
-        description: mouseup ベースの実装のため、キーボード選択でアイコンは出ない仕様。代替として Ctrl+Shift+Y ショートカットを案内する
+        environment: chrome
+        description: "#127 で selectionchange 経路を追加した際、タッチデバイス限定で登録するようゲートして本シナリオの仕様（デスクトップでキーボード選択ではアイコン非表示）を維持している"
         steps:
           - 任意のページにフォーカスを当てる
           - キャレットを置いてから Shift + → / Shift + Ctrl + → でテキスト選択
@@ -1081,3 +1082,29 @@ suites:
         expected:
           - 青色（`#1a73e8`）のアウトラインがアイコン外周に表示される
           - マウスクリックではフォーカスリングは出ない（:focus-visible の意図通り）
+
+      - id: SMI-015
+        title: iOS Safari でテキスト選択するとミニアイコンが表示される
+        priority: p0
+        environment: safari-ios-real
+        description: "#127 で iOS Safari でアイコンが出ない問題に対応した回帰防止項目。selectionchange + 300ms デバウンスで動作"
+        steps:
+          - iOS Safari で拡張を有効化したまま任意の Web ページを開く
+          - 段落のテキストを長押し選択（範囲ハンドルでも調整 OK）
+          - 指を離してから 0.5 秒程度待つ
+        expected:
+          - 選択範囲の右下隣あたりに白角丸の 🌐 ミニアイコンが表示される
+          - フルパネルは即座には開かない
+          - アイコンをタップすると翻訳パネルが展開する
+
+      - id: SMI-016
+        title: iOS Safari でフルパネル表示中にテキスト再選択しても二重に開かない
+        priority: p1
+        environment: safari-ios-real
+        steps:
+          - SMI-015 の手順でミニアイコン → タップでフルパネルを開く
+          - パネルを閉じずにページの別のテキストを選択
+        expected:
+          - パネル内のテキスト選択は無視される
+          - パネル外のテキスト選択時は新しいミニアイコンは出ない（現在のフルパネルが優先）
+          - パネルを閉じてから再選択するとミニアイコンが出る

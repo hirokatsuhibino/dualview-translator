@@ -42,6 +42,32 @@ var DVT_SEL = (function () {
   // ─── テキスト選択イベント ───────────────────────────────────────────
   // 選択直後はフルパネルを開かず、小さなアイコンだけを表示する。
   // クリックすると初めてフルパネルに展開する（コピー目的の選択を妨げないため）。
+
+  // selectionchange のデバウンス用タイマー（タッチデバイスのみで使用）
+  let selectionChangeTimer = null;
+
+  function clearSelectionChangeTimer() {
+    if (selectionChangeTimer) {
+      clearTimeout(selectionChangeTimer);
+      selectionChangeTimer = null;
+    }
+  }
+
+  // 共通: 現在の選択テキストを評価してミニアイコンを再表示する
+  function handleSelectionForMiniBtn() {
+    const sel = window.getSelection();
+    // sel が null のときに .trim() で例外にならないよう optional chaining を二段にする
+    const text = sel?.toString()?.trim();
+
+    removeSelectionMiniBtn();
+
+    // sel が有効で範囲があり、テキストが 2 文字以上のときだけ表示
+    if (sel && sel.rangeCount > 0 && text && text.length > 1) {
+      showSelectionMiniBtn(sel, text);
+    }
+  }
+
+  // デスクトップ系（Chrome / Firefox / macOS Safari）: mouseup ベース
   document.addEventListener('mouseup', (e) => {
     // 左クリック以外（右クリックや中クリックの mouseup）は無視。
     // 右クリックでミニアイコンが出てしまうとコンテキストメニュー操作の邪魔になる
@@ -50,25 +76,46 @@ var DVT_SEL = (function () {
     if (DVT.state.selectionMiniBtn && DVT.state.selectionMiniBtn.contains(e.target)) return;
     if (DVT.state.selectionPanel && DVT.state.selectionPanel.contains(e.target)) return;
 
-    const sel = window.getSelection();
-    const text = sel?.toString().trim();
-
+    // mouseup は「別箇所をクリックして選択を解除」したケースも兼ねるので、
+    // フルパネルが開いていれば閉じる
     removeSelectionPanel();
-    removeSelectionMiniBtn();
-
-    if (text && text.length > 1) {
-      showSelectionMiniBtn(sel, text);
-    }
+    handleSelectionForMiniBtn();
   });
+
+  // iOS Safari など mouseup が期待通り発火しないタッチデバイス向けに selectionchange でも検知。
+  // タッチデバイスのみに限定する理由:
+  //   デスクトップで selectionchange を有効にすると、Shift+Arrow などキーボード選択でも
+  //   ミニアイコンが出てしまい、手動シナリオ SMI-013（キーボード選択では出さない）と矛盾する。
+  // selectionchange は選択中の連続発火が頻繁なため 300ms デバウンスして「選択完了後」に判定する。
+  const isTouchDevice = (
+    typeof document !== 'undefined' &&
+    'ontouchstart' in document.documentElement
+  );
+  if (isTouchDevice) {
+    document.addEventListener('selectionchange', () => {
+      clearSelectionChangeTimer();
+      selectionChangeTimer = setTimeout(() => {
+        selectionChangeTimer = null;
+        // フルパネルが開いている間（パネル内テキスト選択など）は無視
+        if (DVT.state.selectionPanel) return;
+        handleSelectionForMiniBtn();
+      }, 300);
+    });
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      // 保留中の selectionchange タイマーで意図せず再表示されないよう先にクリア
+      clearSelectionChangeTimer();
       removeSelectionPanel();
       removeSelectionMiniBtn();
     }
   });
 
   function removeSelectionPanel() {
+    // パネルを閉じるタイミングで保留中の selectionchange タイマーもクリアしておくと、
+    // 「パネル閉じる → 0.3 秒後に古い選択範囲でアイコン再表示」のような副作用を防げる
+    clearSelectionChangeTimer();
     if (DVT.state.selectionPanel) {
       DVT.state.selectionPanel.remove();
       DVT.state.selectionPanel = null;
