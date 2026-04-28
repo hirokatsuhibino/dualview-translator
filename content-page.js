@@ -218,8 +218,9 @@ var DVT_PAGE = (function () {
     // 動的コンテンツ監視を停止
     stopPageObserver();
     // 要約ブロックを全削除（ページ全体翻訳の #dvt-page-summary だけでなく、
-    // 領域選択翻訳・右クリック翻訳由来の .dvt-summary もまとめて撤去する）
-    document.querySelectorAll('.dvt-summary').forEach(el => el.remove());
+    // 領域選択翻訳・右クリック翻訳由来の .dvt-summary もまとめて撤去する）。
+    // ホストページが偶然 .dvt-summary を使っていても消さないよう [data-dvt="true"] でスコープ
+    document.querySelectorAll('[data-dvt="true"].dvt-summary').forEach(el => el.remove());
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
       const origEl = el.querySelector('.dvt-orig');
       if (origEl) {
@@ -443,7 +444,11 @@ var DVT_PAGE = (function () {
     const summaryUndoBtn = document.createElement('button');
     summaryUndoBtn.className = 'dvt-summary-undo-btn';
     summaryUndoBtn.setAttribute('data-dvt', 'true');
+    // form 内に挿入されたページでもデフォルト submit が走らないよう type を明示
+    summaryUndoBtn.setAttribute('type', 'button');
     summaryUndoBtn.title = t('undoSummary');
+    // SR 利用者向けに aria-label も設定（"×" だけだと「multiplication sign」等で読み上げられる可能性）
+    summaryUndoBtn.setAttribute('aria-label', t('undoSummary'));
     summaryUndoBtn.textContent = '×';
     summaryUndoBtn.addEventListener('click', (e) => {
       e.stopPropagation();
