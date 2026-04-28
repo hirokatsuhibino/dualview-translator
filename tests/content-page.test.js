@@ -210,4 +210,67 @@ describe('DVT_PAGE (content-page)', () => {
       expect(document.querySelector('.dvt-toast')).toBeFalsy();
     });
   });
+
+  describe('要約ブロックの個別 × ボタン（#134）', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+    const cssCode = readFileSync(resolve(__dirname, '..', 'content.css'), 'utf-8');
+
+    it('runSummarize 内で要約ブロックに dvt-summary-undo-btn を生成している', () => {
+      expect(code).toMatch(/runSummarize[\s\S]*?dvt-summary-undo-btn/);
+    });
+
+    it('要約 × クリックで summaryBlock.remove() が呼ばれる', () => {
+      expect(code).toMatch(/dvt-summary-undo-btn[\s\S]{0,800}summaryBlock\.remove\(\)/);
+    });
+
+    it('要約 × ボタンには title と aria-label の両方に i18n キー undoSummary が設定される', () => {
+      // SR 上で「multiplication sign」等で読み上げられないよう aria-label も明示
+      expect(code).toMatch(/summaryUndoBtn\.title\s*=\s*t\('undoSummary'\)/);
+      expect(code).toMatch(/setAttribute\(\s*['"]aria-label['"]\s*,\s*t\('undoSummary'\)/);
+    });
+
+    it('要約 × ボタンには type="button" が設定される（form 内 submit 回避）', () => {
+      expect(code).toMatch(/setAttribute\(\s*['"]type['"]\s*,\s*['"]button['"]/);
+    });
+
+    it('CSS で .dvt-summary-undo-btn が定義されている', () => {
+      expect(cssCode).toContain('.dvt-summary-undo-btn');
+      expect(cssCode).toContain('position: absolute');
+    });
+
+    it('CSS の .dvt-summary は [data-dvt] でスコープ限定されている（ホストページ汚染防止）', () => {
+      expect(cssCode).toMatch(/\.dvt-summary\[data-dvt\]\s*\{[\s\S]{0,200}position:\s*relative/);
+    });
+  });
+
+  describe('undoPageTranslate — 領域選択時の要約ブロックも撤去（#134）', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+
+    it('undoPageTranslate は ID 指定ではなくクラス指定で .dvt-summary 全削除する（拡張挿入要素に限定）', () => {
+      // ホストページの偶然の同名クラス汚染を避けるため [data-dvt="true"] でスコープ
+      expect(code).toMatch(/undoPageTranslate[\s\S]{0,400}querySelectorAll\([^)]*data-dvt[^)]*dvt-summary/);
+    });
+
+    it('undoPageTranslate 実行で document 上の .dvt-summary が消える（jsdom 統合）', () => {
+      // 領域選択翻訳の要約ブロック（ID なし）と data-dvt-id を持つ翻訳要素を仕込む
+      document.body.innerHTML = `
+        <div class="dvt-summary" data-dvt="true">
+          <span class="dvt-badge dvt-badge-summary">要約</span>
+          <div class="dvt-summary-text">サンプル要約</div>
+        </div>
+        <p data-dvt-id="dvt-r-1">
+          <span class="dvt-orig">Original</span>
+          <span class="dvt-trans">翻訳</span>
+        </p>
+      `;
+      expect(document.querySelectorAll('.dvt-summary').length).toBe(1);
+      DVT_PAGE.undoPageTranslate();
+      expect(document.querySelectorAll('.dvt-summary').length).toBe(0);
+      expect(document.querySelectorAll('[data-dvt-id]').length).toBe(0);
+    });
+  });
 });

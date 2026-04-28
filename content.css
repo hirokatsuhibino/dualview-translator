@@ -467,10 +467,13 @@
 }
 
 /* ── Summary Block (要約) ────────────────────────────────────────────── */
-.dvt-summary {
+/* ホストページが偶然 .dvt-summary を使っていても影響しないよう
+   [data-dvt] でスコープを限定する */
+.dvt-summary[data-dvt] {
+  position: relative !important;
   display: block !important;
   margin-top: 12px !important;
-  padding: 10px 14px !important;
+  padding: 10px 30px 10px 14px !important;
   border-left: 3px solid #4caf50 !important;
   background: rgba(76, 175, 80, 0.07) !important;
   color: inherit !important;
@@ -479,6 +482,30 @@
   border-radius: 0 8px 8px 0 !important;
   animation: dvt-fade-in 0.3s ease !important;
   font-family: -apple-system, 'Hiragino Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+/* 要約ブロック右上の × ボタン（要約だけを消す） */
+.dvt-summary-undo-btn {
+  position: absolute !important;
+  top: 8px !important;
+  right: 10px !important;
+  margin: 0 !important;
+  padding: 2px 6px !important;
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
+  cursor: pointer !important;
+  font-size: 1em !important;
+  line-height: 1 !important;
+  opacity: 0.4 !important;
+  border-radius: 3px !important;
+  transition: opacity 0.15s, background 0.15s, color 0.15s !important;
+}
+.dvt-summary[data-dvt]:hover .dvt-summary-undo-btn { opacity: 0.7 !important; }
+.dvt-summary-undo-btn:hover {
+  opacity: 1 !important;
+  background: rgba(229, 115, 115, 0.15) !important;
+  color: #e57373 !important;
 }
 
 .dvt-badge-summary {
@@ -649,7 +676,7 @@
   }
 
   /* ── Summary ── */
-  .dvt-summary {
+  .dvt-summary[data-dvt] {
     background: rgba(76, 175, 80, 0.06) !important;
     color: #1a1a2e !important;
     border-left-color: #388e3c !important;
@@ -731,7 +758,7 @@
 .dvt-light .dvt-translate-bar-close { color: rgba(0,0,0,0.35) !important; }
 .dvt-light .dvt-translate-bar-close:hover { color: #1a1a2e !important; background: rgba(0,0,0,0.06) !important; }
 
-.dvt-light .dvt-summary { background: rgba(76,175,80,0.06) !important; color: #1a1a2e !important; border-left-color: #388e3c !important; }
+.dvt-light .dvt-summary[data-dvt] { background: rgba(76,175,80,0.06) !important; color: #1a1a2e !important; border-left-color: #388e3c !important; }
 .dvt-light .dvt-badge-summary { background: rgba(56,142,60,0.15) !important; color: #388e3c !important; }
 
 .dvt-light .dvt-same-lang { color: rgba(0,0,0,0.4) !important; }
