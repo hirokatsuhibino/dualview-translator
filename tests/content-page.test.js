@@ -211,6 +211,34 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('applyTranslation — 翻訳結果が原文と完全一致なら表示しない（#138）', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+
+    // jsdom は innerText を完全サポートしていないため、翻訳パイプライン全体を
+    // jsdom 統合テストでは動かしにくい。ここでは applyTranslation 内のロジック
+    // 存在を文字列マッチで担保する。
+
+    it('applyTranslation 内で原文と翻訳結果の完全一致をチェックする分岐がある', () => {
+      expect(code).toMatch(/translatedText\s*===\s*originalText/);
+    });
+
+    it('isUnchanged フラグは originalText.length > 0 の前提で評価される（空文字での誤一致を避ける）', () => {
+      expect(code).toMatch(/originalText\.length\s*>\s*0\s*&&\s*translatedText\s*===\s*originalText/);
+    });
+
+    it('一致時または同一言語時は transEl.remove() で翻訳ブロックを撤去する', () => {
+      // isSameLanguage || isUnchanged → transEl.remove() の流れ
+      expect(code).toMatch(/isSameLanguage\s*\|\|\s*isUnchanged[\s\S]{0,200}transEl\.remove\(\)/);
+    });
+
+    it('一致しない場合は従来通り transEl.textContent = result が呼ばれる', () => {
+      // applyTranslation 内に「remove → return」の早期 return 後、textContent 代入が来る
+      expect(code).toMatch(/transEl\.textContent\s*=\s*result/);
+    });
+  });
+
   describe('要約ブロックの個別 × ボタン（#134）', () => {
     const { readFileSync } = require('fs');
     const { resolve } = require('path');

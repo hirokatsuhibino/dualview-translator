@@ -49,31 +49,42 @@ var DVT_PAGE = (function () {
   // ─── 翻訳結果の反映（共通処理） ────────────────────────────────────
   function applyTranslation(el, result, detectedLang, tl) {
     const transEl = el.querySelector('.dvt-trans');
-    if (DVT.langMatches(detectedLang, tl)) {
+    const origEl = el.querySelector('.dvt-orig');
+
+    // 翻訳ブロックを表示しない条件:
+    //  1) 言語検出が同一言語（既存挙動）
+    //  2) 翻訳結果が原文と完全一致（記号・数字のみ・URL・絵文字列など、
+    //     翻訳しても結果が変わらないケース。空の翻訳ブロックが残ると邪魔）
+    const isSameLanguage = DVT.langMatches(detectedLang, tl);
+    const originalText = origEl ? origEl.textContent.trim() : '';
+    const translatedText = (result || '').trim();
+    const isUnchanged = originalText.length > 0 && translatedText === originalText;
+
+    if (isSameLanguage || isUnchanged) {
       if (transEl) transEl.remove();
-    } else {
-      if (transEl) {
-        transEl.textContent = result;
-        // 個別リセットボタン（×）を翻訳テキストの末尾に追加
-        const undoBtn = document.createElement('button');
-        undoBtn.className = 'dvt-undo-btn';
-        undoBtn.setAttribute('data-dvt', 'true');
-        undoBtn.title = t('undoElement');
-        undoBtn.textContent = '×';
-        undoBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          // 元のHTMLを復元してdata-dvt-idを削除
-          const origEl = el.querySelector('.dvt-orig');
-          if (origEl) {
-            // 元のノードを復元
-            el.textContent = '';
-            while (origEl.firstChild) el.appendChild(origEl.firstChild);
-            delete el.dataset.dvtId;
-          }
-        });
-        transEl.appendChild(undoBtn);
-      }
+      return;
+    }
+
+    if (transEl) {
+      transEl.textContent = result;
+      // 個別リセットボタン（×）を翻訳テキストの末尾に追加
+      const undoBtn = document.createElement('button');
+      undoBtn.className = 'dvt-undo-btn';
+      undoBtn.setAttribute('data-dvt', 'true');
+      undoBtn.title = t('undoElement');
+      undoBtn.textContent = '×';
+      undoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        // 元のHTMLを復元してdata-dvt-idを削除
+        if (origEl) {
+          // 元のノードを復元
+          el.textContent = '';
+          while (origEl.firstChild) el.appendChild(origEl.firstChild);
+          delete el.dataset.dvtId;
+        }
+      });
+      transEl.appendChild(undoBtn);
     }
   }
 
