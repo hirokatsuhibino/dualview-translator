@@ -11,6 +11,7 @@ let getMenuTitles;
 let hasLLMApiKey;
 let isTranslateAvailable;
 let testApiKey;
+let isNetworkError;
 
 beforeAll(() => {
   const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
@@ -37,6 +38,10 @@ beforeAll(() => {
   // isTranslateAvailable を抽出
   const translateMatch = code.match(/function isTranslateAvailable\(data\)\s*\{[\s\S]*?\n\}/);
   if (translateMatch) isTranslateAvailable = new Function('data', translateMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
+
+  // isNetworkError を抽出
+  const networkErrorMatch = code.match(/function isNetworkError\(err\)\s*\{[\s\S]*?\n\}/);
+  if (networkErrorMatch) isNetworkError = new Function('err', networkErrorMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 
   // testApiKey を抽出（getDeepLEndpointに依存するため一緒にeval）
   const testApiKeyMatch = code.match(/async function testApiKey\(engine, apiKey\)\s*\{[\s\S]*?\n\}/);
@@ -195,6 +200,38 @@ describe('isTranslateAvailable()', () => {
     // chrome.storage.local.get の取得キーから appleAvailable が漏れた場合、data が
     // { translateEngine: 'apple' } のみでも安全側（false）に倒す
     expect(isTranslateAvailable({ translateEngine: 'apple', deeplApiKey: 'x' })).toBe(false);
+  });
+});
+
+describe('isNetworkError()', () => {
+  it('TypeError は network error 扱い（fetch ネットワーク不通の典型）', () => {
+    expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true);
+  });
+
+  it('"Failed to fetch" メッセージは network error', () => {
+    expect(isNetworkError(new Error('Failed to fetch'))).toBe(true);
+  });
+
+  it('"Network request failed" は network error', () => {
+    expect(isNetworkError(new Error('Network request failed'))).toBe(true);
+  });
+
+  it('"Load failed" (Safari) は network error', () => {
+    expect(isNetworkError(new Error('Load failed'))).toBe(true);
+  });
+
+  it('HTTP 4xx/5xx 系のメッセージは network error ではない', () => {
+    expect(isNetworkError(new Error('Google HTTP 503'))).toBe(false);
+    expect(isNetworkError(new Error('DeepL HTTP 403'))).toBe(false);
+  });
+
+  it('null / undefined は false', () => {
+    expect(isNetworkError(null)).toBe(false);
+    expect(isNetworkError(undefined)).toBe(false);
+  });
+
+  it('メッセージなしの Error は false', () => {
+    expect(isNetworkError(new Error())).toBe(false);
   });
 });
 

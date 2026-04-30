@@ -384,17 +384,65 @@ async function getCacheStats() {
   };
 }
 
-// ─── 翻訳ディスパッチャー ────────────────────────────────────────────
-async function fetchTranslation(text, tl, sl, config) {
-  if (!text || !text.trim()) return { text: '', detectedLang: null };
+// ─── ネットワークエラー判定 ──────────────────────────────────────────
+// fetch がネットワーク不通で失敗した場合は TypeError("Failed to fetch") 等を throw する。
+// HTTP エラー (4xx/5xx) は別 throw で識別可能なので除外。
+// このヘルパーで「オフラインフォールバックが妥当か」を判定する。
+function isNetworkError(err) {
+  if (!err) return false;
+  // fetch の TypeError は環境によりメッセージが異なる: "Failed to fetch" / "Network request failed" / "Load failed" 等
+  if (err.name === 'TypeError') return true;
+  const msg = (err.message || '').toLowerCase();
+  return msg.includes('failed to fetch') ||
+    msg.includes('network') ||
+    msg.includes('load failed') ||
+    msg.includes('offline');
+}
 
+// ─── 翻訳ディスパッチャー ────────────────────────────────────────────
+// オフラインフォールバック動作:
+// - apple が明示選択されていればそのまま fetchApple
+// - 起動時に navigator.onLine === false を検出していれば、apple 利用可能なら apple にフォールバック
+// - 主エンジン実行中に network error が発生した場合も apple にフォールバック
+// - sl === 'auto' は apple が auto 検出を提供しないためフォールバックしない（誤訳回避）
+async function fetchTranslation(text, tl, sl, config) {
+  if (!text || !text.trim()) return { text: '', detectedLang: null, engineUsed: null };
+
+  // 明示選択された apple は直行
   if (config.engine === 'apple' && config.appleAvailable) {
-    return fetchApple(text, tl, sl);
+    const result = await fetchApple(text, tl, sl);
+    return { ...result, engineUsed: 'apple' };
   }
-  if (config.engine === 'deepl' && config.deeplApiKey) {
-    return fetchDeepL(text, tl, sl, config.deeplApiKey);
+
+  const canFallbackToApple = config.appleAvailable && sl && sl !== 'auto';
+
+  // 起動時オフライン: 主エンジンが必ず失敗するので最初から apple を試す
+  if (typeof navigator !== 'undefined' && navigator.onLine === false && canFallbackToApple) {
+    try {
+      const result = await fetchApple(text, tl, sl);
+      return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'offline' };
+    } catch (e) {
+      // apple も失敗したら主エンジンを試す（一応）。ここで投げ直さず継続
+      console.warn('[DVT] offline → apple fallback failed, trying primary engine:', e.message);
+    }
   }
-  return fetchGoogle(text, tl, sl);
+
+  // 主エンジン実行（network error は apple フォールバック対象）
+  try {
+    if (config.engine === 'deepl' && config.deeplApiKey) {
+      const result = await fetchDeepL(text, tl, sl, config.deeplApiKey);
+      return { ...result, engineUsed: 'deepl' };
+    }
+    const result = await fetchGoogle(text, tl, sl);
+    return { ...result, engineUsed: 'google' };
+  } catch (err) {
+    if (canFallbackToApple && isNetworkError(err)) {
+      console.warn(`[DVT] ${config.engine} network error → apple fallback:`, err.message);
+      const result = await fetchApple(text, tl, sl);
+      return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'network-error' };
+    }
+    throw err;
+  }
 }
 
 // ─── Google Translate ────────────────────────────────────────────────
