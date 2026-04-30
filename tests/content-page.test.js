@@ -224,14 +224,16 @@ describe('DVT_PAGE (content-page)', () => {
       expect(code).toMatch(/originalText\.length\s*>\s*0\s*&&\s*translatedText\s*===\s*originalText/);
     });
 
-    it('一致時または同一言語時は wrapper 全体を解体して元の DOM 構造に戻す（#140）', () => {
-      // .dvt-trans の remove だけだと block 化された .dvt-orig が残って空行が出るため、
-      // origEl の中身を el に直接戻す処理が含まれること
-      expect(code).toMatch(/isSameLanguage\s*\|\|\s*isUnchanged[\s\S]{0,400}while\s*\(\s*origEl\.firstChild\s*\)\s*el\.appendChild\(origEl\.firstChild\)/);
-    });
-
     it('一致しない場合は従来通り transEl.textContent = result が呼ばれる', () => {
       expect(code).toMatch(/transEl\.textContent\s*=\s*result/);
+    });
+
+    it('DOM 復元処理は restoreOriginalContent ヘルパーに集約されている', () => {
+      // 同じロジックを 3 箇所に複製しないためのリファクタリング（PR #141 レビュー指摘）
+      expect(code).toMatch(/function\s+restoreOriginalContent/);
+      // applyTranslation の同一翻訳パス・undo ボタン・undoPageTranslate の 3 箇所すべてで使われる
+      const matches = code.match(/restoreOriginalContent\s*\(/g) || [];
+      expect(matches.length).toBeGreaterThanOrEqual(3);
     });
 
     it('翻訳要素の × ボタンは type=\"button\" + aria-label が設定される（要約 × と一貫）', () => {
