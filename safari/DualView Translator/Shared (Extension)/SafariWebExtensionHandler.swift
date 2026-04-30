@@ -7,8 +7,11 @@
 
 import SafariServices
 import os.log
+// Translation framework は iOS 17.4+ / macOS 14.4+ にしか存在しないため、
+// strong link すると iOS 15 / macOS 10.14 など古い OS で dyld が拡張をロードできなくなる。
+// @_weakLinked により実体不在時もロードを許可し、availability ガードで実呼び出しを抑止する。
 #if canImport(Translation)
-import Translation
+@_weakLinked import Translation
 #endif
 
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
@@ -34,8 +37,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         // 本体は出力せず、存在有無とプロファイルIDのみデバッグレベルで記録する
         os_log(.debug, "Received message from browser.runtime.sendNativeMessage (hasMessage: %{public}@, profile: %{public}@)", message == nil ? "false" : "true", profile?.uuidString ?? "none")
 
-        // メッセージが { action, payload } 形式の場合は action でディスパッチ。
-        // それ以外（旧形式）は後方互換のため echo を返す。
+        // メッセージが { action: "...", ...パラメータ } 形式（フラット辞書）の場合は action でディスパッチ。
+        // 各 action に必要なパラメータ（source / target / text 等）はトップレベルから直接読み取る。
+        // action キーが無い旧形式メッセージは後方互換のため echo を返す。
         let payload = message as? [String: Any]
         let action = payload?["action"] as? String
 
