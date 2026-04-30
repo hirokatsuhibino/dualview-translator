@@ -399,27 +399,65 @@ function isNetworkError(err) {
     msg.includes('offline');
 }
 
+// NLLanguage 形式（"zh-Hans" / "zh-Hant"）→ アプリ内言語コード（"zh-CN" / "zh-TW"）への対応。
+// 他の言語は NLLanguage の rawValue がそのまま BCP-47 言語コードと一致するためマッピング不要。
+const NL_LANG_TO_APP = {
+  'zh-Hans': 'zh-CN',
+  'zh-Hant': 'zh-TW',
+};
+
+// SafariWebExtensionHandler の detectLanguage アクションを叩いて、
+// オフラインで言語検出する（NLLanguageRecognizer 経由）。
+// 失敗したら null を返し、呼び出し元で適切にエラー化する。
+async function detectLanguageNative(text) {
+  if (!HAS_NATIVE_MESSAGING) return null;
+  try {
+    const sample = text.slice(0, 500);
+    const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, {
+      action: 'detectLanguage',
+      text: sample,
+    });
+    if (!response?.ok || !response.detectedLang) return null;
+    const code = response.detectedLang;
+    return NL_LANG_TO_APP[code] || code;
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Apple Translation 呼び出し前に sl を必ず具体コードに解決する。
+// すでに具体コードならそのまま、auto / und / 空 ならネイティブ言語検出を経由する。
+async function ensureExplicitSourceLang(sl, text) {
+  if (sl && sl !== 'auto' && sl !== 'und') return sl;
+  const detected = await detectLanguageNative(text);
+  if (!detected) {
+    throw new Error('Apple Translation: language detection failed (offline)');
+  }
+  return detected;
+}
+
 // ─── 翻訳ディスパッチャー ────────────────────────────────────────────
 // オフラインフォールバック動作:
-// - apple が明示選択されていればそのまま fetchApple
+// - apple が明示選択されていればそのまま fetchApple（sl が auto なら native 検出で解決）
 // - 起動時に navigator.onLine === false を検出していれば、apple 利用可能なら apple にフォールバック
 // - 主エンジン実行中に network error が発生した場合も apple にフォールバック
-// - sl === 'auto' は apple が auto 検出を提供しないためフォールバックしない（誤訳回避）
+// - sl が auto/未指定でも NLLanguageRecognizer でオフライン検出するため、フォールバックは
+//   主要言語に対しては問題なく動作する（ただし検出失敗時はエラー）
 async function fetchTranslation(text, tl, sl, config) {
   if (!text || !text.trim()) return { text: '', detectedLang: null, engineUsed: null };
 
-  // 明示選択された apple は直行
+  // 明示選択された apple は直行（sl が auto なら native 検出で具体コードに解決）
   if (config.engine === 'apple' && config.appleAvailable) {
-    const result = await fetchApple(text, tl, sl);
+    const finalSl = await ensureExplicitSourceLang(sl, text);
+    const result = await fetchApple(text, tl, finalSl);
     return { ...result, engineUsed: 'apple' };
   }
 
-  const canFallbackToApple = config.appleAvailable && sl && sl !== 'auto';
-
   // 起動時オフライン: 主エンジンが必ず失敗するので最初から apple を試す
-  if (typeof navigator !== 'undefined' && navigator.onLine === false && canFallbackToApple) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false && config.appleAvailable) {
     try {
-      const result = await fetchApple(text, tl, sl);
+      const finalSl = await ensureExplicitSourceLang(sl, text);
+      const result = await fetchApple(text, tl, finalSl);
       return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'offline' };
     } catch (e) {
       // apple も失敗したら主エンジンを試す（一応）。ここで投げ直さず継続
@@ -436,9 +474,10 @@ async function fetchTranslation(text, tl, sl, config) {
     const result = await fetchGoogle(text, tl, sl);
     return { ...result, engineUsed: 'google' };
   } catch (err) {
-    if (canFallbackToApple && isNetworkError(err)) {
+    if (config.appleAvailable && isNetworkError(err)) {
       console.warn(`[DVT] ${config.engine} network error → apple fallback:`, err.message);
-      const result = await fetchApple(text, tl, sl);
+      const finalSl = await ensureExplicitSourceLang(sl, text);
+      const result = await fetchApple(text, tl, finalSl);
       return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'network-error' };
     }
     throw err;
