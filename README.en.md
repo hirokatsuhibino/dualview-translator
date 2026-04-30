@@ -12,7 +12,7 @@ The original text doesn't disappear when you translate, so you can always read w
 - **8 translation modes** — pick the one that fits the moment
 - **Auto-translation rules** — match a URL pattern + CSS selector and you're done. Works with SPAs and dynamic content
 - **Translation reset** — × button per element, or wipe the page from the popup
-- **3 translation engines** — Google Translate (free) / DeepL (sharper) / Apple Translation (offline, macOS Safari only). When you're offline, we auto-fall-back to Apple Translation
+- **3 translation engines** — Google Translate (free) / DeepL (sharper) / Apple Translation (offline, macOS Safari only). When you're offline, we automatically fall back to Apple Translation
 - **AI summaries** — Claude or Gemini auto-summarizes the translated content
 - **Translation & summary cache** — same text won't hit the API twice. Faster, cheaper. Hit rate shown in settings
 - **Tabbed popup** — translate stuff on one tab, configure on the other

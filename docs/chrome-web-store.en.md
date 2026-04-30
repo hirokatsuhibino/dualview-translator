@@ -20,7 +20,7 @@ Great for language learners, anyone reading foreign articles, or when you just w
 - **8 translation modes** — pick what fits: a single line, the whole page, just one element, with or without AI summary
 - **Auto-translation rules** — set up your favorite sites once, and they get translated automatically when you open them
 - **Translation reset** — undo per element with the × button, or wipe everything in one tap
-- **Three engines** — Google Translate (free, no setup), DeepL (sharper translations), or Apple Translation (macOS Safari only, fully offline)
+- **Two engines** — Google Translate (free, no setup) or DeepL (sharper translations)
 - **AI summaries** — Claude or Gemini sums up the translated content in 3–5 lines
 - **Tabbed popup** — translation actions and settings, neatly separated
 - **Keyboard shortcuts** — Ctrl+Shift+T, you know the drill
@@ -54,7 +54,6 @@ Lazy-loaded sections, infinite scroll — they get picked up and translated as t
 
 - **Google Translate**: free, no API key, ready to roll (default)
 - **DeepL**: better quality. Free tier covers 500,000 characters/month
-- **Apple Translation**: macOS Safari only. Runs fully on-device — no API key, no network needed. If your network drops while you're using Google or DeepL, we automatically fall back to Apple Translation
 
 ■ AI summaries
 

@@ -25,7 +25,7 @@ Dual-view translation: keeps the original visible with the translation right bel
   <li><b>8 translation modes</b> — pick what fits: a single line, the whole page, just one element, with or without AI summary</li>
   <li><b>Auto-translation rules</b> — set up your favorite sites once, and they get translated automatically when you open them</li>
   <li><b>Translation reset</b> — undo per element with the × button, or wipe everything in one tap</li>
-  <li><b>Three engines</b> — Google Translate (free, no setup), DeepL (sharper translations), or Apple Translation (macOS Safari only, fully offline)</li>
+  <li><b>Two engines</b> — Google Translate (free, no setup) or DeepL (sharper translations)</li>
   <li><b>AI summaries</b> — Claude or Gemini sums up the translated content in 3–5 lines</li>
   <li><b>Tabbed popup</b> — translation actions and settings, neatly separated</li>
   <li><b>Keyboard shortcuts</b> — Ctrl+Shift+T, you know the drill</li>
@@ -58,7 +58,6 @@ Dual-view translation: keeps the original visible with the translation right bel
 <ul>
   <li><b>Google Translate</b>: free, no API key, ready to roll (default)</li>
   <li><b>DeepL</b>: better quality. Free tier covers 500,000 characters/month</li>
-  <li><b>Apple Translation</b>: macOS Safari only. Runs fully on-device — no API key, no network needed. If your network drops while you're using Google or DeepL, we automatically fall back to Apple Translation</li>
 </ul>
 
 <b>■ AI summaries</b>

@@ -23,7 +23,7 @@ DualView Translator
   <li><b>8つの翻訳モード</b> — 選択翻訳、ページ全体翻訳、要素選択翻訳＆要約など</li>
   <li><b>自動翻訳ルール</b> — URLパターンで特定サイトを自動翻訳。CSSセレクタで対象要素を絞り込み可能</li>
   <li><b>翻訳リセット</b> — ×ボタンで要素ごとに個別リセット、またはまとめてリセット</li>
-  <li><b>3つの翻訳エンジン</b> — Google翻訳（無料）、DeepL（高品質）、Apple翻訳（macOS Safari限定・オフライン対応）</li>
+  <li><b>2つの翻訳エンジン</b> — Google翻訳（無料）とDeepL（高品質）</li>
   <li><b>AI要約機能</b> — Claude / Geminiで翻訳結果を3〜5行に要約</li>
   <li><b>タブ式ポップアップ</b> — 翻訳操作と設定を分離したすっきりUI</li>
   <li><b>キーボードショートカット</b> — Ctrl+Shift+Tでページ翻訳など</li>
@@ -56,7 +56,6 @@ DualView Translator
 <ul>
   <li><b>Google翻訳</b>: APIキー不要、無料で即座に利用可能（デフォルト）</li>
   <li><b>DeepL</b>: 高品質な翻訳。無料APIキーで月50万文字まで利用可能</li>
-  <li><b>Apple翻訳</b>: macOS Safari環境のみで利用可能。オンデバイスで動作するためAPIキー不要・ネットワーク不要。ネットワーク不通時は他エンジン選択中でも自動でApple翻訳にフォールバック</li>
 </ul>
 
 <b>■ AI要約機能</b>
