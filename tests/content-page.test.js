@@ -224,9 +224,10 @@ describe('DVT_PAGE (content-page)', () => {
       expect(code).toMatch(/originalText\.length\s*>\s*0\s*&&\s*translatedText\s*===\s*originalText/);
     });
 
-    it('一致時または同一言語時は transEl.remove() で翻訳ブロックを撤去する', () => {
-      // isSameLanguage || isUnchanged → transEl.remove() の流れ
-      expect(code).toMatch(/isSameLanguage\s*\|\|\s*isUnchanged[\s\S]{0,200}transEl\.remove\(\)/);
+    it('一致時または同一言語時は wrapper 全体を解体して元の DOM 構造に戻す（#140）', () => {
+      // .dvt-trans の remove だけだと block 化された .dvt-orig が残って空行が出るため、
+      // origEl の中身を el に直接戻す処理が含まれること
+      expect(code).toMatch(/isSameLanguage\s*\|\|\s*isUnchanged[\s\S]{0,400}while\s*\(\s*origEl\.firstChild\s*\)\s*el\.appendChild\(origEl\.firstChild\)/);
     });
 
     it('一致しない場合は従来通り transEl.textContent = result が呼ばれる', () => {
@@ -272,7 +273,9 @@ describe('DVT_PAGE (content-page)', () => {
       DVT.state.pageTranslateActive = false;
     });
 
-    it('翻訳結果が原文と完全一致した場合、.dvt-trans が DOM から remove される', async () => {
+    it('翻訳結果が原文と完全一致した場合、wrapper 全体が解体されて元の DOM 構造に戻る', async () => {
+      // #140: .dvt-trans だけ remove だと .dvt-orig (display: block) や wrapper span が
+      // 残ってレイアウトに空行が出るため、wrapper 全体を解体する仕様
       DVT.translate = async (text) => ({ text, detectedLang: 'auto' });
       chrome.storage.local.set({ translateEngine: 'google' });
       document.body.innerHTML = '<p id="target">&gt;***********</p>';
@@ -282,7 +285,12 @@ describe('DVT_PAGE (content-page)', () => {
 
       const target = document.getElementById('target');
       expect(target).toBeTruthy();
+      // .dvt-trans / .dvt-orig / wrapper span のいずれも残っていないこと（空行が出ない構造）
       expect(target.querySelector('.dvt-trans')).toBeNull();
+      expect(target.querySelector('.dvt-orig')).toBeNull();
+      expect(target.querySelector('[data-dvt]')).toBeNull();
+      // 元のテキストはそのまま残る
+      expect(target.textContent.trim()).toBe('>***********');
     });
 
     it('翻訳結果が原文と異なる場合、.dvt-trans に結果が反映される', async () => {

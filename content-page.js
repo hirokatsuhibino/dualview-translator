@@ -61,7 +61,15 @@ var DVT_PAGE = (function () {
     const isUnchanged = originalText.length > 0 && translatedText === originalText;
 
     if (isSameLanguage || isUnchanged) {
-      if (transEl) transEl.remove();
+      // .dvt-trans を remove するだけでは wrapper span と block 化された
+      // .dvt-orig が残り、レイアウトに余分な空行が出る。× ボタンクリック時と同じく
+      // wrapper 全体を解体して元の DOM 構造に戻す（data-dvt-id は残して再翻訳防止）。
+      if (origEl) {
+        el.textContent = '';
+        while (origEl.firstChild) el.appendChild(origEl.firstChild);
+      } else if (transEl) {
+        transEl.remove();
+      }
       return;
     }
 
