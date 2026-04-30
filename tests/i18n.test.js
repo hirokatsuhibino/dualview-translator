@@ -73,6 +73,7 @@ describe('DVT_I18N', () => {
       'cacheSectionLabel', 'cacheEntriesLabel', 'cacheClearBtn', 'cacheLoading', 'cacheClearedToast',
       'translateSelection',
       'undoElement', 'undoSummary',
+      'engineApple', 'fallbackToApple',
     ];
 
     for (const lang of langs) {
