@@ -64,6 +64,22 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                     ])
                 }
                 return
+            case "listSupportedLanguages":
+                // 対応言語リストを返す診断用アクション。
+                // checkLanguageAvailability が unsupported を返す場合に、
+                // フレームワークが期待する identifier 形式を確認するために使用する。
+                if #available(iOS 13.0, macOS 10.15, *) {
+                    Task {
+                        let body = await handleListSupportedLanguages()
+                        respond(context: context, body: body)
+                    }
+                } else {
+                    respond(context: context, body: [
+                        "ok": false,
+                        "error": "Requires iOS 13+ / macOS 10.15+ runtime"
+                    ])
+                }
+                return
             default:
                 // 未知の action は明示的にエラーを返す（黙って echo にフォールバックすると
                 // JS 側のバグに気付きにくくなるため）
@@ -130,8 +146,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         if #available(iOS 18.0, macOS 15.0, *) {
             #if canImport(Translation)
             let availability = LanguageAvailability()
-            let sourceLang = Locale.Language(identifier: source)
-            let targetLang = Locale.Language(identifier: target)
+            // Locale.Language(identifier:) は BCP-47 文字列をパースするが、"en" / "ja" のような
+            // 言語コードのみだと script / region が解決されず、フレームワークの対応リストとマッチせず
+            // unsupported になる場合がある。languageCode: で構築する方が堅牢。
+            let sourceLang = makeLanguage(from: source)
+            let targetLang = makeLanguage(from: target)
             let status = await availability.status(from: sourceLang, to: targetLang)
 
             let statusString: String
@@ -146,6 +165,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 "status": statusString,
                 "source": source,
                 "target": target,
+                // 構築した Language の最大識別子もデバッグ用に返す（実際にどう解決されたかが分かる）
+                "sourceMaximalIdentifier": sourceLang.maximalIdentifier,
+                "targetMaximalIdentifier": targetLang.maximalIdentifier,
             ]
             #else
             return ["ok": false, "error": "Translation framework not importable"]
@@ -153,6 +175,51 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         } else {
             return ["ok": false, "error": "Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability"]
         }
+    }
+
+    // ─── listSupportedLanguages: 対応言語リストを返す ────────────────
+    // フレームワークが認識する識別子の正確な形式を確認するための診断用アクション。
+    // checkLanguageAvailability が想定外に unsupported を返す場合の切り分けに使う。
+    @available(iOS 13.0, macOS 10.15, *)
+    private func handleListSupportedLanguages() async -> [String: Any] {
+        if #available(iOS 18.0, macOS 15.0, *) {
+            #if canImport(Translation)
+            let availability = LanguageAvailability()
+            let supported = await availability.supportedLanguages
+            // 各 Language を maximalIdentifier（"en-Latn-US" 形式）と内部コンポーネントで返す
+            let entries: [[String: String]] = supported.map { lang in
+                [
+                    "maximalIdentifier": lang.maximalIdentifier,
+                    "languageCode": lang.languageCode?.identifier ?? "",
+                    "script": lang.script?.identifier ?? "",
+                    "region": lang.region?.identifier ?? "",
+                ]
+            }
+            return [
+                "ok": true,
+                "count": entries.count,
+                "languages": entries,
+            ]
+            #else
+            return ["ok": false, "error": "Translation framework not importable"]
+            #endif
+        } else {
+            return ["ok": false, "error": "Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability"]
+        }
+    }
+
+    // ─── Locale.Language ヘルパー ─────────────────────────────────
+    // "en" / "ja" / "zh-CN" のような短い言語コードから Locale.Language を構築する。
+    // 単純な identifier 渡しだと script/region 解決の差異で対応判定が外れることがあるため、
+    // languageCode コンポーネント経由で構築する。
+    // Locale.Language 自体が iOS 16+ / macOS 13+ で導入された型のため availability ガード必須。
+    @available(iOS 16.0, macOS 13.0, *)
+    private func makeLanguage(from code: String) -> Locale.Language {
+        // ハイフンが含まれる場合（"zh-CN" 等）は identifier 渡しの方が region/script 推定が効く
+        if code.contains("-") || code.contains("_") {
+            return Locale.Language(identifier: code)
+        }
+        return Locale.Language(languageCode: Locale.LanguageCode(code))
     }
 
 }
