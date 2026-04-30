@@ -26,14 +26,55 @@ function hasLLMApiKey(data) {
   return !!(data.claudeApiKey || data.geminiApiKey);
 }
 
-// ─── DeepL選択時にAPIキーが設定されているか判定 ──────────────────────
+// ─── 翻訳エンジンが利用可能か判定 ──────────────────────────────────
+// DeepL: APIキーが必要 / Apple: Safari (Native Messaging が動く環境) のみ
 function isTranslateAvailable(data) {
-  return data.translateEngine !== 'deepl' || !!data.deeplApiKey;
+  if (data.translateEngine === 'deepl') return !!data.deeplApiKey;
+  if (data.translateEngine === 'apple') return !!data.appleAvailable;
+  return true; // google はキー不要・常に利用可能
 }
 
 // ─── 機能検出フラグ（iOS Safariはcontextual menu / commands非対応） ──
 const HAS_CONTEXT_MENUS = typeof chrome.contextMenus !== 'undefined';
 const HAS_COMMANDS = typeof chrome.commands !== 'undefined';
+// Native Messaging API の存在チェック。実際の Safari 判定は ping 応答で行う
+const HAS_NATIVE_MESSAGING = typeof chrome.runtime?.sendNativeMessage === 'function';
+
+// Native Messaging Host (Safari ネイティブハンドラ) の bundle ID
+const NATIVE_HOST_ID = 'jp.co.orangesoft.dualview-translator';
+
+// ─── Apple Translation 利用可否を検出（Safari かどうかの実体判定） ──
+// 拡張起動時に ping を1回投げて応答を見る。Safari なら ok:true が返り、
+// Chrome / Firefox では送信自体が失敗するか応答が来ない。
+// 結果は chrome.storage.local.appleAvailable にキャッシュして popup 等から参照する。
+async function detectAppleAvailability() {
+  if (!HAS_NATIVE_MESSAGING) {
+    await chrome.storage.local.set({ appleAvailable: false });
+    return false;
+  }
+  try {
+    // Promise.race でタイムアウト付き（Chrome では応答が来ずハングする）
+    const response = await Promise.race([
+      chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, { action: 'ping' }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 3000)),
+    ]);
+    // ping が ok:true でかつ Translation framework と LanguageAvailability API
+    // 両方が利用可能な OS でだけ apple を有効にする
+    const available = !!(response && response.ok &&
+      response.translationFrameworkAvailable &&
+      response.languageAvailabilityAPIAvailable);
+    await chrome.storage.local.set({ appleAvailable: available });
+    return available;
+  } catch (_err) {
+    // ping 失敗（Chrome / Firefox / 未対応 OS など）
+    await chrome.storage.local.set({ appleAvailable: false });
+    return false;
+  }
+}
+
+// 拡張起動時に1度だけ実行（installed / startup の両方をカバー）
+chrome.runtime.onInstalled.addListener(() => { detectAppleAvailability(); });
+chrome.runtime.onStartup?.addListener(() => { detectAppleAvailability(); });
 
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 if (HAS_CONTEXT_MENUS) {
@@ -187,10 +228,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // ─── エンジン設定をstorageから取得 ────────────────────────────────────
 function getEngineConfig() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['translateEngine', 'deeplApiKey'], (data) => {
+    chrome.storage.local.get(['translateEngine', 'deeplApiKey', 'appleAvailable'], (data) => {
       resolve({
         engine: data.translateEngine || 'google',
         deeplApiKey: data.deeplApiKey || '',
+        appleAvailable: !!data.appleAvailable,
       });
     });
   });
@@ -342,6 +384,9 @@ async function getCacheStats() {
 async function fetchTranslation(text, tl, sl, config) {
   if (!text || !text.trim()) return { text: '', detectedLang: null };
 
+  if (config.engine === 'apple' && config.appleAvailable) {
+    return fetchApple(text, tl, sl);
+  }
   if (config.engine === 'deepl' && config.deeplApiKey) {
     return fetchDeepL(text, tl, sl, config.deeplApiKey);
   }
@@ -378,6 +423,43 @@ async function fetchGoogle(text, tl, sl) {
   }
 
   return { text: results.join(' '), detectedLang };
+}
+
+// ─── Apple Translation（Safari ネイティブ呼び出し） ───────────────────
+// PR #149 で実装した SafariWebExtensionHandler の translate アクションを呼ぶ。
+// ネットワーク不要・オンデバイスで動作するが Safari でしか利用できない。
+//
+// sendNativeMessage は Safari MV3 では Promise を返す（Chrome でも MV3 は Promise 対応）。
+// callback シグネチャだと Safari で undefined response になるケースがあるため Promise 形式で呼ぶ。
+async function fetchAppleChunk(chunk, sl, tl) {
+  const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, {
+    action: 'translate',
+    source: sl === 'auto' ? 'en' : sl, // Apple Translation は auto 検出未対応のため暫定で en に
+    target: tl,
+    text: chunk,
+  });
+  if (!response || !response.ok) {
+    throw new Error(response?.error || 'Apple translation failed');
+  }
+  return { translated: response.translated, detectedLang: null };
+}
+
+async function fetchApple(text, tl, sl) {
+  const chunks = splitIntoChunks(text, 4000);
+  const results = [];
+
+  for (const chunk of chunks) {
+    const cacheKey = await buildCacheKey('apple', sl, tl, chunk);
+    let entry = await getCached(cacheKey);
+    if (!entry) {
+      const fetched = await fetchAppleChunk(chunk, sl, tl);
+      entry = { translated: fetched.translated, detectedLang: fetched.detectedLang };
+      await setCached(cacheKey, entry);
+    }
+    results.push(entry.translated);
+  }
+
+  return { text: results.join(' '), detectedLang: null };
 }
 
 // ─── DeepL API ───────────────────────────────────────────────────────

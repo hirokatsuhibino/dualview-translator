@@ -49,9 +49,21 @@ DVT_I18N.loadLang((lang) => {
 });
 
 // ── Load saved settings ──────────────────────────────────────────────
-chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey', 'llmEngine', 'claudeApiKey', 'geminiApiKey'], (data) => {
+chrome.storage.local.get(['targetLang', 'translateEngine', 'deeplApiKey', 'llmEngine', 'claudeApiKey', 'geminiApiKey', 'appleAvailable'], (data) => {
   if (data.targetLang) targetLangSel.value = data.targetLang;
-  if (data.translateEngine) engineSel.value = data.translateEngine;
+  // Apple Translation は Safari でのみ利用可能。background.js の起動時 ping で判定済みの
+  // appleAvailable フラグが true のときだけ <option value="apple"> を表示する
+  const appleOption = document.getElementById('engineAppleOption');
+  if (appleOption) {
+    appleOption.style.display = data.appleAvailable ? '' : 'none';
+  }
+  // 保存されたエンジンが apple だが現環境で利用不可な場合は google にフォールバック
+  if (data.translateEngine === 'apple' && !data.appleAvailable) {
+    engineSel.value = 'google';
+    chrome.storage.local.set({ translateEngine: 'google' });
+  } else if (data.translateEngine) {
+    engineSel.value = data.translateEngine;
+  }
   if (data.deeplApiKey) deeplApiKeyInput.value = data.deeplApiKey;
   if (data.llmEngine) llmSel.value = data.llmEngine;
   if (data.claudeApiKey) claudeApiKeyInput.value = data.claudeApiKey;

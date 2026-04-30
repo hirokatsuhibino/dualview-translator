@@ -177,6 +177,18 @@ describe('isTranslateAvailable()', () => {
   it('DeepL選択＋APIキーundefinedはfalse', () => {
     expect(isTranslateAvailable({ translateEngine: 'deepl' })).toBe(false);
   });
+
+  it('Apple選択＋appleAvailable=trueはtrue（Safari環境）', () => {
+    expect(isTranslateAvailable({ translateEngine: 'apple', appleAvailable: true })).toBe(true);
+  });
+
+  it('Apple選択＋appleAvailable=falseはfalse（Chrome / Firefox）', () => {
+    expect(isTranslateAvailable({ translateEngine: 'apple', appleAvailable: false })).toBe(false);
+  });
+
+  it('Apple選択＋appleAvailable未定義はfalse（未検出）', () => {
+    expect(isTranslateAvailable({ translateEngine: 'apple' })).toBe(false);
+  });
 });
 
 describe('testApiKey()', () => {
