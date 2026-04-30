@@ -329,29 +329,28 @@ btnUndo.addEventListener('click', async () => {
 });
 
 // ── Region mode ────────────────────────────────────────────────────────
-btnRegion.addEventListener('click', async () => {
+// macOS Safari では await を挟んだ後の window.close() が user gesture context を失い
+// 無視されるため、メッセージ送信は fire-and-forget にして click ハンドラ末尾で同期的に
+// window.close() する。content script 側は popup が閉じても messaging を受信して動作する。
+btnRegion.addEventListener('click', () => {
   setStatus('translating', t('statusSelectRegion'));
-  const res = await sendToContent({
+  sendToContent({
     action: 'enterRegionMode',
     lang: targetLangSel.value,
     mode: 'translate'
   });
-  if (res?.ok) {
-    window.close();
-  }
+  window.close();
 });
 
 // ── Region mode & summarize ───────────────────────────────────────────
-btnRegionSummary.addEventListener('click', async () => {
+btnRegionSummary.addEventListener('click', () => {
   setStatus('translating', t('statusSelectRegion'));
-  const res = await sendToContent({
+  sendToContent({
     action: 'enterRegionMode',
     lang: targetLangSel.value,
     mode: 'summarize'
   });
-  if (res?.ok) {
-    window.close();
-  }
+  window.close();
 });
 
 // ── Check current state on popup open ─────────────────────────────────
@@ -587,15 +586,14 @@ document.getElementById('btnCancelRuleEdit').addEventListener('click', () => {
 loadAutoRules();
 
 // ── 要素ピッカーボタン ─────────────────────────────────────────────
-document.getElementById('btnPickSelector').addEventListener('click', async () => {
+document.getElementById('btnPickSelector').addEventListener('click', () => {
+  // macOS Safari の user gesture 制約に合わせて、await を挟まず同期的に window.close() する。
   const urlPattern = document.getElementById('ruleUrlPattern').value.trim();
-  const res = await sendToContent({
+  sendToContent({
     action: 'enterSelectorPickMode',
     urlPattern,
   });
-  if (res?.ok) {
-    window.close();
-  }
+  window.close();
 });
 
 // ── 起動時の初期化: URL自動補完 + ピッカー結果の復元 ───────────────────
