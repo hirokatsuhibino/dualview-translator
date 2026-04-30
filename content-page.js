@@ -46,6 +46,23 @@ var DVT_PAGE = (function () {
     return el;
   }
 
+  // ─── 元の DOM 構造への復元ヘルパー ─────────────────────────────────
+  // wrapper span (.dvt-orig + .dvt-trans を含む) を解体して原文ノードを el 直下に戻す。
+  // applyTranslation の同一翻訳パス・undo ボタンクリック・undoPageTranslate の 3 箇所で使う。
+  // - keepDvtId: true → data-dvt-id を残す（再翻訳防止用、applyTranslation の早期 return 時）
+  //              false → data-dvt-id も削除する（手動 undo / 全体リセット時）
+  function restoreOriginalContent(el, options = {}) {
+    const { keepDvtId = false } = options;
+    const origEl = el.querySelector('.dvt-orig');
+    if (origEl) {
+      el.textContent = '';
+      while (origEl.firstChild) el.appendChild(origEl.firstChild);
+    }
+    if (!keepDvtId) {
+      delete el.dataset.dvtId;
+    }
+  }
+
   // ─── 翻訳結果の反映（共通処理） ────────────────────────────────────
   function applyTranslation(el, result, detectedLang, tl) {
     const transEl = el.querySelector('.dvt-trans');
@@ -61,7 +78,14 @@ var DVT_PAGE = (function () {
     const isUnchanged = originalText.length > 0 && translatedText === originalText;
 
     if (isSameLanguage || isUnchanged) {
-      if (transEl) transEl.remove();
+      // wrapper 全体を解体して元の DOM 構造に戻す
+      // （.dvt-trans を remove するだけでは block 化された .dvt-orig が残り空行が出る）
+      // data-dvt-id は残して再翻訳ループを防止する
+      if (origEl) {
+        restoreOriginalContent(el, { keepDvtId: true });
+      } else if (transEl) {
+        transEl.remove();
+      }
       return;
     }
 
@@ -81,13 +105,8 @@ var DVT_PAGE = (function () {
       undoBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
-        // 元のHTMLを復元してdata-dvt-idを削除
-        if (origEl) {
-          // 元のノードを復元
-          el.textContent = '';
-          while (origEl.firstChild) el.appendChild(origEl.firstChild);
-          delete el.dataset.dvtId;
-        }
+        // 元の DOM 構造に戻して data-dvt-id を削除（手動 undo は再翻訳を許容する）
+        restoreOriginalContent(el);
       });
       transEl.appendChild(undoBtn);
     }
@@ -237,20 +256,9 @@ var DVT_PAGE = (function () {
     // 領域選択翻訳・右クリック翻訳由来の .dvt-summary もまとめて撤去する）。
     // ホストページが偶然 .dvt-summary を使っていても消さないよう [data-dvt="true"] でスコープ
     document.querySelectorAll('[data-dvt="true"].dvt-summary').forEach(el => el.remove());
+    // 翻訳済み要素は原文を復元、dvt-pending だけの要素もマークだけ削除（restoreOriginalContent が両方扱う）
     document.querySelectorAll('[data-dvt-id]').forEach(el => {
-      const origEl = el.querySelector('.dvt-orig');
-      if (origEl) {
-        // 翻訳済み要素: 原文ノードを復元してIDを削除
-        el.textContent = '';
-        while (origEl.firstChild) el.appendChild(origEl.firstChild);
-        delete el.dataset.dvtId;
-      }
-      // dvt-pending状態（処理中）の要素は .dvt-orig が存在しないためスキップ。
-      // 次のループで dvt-id のみ削除する。
-    });
-    document.querySelectorAll('[data-dvt-id]').forEach(el => {
-      // dvt-pending 等の残存マークを削除
-      delete el.dataset.dvtId;
+      restoreOriginalContent(el);
     });
     DVT.showToast(t('toastReset'), false, TOAST_SHORT_DURATION_MS);
   }
