@@ -288,18 +288,4 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
     }
 
-    // ─── Locale.Language ヘルパー ─────────────────────────────────
-    // "en" / "ja" / "zh-CN" のような短い言語コードから Locale.Language を構築する。
-    // 単純な identifier 渡しだと script/region 解決の差異で対応判定が外れることがあるため、
-    // languageCode コンポーネント経由で構築する。
-    // Locale.Language 自体が iOS 16+ / macOS 13+ で導入された型のため availability ガード必須。
-    @available(iOS 16.0, macOS 13.0, *)
-    private func makeLanguage(from code: String) -> Locale.Language {
-        // ハイフンが含まれる場合（"zh-CN" 等）は identifier 渡しの方が region/script 推定が効く
-        if code.contains("-") || code.contains("_") {
-            return Locale.Language(identifier: code)
-        }
-        return Locale.Language(languageCode: Locale.LanguageCode(code))
-    }
-
 }
