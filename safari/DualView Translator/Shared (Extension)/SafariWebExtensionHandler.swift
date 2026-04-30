@@ -146,11 +146,14 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         if #available(iOS 18.0, macOS 15.0, *) {
             #if canImport(Translation)
             let availability = LanguageAvailability()
-            // Locale.Language(identifier:) は BCP-47 文字列をパースするが、"en" / "ja" のような
-            // 言語コードのみだと script / region が解決されず、フレームワークの対応リストとマッチせず
-            // unsupported になる場合がある。languageCode: で構築する方が堅牢。
-            let sourceLang = makeLanguage(from: source)
-            let targetLang = makeLanguage(from: target)
+            let supported = await availability.supportedLanguages
+
+            // 自前で Locale.Language を組み立てると script/region が nil のままになり、
+            // フレームワーク内部の components 照合で対応リストとマッチせず unsupported になる。
+            // 対応リストから該当言語コードを持つ Language を直接ピックして渡す。
+            // ハイフン入りコード（"zh-CN" 等）は region で絞り込み、それ以外は languageCode のみで一致を探す。
+            let sourceLang = resolveLanguage(code: source, from: supported)
+            let targetLang = resolveLanguage(code: target, from: supported)
             let status = await availability.status(from: sourceLang, to: targetLang)
 
             let statusString: String
@@ -165,9 +168,10 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 "status": statusString,
                 "source": source,
                 "target": target,
-                // 構築した Language の最大識別子もデバッグ用に返す（実際にどう解決されたかが分かる）
                 "sourceMaximalIdentifier": sourceLang.maximalIdentifier,
                 "targetMaximalIdentifier": targetLang.maximalIdentifier,
+                "sourceMatchedFromSupported": isInSupported(sourceLang, supported: supported),
+                "targetMatchedFromSupported": isInSupported(targetLang, supported: supported),
             ]
             #else
             return ["ok": false, "error": "Translation framework not importable"]
@@ -175,6 +179,36 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         } else {
             return ["ok": false, "error": "Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability"]
         }
+    }
+
+    // 対応リストから入力コードに合う Locale.Language を選ぶ。
+    // 完全一致が無ければ、新規構築した Language をフォールバックとして返す。
+    @available(iOS 16.0, macOS 13.0, *)
+    private func resolveLanguage(code: String, from supported: [Locale.Language]) -> Locale.Language {
+        // "zh-CN" 形式: region を比較
+        if code.contains("-") || code.contains("_") {
+            let parts = code.replacingOccurrences(of: "_", with: "-").split(separator: "-")
+            if parts.count >= 2 {
+                let langPart = String(parts[0])
+                let regionPart = String(parts[1]).uppercased()
+                if let match = supported.first(where: {
+                    $0.languageCode?.identifier == langPart && $0.region?.identifier == regionPart
+                }) {
+                    return match
+                }
+            }
+            return Locale.Language(identifier: code)
+        }
+        // 言語コードのみ（"en" / "ja"）: languageCode 一致の最初のエントリを採用
+        if let match = supported.first(where: { $0.languageCode?.identifier == code }) {
+            return match
+        }
+        return Locale.Language(languageCode: Locale.LanguageCode(code))
+    }
+
+    @available(iOS 16.0, macOS 13.0, *)
+    private func isInSupported(_ lang: Locale.Language, supported: [Locale.Language]) -> Bool {
+        return supported.contains(where: { $0.maximalIdentifier == lang.maximalIdentifier })
     }
 
     // ─── listSupportedLanguages: 対応言語リストを返す ────────────────
