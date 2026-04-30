@@ -203,7 +203,10 @@ var DVT = (function () {
       const hasTranslations = document.querySelectorAll('[data-dvt-id]').length > 0;
       sendResponse({ pageTranslateActive: state.pageTranslateActive, targetLang: state.targetLang, hasTranslations });
     }
-    return true;
+    // 全アクションで sendResponse を同期呼び出ししているため return true は不要。
+    // 不用意に true を返すと macOS Safari ではメッセージチャンネルが非同期応答待ちのまま
+    // ハングし、popup 側の await が undefined を受け取って window.close() が動かない等の
+    // 不具合になる（iOS Safari / Chrome / Firefox では症状が出ない）。
   });
 
   // ─── 公開API ───────────────────────────────────────────────────────
