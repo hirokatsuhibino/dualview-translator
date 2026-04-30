@@ -1,5 +1,5 @@
 // content-core.js のユニットテスト（純粋関数 + DOMロジック）
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { loadScript } from './helpers.js';
 
 describe('DVT (content-core)', () => {
@@ -93,6 +93,53 @@ describe('DVT (content-core)', () => {
 
     it('null は Unknown を返す', () => {
       expect(DVT.getLangDisplayName(null)).toBe('Unknown');
+    });
+  });
+
+  describe('translate() — オフラインフォールバック通知', () => {
+    let originalSendMessage;
+    beforeEach(() => {
+      originalSendMessage = chrome.runtime.sendMessage;
+      // ページ life cycle 内 1 度だけ表示するフラグをリセット
+      DVT.state.fallbackToastShown = false;
+      // 既存のトースト要素をクリア
+      document.querySelectorAll('.dvt-toast').forEach(el => el.remove());
+      // showToast 内の setTimeout(5000) が他テストに残らないよう fake timers を使う
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      chrome.runtime.sendMessage = originalSendMessage;
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    });
+
+    it('result.fallback が true のとき .dvt-toast が DOM に追加される', async () => {
+      chrome.runtime.sendMessage = (_msg, cb) => {
+        cb({ ok: true, result: { text: 'こんにちは', detectedLang: 'en', engineUsed: 'apple', fallback: true, fallbackReason: 'network-error' } });
+      };
+      await DVT.translate('Hello', 'ja', 'en');
+      expect(document.querySelectorAll('.dvt-toast').length).toBe(1);
+      expect(DVT.state.fallbackToastShown).toBe(true);
+    });
+
+    it('result.fallback が無いときはトースト表示されない', async () => {
+      chrome.runtime.sendMessage = (_msg, cb) => {
+        cb({ ok: true, result: { text: 'こんにちは', detectedLang: 'en', engineUsed: 'google' } });
+      };
+      await DVT.translate('Hello', 'ja', 'en');
+      expect(document.querySelectorAll('.dvt-toast').length).toBe(0);
+      expect(DVT.state.fallbackToastShown).toBe(false);
+    });
+
+    it('連続で fallback が起きてもトーストは 1 回のみ', async () => {
+      chrome.runtime.sendMessage = (_msg, cb) => {
+        cb({ ok: true, result: { text: 'こんにちは', detectedLang: 'en', engineUsed: 'apple', fallback: true } });
+      };
+      await DVT.translate('Hello 1', 'ja', 'en');
+      await DVT.translate('Hello 2', 'ja', 'en');
+      await DVT.translate('Hello 3', 'ja', 'en');
+      expect(document.querySelectorAll('.dvt-toast').length).toBe(1);
     });
   });
 });

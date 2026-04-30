@@ -14,6 +14,10 @@ var DVT = (function () {
     translateBar: null,
     lastContextMenuTarget: null,
     regionMode: false,
+    // ページの life cycle 内で 1 度だけフォールバック通知トーストを表示するフラグ。
+    // 連続翻訳でトーストが大量に出ないよう、最初の 1 回だけ表示する。
+    // ページ遷移で content script が再読み込みされるとリセットされる。
+    fallbackToastShown: false,
   };
 
   // ─── 言語コード→表示名マップ ───────────────────────────────────────
@@ -36,6 +40,12 @@ var DVT = (function () {
       chrome.runtime.sendMessage({ action: 'translate', text, tl, sl }, (res) => {
         if (chrome.runtime.lastError) { resolve({ text: t('error'), detectedLang: null }); return; }
         if (res?.ok) {
+          // Apple Translation へのオフラインフォールバックが発生したらトーストで通知。
+          // ページ life cycle 内で 1 度だけ表示し、連続翻訳での通知スパムを避ける。
+          if (res.result?.fallback && !state.fallbackToastShown) {
+            state.fallbackToastShown = true;
+            showToast(t('fallbackToApple'), false, 5000);
+          }
           resolve(res.result);
         } else {
           resolve({ text: t('translateFailed'), detectedLang: null });
