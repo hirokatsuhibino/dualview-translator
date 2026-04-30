@@ -442,8 +442,11 @@ async function ensureExplicitSourceLang(sl, text) {
 // ─── 翻訳ディスパッチャー ────────────────────────────────────────────
 // オフラインフォールバック動作:
 // - apple が明示選択されていればそのまま fetchApple（sl が auto なら native 検出で解決）
-// - 起動時に navigator.onLine === false を検出していれば、apple 利用可能なら apple にフォールバック
-// - 主エンジン実行中に network error が発生した場合も apple にフォールバック
+// - 主エンジン (Google/DeepL) はチャンク単位に内部キャッシュを参照するため、
+//   フル cache hit ならネットワーク要求を発行せずオフラインでも成功する。
+//   キャッシュを優先するため `navigator.onLine` 早期バイパスは行わない
+//   （cache を無視して無駄に Apple ネイティブ呼び出しになることを防ぐ）。
+// - 主エンジン実行中に network error が発生した場合に apple にフォールバック
 // - sl が auto/未指定でも NLLanguageRecognizer でオフライン検出するため、フォールバックは
 //   主要言語に対しては問題なく動作する（ただし検出失敗時はエラー）
 async function fetchTranslation(text, tl, sl, config) {
@@ -454,18 +457,6 @@ async function fetchTranslation(text, tl, sl, config) {
     const finalSl = await ensureExplicitSourceLang(sl, text);
     const result = await fetchApple(text, tl, finalSl);
     return { ...result, engineUsed: 'apple' };
-  }
-
-  // 起動時オフライン: 主エンジンが必ず失敗するので最初から apple を試す
-  if (typeof navigator !== 'undefined' && navigator.onLine === false && config.appleAvailable) {
-    try {
-      const finalSl = await ensureExplicitSourceLang(sl, text);
-      const result = await fetchApple(text, tl, finalSl);
-      return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'offline' };
-    } catch (e) {
-      // apple も失敗したら主エンジンを試す（一応）。ここで投げ直さず継続
-      console.warn('[DVT] offline → apple fallback failed, trying primary engine:', e.message);
-    }
   }
 
   // 主エンジン実行（network error は apple フォールバック対象）。
