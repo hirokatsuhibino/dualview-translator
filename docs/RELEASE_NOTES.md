@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### マイルストーン
+
+- **Chrome Web Store で配信開始**（#142）
+  - 公開 URL: https://chromewebstore.google.com/detail/dualview-translator/hmnlfemcpbkcfppjnghiofddiiclkbmg
+  - これで Chrome / Firefox / iOS Safari の3チャネルが正規ストアから配信される状態に（macOS Safari は引き続き Mac App Store 審査中）
+
 ### 改善
 
 - **翻訳結果が原文と完全一致する場合は翻訳ブロックを表示しない**（#138, #140）

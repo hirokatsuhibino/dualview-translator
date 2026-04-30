@@ -24,7 +24,7 @@ Copyright (c) Orangesoft Inc.
 
 ## 配布
 
-- Chrome: Chrome Web Store（準備中）
+- Chrome: [Chrome Web Store](https://chromewebstore.google.com/detail/dualview-translator/hmnlfemcpbkcfppjnghiofddiiclkbmg)
 - Firefox: [Firefox Add-ons](https://addons.mozilla.org/ja/firefox/addon/dualview-translator/)
 - iOS Safari: [App Store](https://apps.apple.com/jp/app/dualview-translator/id6763488360)
 - macOS Safari: Mac App Store（審査中）
