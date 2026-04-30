@@ -10,6 +10,24 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+---
+
+## v1.5.0（2026-04-30）
+
+### 新機能
+
+- **Apple Translation 連携（macOS Safari 限定）**（#144, #146, #148, #151）
+  - 翻訳エンジンに **Apple 翻訳** を追加。On-Device の `Translation.framework` を使用し、APIキー不要・ネットワーク不要で動作する
+  - 設定タブの翻訳エンジン選択肢に追加（Safari 環境のみ表示。Chrome / Firefox では選択肢自体が出ない）
+  - 起動時の `ping` 応答で Safari かどうかを自動検出
+  - `chrome.runtime.sendNativeMessage` 経由で `SafariWebExtensionHandler` を呼び出す。SwiftUI の `.translationTask` modifier を画面外の `NSHostingController` でホストする方式で、拡張プロセスから programmatic に翻訳を実行
+- **オフライン自動フォールバック**（#150, #155）
+  - Google / DeepL を選択中でもネットワーク不通時に Apple 翻訳に自動切替（macOS Safari 限定）
+  - キャッシュ優先：Google / DeepL のチャンク単位キャッシュが hit する場合はそのまま返却し、不必要なフォールバックを避ける
+  - `NLLanguageRecognizer`（Apple `NaturalLanguage` framework）でオフライン言語検出。`sl='auto'` でも問題なく動作
+  - フォールバック発生時に画面右下にトースト通知（ページ life cycle 内 1 回のみ表示）
+  - i18n キー `engineApple` / `fallbackToApple` を全 11 言語に追加
+
 ### マイルストーン
 
 - **Chrome Web Store で配信開始**（#142）
@@ -26,6 +44,14 @@ permalink: /RELEASE_NOTES.html
   - 要約ブロック右上に × ボタンを追加（要約だけを撤去可能）
   - ポップアップの「翻訳をリセット」が `.dvt-summary` クラス全体を撤去するようになり、領域選択時の要約も消える
   - aria-label / title 用に i18n キー `undoSummary` を全 11 言語に追加
+
+### バグ修正
+
+- **macOS Safari で「領域を選択して翻訳」ボタン押下時に popup が閉じず領域選択も動作しない問題を修正**（#157）
+  - 原因 1: `chrome.runtime.onMessage.addListener` 末尾の不要な `return true` で macOS Safari がメッセージチャンネルを async 待ちのまま保持し、popup の `await sendToContent` が undefined を受け取っていた
+  - 原因 2: `await sendToContent` 後の `window.close()` が macOS Safari で user gesture context を失って無視されていた
+  - 修正: listener 末尾の `return true` を削除 + popup 起動時に tabId をキャッシュし、region 系ボタンで同期的に `sendMessage` を発射してから `window.close()` を呼ぶ
+  - iOS Safari / Chrome / Firefox は影響なし
 
 ---
 
