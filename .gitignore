@@ -20,4 +20,4 @@ package-lock.json
 # Xcode (Safari Web Extension project)
 safari/**/xcuserdata/
 safari/**/*.xcuserstate
-safari/build/
+safari/**/build/
