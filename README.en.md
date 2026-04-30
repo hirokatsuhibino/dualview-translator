@@ -105,11 +105,11 @@ Japanese, English, Chinese (Simplified/Traditional), Korean, French, German, Spa
 
 ### Chrome / Edge
 
-1. Download the latest ZIP from [Releases](../../releases)
-2. Open `chrome://extensions/`
-3. Toggle on "Developer mode" in the top right
-4. Click "Load unpacked"
-5. Select the unpacked `dualview-translator` folder
+Live on the Chrome Web Store:
+
+https://chromewebstore.google.com/detail/dualview-translator/hmnlfemcpbkcfppjnghiofddiiclkbmg
+
+Want to try a dev build? Grab the latest ZIP from [Releases](../../releases) and load it in `chrome://extensions/` via "Load unpacked".
 
 ### Firefox
 

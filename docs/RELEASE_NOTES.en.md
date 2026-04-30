@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Milestones
+
+- **Now live on the Chrome Web Store** (#142)
+  - Public URL: https://chromewebstore.google.com/detail/dualview-translator/hmnlfemcpbkcfppjnghiofddiiclkbmg
+  - All three of Chrome / Firefox / iOS Safari are now served from official stores (macOS Safari is still in Mac App Store review)
+
 ### Improvements
 
 - **Skip the translation block when the result is identical to the original** (#138, #140)
