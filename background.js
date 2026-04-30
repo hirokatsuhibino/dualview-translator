@@ -388,10 +388,13 @@ async function getCacheStats() {
 // fetch がネットワーク不通で失敗した場合は TypeError("Failed to fetch") 等を throw する。
 // HTTP エラー (4xx/5xx) は別 throw で識別可能なので除外。
 // このヘルパーで「オフラインフォールバックが妥当か」を判定する。
+//
+// TypeError 単独だと fetch 以外のコードバグ（プロパティ参照ミス等）も誤検知して
+// バグを apple フォールバックで隠蔽してしまうため、TypeError + ネットワーク系
+// メッセージの両方を要求する。
 function isNetworkError(err) {
   if (!err) return false;
-  // fetch の TypeError は環境によりメッセージが異なる: "Failed to fetch" / "Network request failed" / "Load failed" 等
-  if (err.name === 'TypeError') return true;
+  if (!(err instanceof TypeError) && err.name !== 'TypeError') return false;
   const msg = (err.message || '').toLowerCase();
   return msg.includes('failed to fetch') ||
     msg.includes('network') ||
@@ -465,9 +468,12 @@ async function fetchTranslation(text, tl, sl, config) {
     }
   }
 
-  // 主エンジン実行（network error は apple フォールバック対象）
+  // 主エンジン実行（network error は apple フォールバック対象）。
+  // config.engine='deepl' でも APIキー未設定なら Google にフォールスルーするため、
+  // 実際に呼ばれたエンジンを primaryEngine として保持し、ログ・engineUsed の出力を一致させる。
+  const primaryEngine = (config.engine === 'deepl' && config.deeplApiKey) ? 'deepl' : 'google';
   try {
-    if (config.engine === 'deepl' && config.deeplApiKey) {
+    if (primaryEngine === 'deepl') {
       const result = await fetchDeepL(text, tl, sl, config.deeplApiKey);
       return { ...result, engineUsed: 'deepl' };
     }
@@ -475,7 +481,7 @@ async function fetchTranslation(text, tl, sl, config) {
     return { ...result, engineUsed: 'google' };
   } catch (err) {
     if (config.appleAvailable && isNetworkError(err)) {
-      console.warn(`[DVT] ${config.engine} network error → apple fallback:`, err.message);
+      console.warn(`[DVT] ${primaryEngine} network error → apple fallback:`, err.message);
       const finalSl = await ensureExplicitSourceLang(sl, text);
       const result = await fetchApple(text, tl, finalSl);
       return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'network-error' };

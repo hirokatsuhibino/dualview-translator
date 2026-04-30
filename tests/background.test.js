@@ -204,20 +204,28 @@ describe('isTranslateAvailable()', () => {
 });
 
 describe('isNetworkError()', () => {
-  it('TypeError は network error 扱い（fetch ネットワーク不通の典型）', () => {
+  it('TypeError + "Failed to fetch" は network error 扱い（fetch ネットワーク不通の典型）', () => {
     expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true);
   });
 
-  it('"Failed to fetch" メッセージは network error', () => {
-    expect(isNetworkError(new Error('Failed to fetch'))).toBe(true);
+  it('TypeError + "Network request failed" は network error', () => {
+    expect(isNetworkError(new TypeError('Network request failed'))).toBe(true);
   });
 
-  it('"Network request failed" は network error', () => {
-    expect(isNetworkError(new Error('Network request failed'))).toBe(true);
+  it('TypeError + "Load failed" (Safari) は network error', () => {
+    expect(isNetworkError(new TypeError('Load failed'))).toBe(true);
   });
 
-  it('"Load failed" (Safari) は network error', () => {
-    expect(isNetworkError(new Error('Load failed'))).toBe(true);
+  it('Error（非TypeError）は network error ではない（コードバグ隠蔽防止）', () => {
+    // PR #153 レビュー指摘 #1 — fetch 以外のエラーまで apple フォールバックで
+    // 隠蔽してしまう問題への対処。TypeError 以外は明示的に false にする。
+    expect(isNetworkError(new Error('Failed to fetch'))).toBe(false);
+    expect(isNetworkError(new Error('Network request failed'))).toBe(false);
+    expect(isNetworkError(new Error('Load failed'))).toBe(false);
+  });
+
+  it('TypeError でもネットワーク系メッセージでなければ false（実装バグの隠蔽防止）', () => {
+    expect(isNetworkError(new TypeError("Cannot read property 'x' of undefined"))).toBe(false);
   });
 
   it('HTTP 4xx/5xx 系のメッセージは network error ではない', () => {
@@ -230,8 +238,8 @@ describe('isNetworkError()', () => {
     expect(isNetworkError(undefined)).toBe(false);
   });
 
-  it('メッセージなしの Error は false', () => {
-    expect(isNetworkError(new Error())).toBe(false);
+  it('メッセージなしの TypeError は false', () => {
+    expect(isNetworkError(new TypeError())).toBe(false);
   });
 });
 
