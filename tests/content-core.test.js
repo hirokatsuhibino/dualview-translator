@@ -1,5 +1,5 @@
 // content-core.js のユニットテスト（純粋関数 + DOMロジック）
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { loadScript } from './helpers.js';
 
 describe('DVT (content-core)', () => {
@@ -104,10 +104,14 @@ describe('DVT (content-core)', () => {
       DVT.state.fallbackToastShown = false;
       // 既存のトースト要素をクリア
       document.querySelectorAll('.dvt-toast').forEach(el => el.remove());
+      // showToast 内の setTimeout(5000) が他テストに残らないよう fake timers を使う
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
       chrome.runtime.sendMessage = originalSendMessage;
+      vi.clearAllTimers();
+      vi.useRealTimers();
     });
 
     it('result.fallback が true のとき .dvt-toast が DOM に追加される', async () => {
