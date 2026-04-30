@@ -17,6 +17,9 @@ import os.log
 #if os(macOS)
 import AppKit
 #endif
+// NaturalLanguage は iOS 12+ / macOS 10.14+ で標準提供。
+// オフラインで言語検出可能な NLLanguageRecognizer をオフラインフォールバック時に利用する。
+import NaturalLanguage
 
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
@@ -99,6 +102,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                         "error": "Requires iOS 18+ / macOS 15+"
                     ])
                 }
+                return
+            case "detectLanguage":
+                // NLLanguageRecognizer によるオフライン言語検出。
+                // iOS 12+ / macOS 10.14+ で同期 API なので Task 不要・即応答。
+                respond(context: context, body: handleDetectLanguage(payload: payload ?? [:]))
                 return
             default:
                 // 未知の action は明示的にエラーを返す（黙って echo にフォールバックすると
@@ -306,6 +314,29 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         } else {
             return ["ok": false, "error": "Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability"]
         }
+    }
+
+    // ─── detectLanguage: オフライン言語検出 ─────────────────────────
+    // NLLanguageRecognizer はオンデバイスで動作するため、ネットワーク不通時も呼び出し可能。
+    // 主に Apple Translation フォールバック時に sl="auto" を解決するために使う。
+    // 戻り値: { ok: true, detectedLang: "en" / "ja" / "zh-Hans" 等, confidence: 0..1 }
+    //   or  { ok: false, error: "..." }
+    private func handleDetectLanguage(payload: [String: Any]) -> [String: Any] {
+        guard let text = payload["text"] as? String, !text.isEmpty else {
+            return ["ok": false, "error": "missing or empty text"]
+        }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let dominant = recognizer.dominantLanguage else {
+            return ["ok": true, "detectedLang": NSNull(), "confidence": 0.0]
+        }
+        let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
+        let confidence = hypotheses[dominant] ?? 0.0
+        return [
+            "ok": true,
+            "detectedLang": dominant.rawValue,
+            "confidence": confidence,
+        ]
     }
 
     // ─── translate: 実テキスト翻訳 ────────────────────────────────

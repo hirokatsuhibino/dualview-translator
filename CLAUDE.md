@@ -80,6 +80,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - **Apple Translation**（Safari 限定・macOS）: `chrome.runtime.sendNativeMessage` で `SafariWebExtensionHandler` の `translate` アクションを呼び、On-Device の `Translation.framework` で翻訳。ネットワーク・APIキー不要
 - 切り替え: `chrome.storage.local` の `translateEngine` / `deeplApiKey` で管理
 - Safari 検出: 拡張起動時に `ping` を投げて応答有無で判定し、`chrome.storage.local.appleAvailable` にキャッシュ。popup の `<option value="apple">` は `appleAvailable: true` のときだけ表示される
+- **オフラインフォールバック**: `fetchTranslation` ディスパッチャは Google / DeepL 選択時でも、`navigator.onLine === false` または fetch の network error 発生時に Apple Translation へ自動フォールバックする（`appleAvailable` && `sl !== 'auto'` のみ）。`fetchTranslation` の戻り値に `engineUsed` / `fallback` / `fallbackReason` を含めて UI 側で識別可能にしている
 
 ### 翻訳・要約キャッシュ
 
