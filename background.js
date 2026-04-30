@@ -53,9 +53,13 @@ async function detectAppleAvailability() {
     return false;
   }
   try {
-    // Promise.race でタイムアウト付き（Chrome では応答が来ずハングする）
+    // Promise.race でタイムアウト付き（Chrome では応答が来ずハングする）。
+    // タイムアウトが先に勝った場合、native 側の Promise が後から reject すると
+    // unhandled rejection になるため、先に空の catch を付けて握りつぶす。
+    const nativePromise = chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, { action: 'ping' });
+    nativePromise.catch(() => {});
     const response = await Promise.race([
-      chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, { action: 'ping' }),
+      nativePromise,
       new Promise((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 3000)),
     ]);
     // ping が ok:true でかつ Translation framework と LanguageAvailability API
@@ -79,7 +83,7 @@ chrome.runtime.onStartup?.addListener(() => { detectAppleAvailability(); });
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 if (HAS_CONTEXT_MENUS) {
   chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
+    chrome.storage.local.get(['uiLang', 'claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey', 'appleAvailable'], (data) => {
       const titles = getMenuTitles(data.uiLang || 'ja');
       const llmEnabled = hasLLMApiKey(data);
       const translateEnabled = isTranslateAvailable(data);
@@ -114,9 +118,9 @@ chrome.storage.onChanged.addListener((changes) => {
     chrome.contextMenus.update('dvt-translate-element', { title: titles.element });
     chrome.contextMenus.update('dvt-translate-summarize-element', { title: titles.elementSummary });
   }
-  // 翻訳エンジン・DeepL APIキーの変更時に翻訳メニュー項目の有効/無効を切り替え
-  if (changes.translateEngine || changes.deeplApiKey) {
-    chrome.storage.local.get(['translateEngine', 'deeplApiKey', 'claudeApiKey', 'geminiApiKey'], (data) => {
+  // 翻訳エンジン・DeepL APIキー・Safari 検出結果の変更時に翻訳メニュー項目の有効/無効を切り替え
+  if (changes.translateEngine || changes.deeplApiKey || changes.appleAvailable) {
+    chrome.storage.local.get(['translateEngine', 'deeplApiKey', 'claudeApiKey', 'geminiApiKey', 'appleAvailable'], (data) => {
       const translateEnabled = isTranslateAvailable(data);
       chrome.contextMenus.update('dvt-translate-selection', { enabled: translateEnabled });
       chrome.contextMenus.update('dvt-translate-element', { enabled: translateEnabled });
@@ -127,7 +131,7 @@ chrome.storage.onChanged.addListener((changes) => {
   }
   // LLM APIキーの変更時に要約メニュー項目の有効/無効を切り替え
   if (changes.claudeApiKey || changes.geminiApiKey) {
-    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey'], (data) => {
+    chrome.storage.local.get(['claudeApiKey', 'geminiApiKey', 'translateEngine', 'deeplApiKey', 'appleAvailable'], (data) => {
       chrome.contextMenus.update('dvt-translate-summarize-element', {
         enabled: isTranslateAvailable(data) && hasLLMApiKey(data),
       });
@@ -431,10 +435,17 @@ async function fetchGoogle(text, tl, sl) {
 //
 // sendNativeMessage は Safari MV3 では Promise を返す（Chrome でも MV3 は Promise 対応）。
 // callback シグネチャだと Safari で undefined response になるケースがあるため Promise 形式で呼ぶ。
+//
+// Apple Translation framework は source 言語の "auto" 検出を提供しない。
+// sl が "auto" / 空 / "und" の場合は誤訳を避けるため明示エラーを返す。
+// 上位層（content-bar の言語検出 / popup の sl 選択）で具体的な言語コードを渡す責務を持つ。
 async function fetchAppleChunk(chunk, sl, tl) {
+  if (!sl || sl === 'auto' || sl === 'und') {
+    throw new Error('Apple Translation requires explicit source language; "auto" detection is not supported');
+  }
   const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, {
     action: 'translate',
-    source: sl === 'auto' ? 'en' : sl, // Apple Translation は auto 検出未対応のため暫定で en に
+    source: sl,
     target: tl,
     text: chunk,
   });

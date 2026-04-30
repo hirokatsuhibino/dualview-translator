@@ -189,6 +189,13 @@ describe('isTranslateAvailable()', () => {
   it('Apple選択＋appleAvailable未定義はfalse（未検出）', () => {
     expect(isTranslateAvailable({ translateEngine: 'apple' })).toBe(false);
   });
+
+  it('Apple選択＋appleAvailable=undefined（chrome.storage.local.getに含まれていなかった）はfalse', () => {
+    // PR #152 レビュー指摘 #1 のリグレッションガード:
+    // chrome.storage.local.get の取得キーから appleAvailable が漏れた場合、data が
+    // { translateEngine: 'apple' } のみでも安全側（false）に倒す
+    expect(isTranslateAvailable({ translateEngine: 'apple', deeplApiKey: 'x' })).toBe(false);
+  });
 });
 
 describe('testApiKey()', () => {
