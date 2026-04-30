@@ -229,6 +229,15 @@ async function getTab() {
   return tab;
 }
 
+// popup 起動直後にアクティブタブの tabId をキャッシュする。
+// region 選択系ボタンで window.close() を user gesture context 内で同期呼びするために必要。
+// async な await getTab() を経由すると macOS Safari で popup が閉じる前に sendMessage が
+// 飛ばないリスクがあるため、初期化時に解決しておく。
+let cachedTabId = null;
+chrome.tabs.query({ active: true, currentWindow: true })
+  .then(([tab]) => { if (tab?.id) cachedTabId = tab.id; })
+  .catch(() => {});
+
 // ── Send message to content script ────────────────────────────────────
 async function sendToContent(msg) {
   const tab = await getTab();
@@ -238,6 +247,22 @@ async function sendToContent(msg) {
   } catch (e) {
     setStatus('error', t('statusUnavailable'));
     return null;
+  }
+}
+
+// 同期 fire-and-forget。キャッシュ済み tabId で sendMessage を発射するだけで
+// レスポンスは待たない。region 系ハンドラのように window.close() を user gesture
+// context 内で同期実行したい場面で使う。返り値は送信を試みたかどうか（キャッシュ有無）。
+function sendToContentSync(msg) {
+  if (cachedTabId == null) return false;
+  try {
+    // sendMessage は Promise を返すが await しない。reject されても unhandled に
+    // ならないよう catch を付けておく。
+    const p = chrome.tabs.sendMessage(cachedTabId, msg);
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+    return true;
+  } catch (_e) {
+    return false;
   }
 }
 
@@ -330,26 +355,32 @@ btnUndo.addEventListener('click', async () => {
 
 // ── Region mode ────────────────────────────────────────────────────────
 // macOS Safari では await を挟んだ後の window.close() が user gesture context を失い
-// 無視されるため、メッセージ送信は fire-and-forget にして click ハンドラ末尾で同期的に
-// window.close() する。content script 側は popup が閉じても messaging を受信して動作する。
+// 無視されるため、初期化時にキャッシュした tabId で sendToContentSync を使い、
+// click ハンドラ末尾で同期的に window.close() する。
+// content script 側は popup が閉じても messaging を受信して動作する。
 btnRegion.addEventListener('click', () => {
   setStatus('translating', t('statusSelectRegion'));
-  sendToContent({
+  const sent = sendToContentSync({
     action: 'enterRegionMode',
     lang: targetLangSel.value,
     mode: 'translate'
   });
+  // tabId キャッシュ未取得（極めてレア）の場合は async 経路にフォールバック。
+  // この経路では window.close() のタイミングが macOS Safari で不安定になり得るが、
+  // 普段は cachedTabId が早期に解決するため実質発生しない。
+  if (!sent) sendToContent({ action: 'enterRegionMode', lang: targetLangSel.value, mode: 'translate' });
   window.close();
 });
 
 // ── Region mode & summarize ───────────────────────────────────────────
 btnRegionSummary.addEventListener('click', () => {
   setStatus('translating', t('statusSelectRegion'));
-  sendToContent({
+  const sent = sendToContentSync({
     action: 'enterRegionMode',
     lang: targetLangSel.value,
     mode: 'summarize'
   });
+  if (!sent) sendToContent({ action: 'enterRegionMode', lang: targetLangSel.value, mode: 'summarize' });
   window.close();
 });
 
@@ -587,12 +618,11 @@ loadAutoRules();
 
 // ── 要素ピッカーボタン ─────────────────────────────────────────────
 document.getElementById('btnPickSelector').addEventListener('click', () => {
-  // macOS Safari の user gesture 制約に合わせて、await を挟まず同期的に window.close() する。
+  // macOS Safari の user gesture 制約に合わせて、キャッシュ済 tabId で同期送信してから
+  // 同期 window.close() する。
   const urlPattern = document.getElementById('ruleUrlPattern').value.trim();
-  sendToContent({
-    action: 'enterSelectorPickMode',
-    urlPattern,
-  });
+  const sent = sendToContentSync({ action: 'enterSelectorPickMode', urlPattern });
+  if (!sent) sendToContent({ action: 'enterSelectorPickMode', urlPattern });
   window.close();
 });
 
