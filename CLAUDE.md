@@ -77,7 +77,9 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 - **Google Translate**: 非公式エンドポイント `translate.googleapis.com`（APIキー不要）
 - **DeepL**: `api-free.deepl.com` / `api.deepl.com`（APIキー必要、Free/Pro自動判定）
+- **Apple Translation**（Safari 限定・macOS）: `chrome.runtime.sendNativeMessage` で `SafariWebExtensionHandler` の `translate` アクションを呼び、On-Device の `Translation.framework` で翻訳。ネットワーク・APIキー不要
 - 切り替え: `chrome.storage.local` の `translateEngine` / `deeplApiKey` で管理
+- Safari 検出: 拡張起動時に `ping` を投げて応答有無で判定し、`chrome.storage.local.appleAvailable` にキャッシュ。popup の `<option value="apple">` は `appleAvailable: true` のときだけ表示される
 
 ### 翻訳・要約キャッシュ
 
