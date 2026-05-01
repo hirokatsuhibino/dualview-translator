@@ -38,9 +38,23 @@ git checkout -b release/v<VERSION>
 
 ### 4. バージョン番号を更新
 
-更新対象（必ず両方同期させる）:
+更新対象（必ずすべて同期させる）:
 - `manifest.json` の `version`
 - `package.json` の `version`
+- `safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj` の以下 2 種類（iOS App Store / Mac App Store 提出に必要）:
+  - `MARKETING_VERSION` を新バージョン（例: `1.5.0`）に更新（全 8 箇所、iOS/macOS × App/Extension × Debug/Release）
+  - `CURRENT_PROJECT_VERSION` を +1 インクリメント（全 8 箇所、ビルド番号）
+
+```bash
+# 全 8 箇所一括更新の例
+sed -i '' 's/MARKETING_VERSION = <旧>;/MARKETING_VERSION = <新>;/g' \
+  "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
+sed -i '' 's/CURRENT_PROJECT_VERSION = <旧>;/CURRENT_PROJECT_VERSION = <新>;/g' \
+  "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
+```
+
+Xcode 側を更新し忘れると iOS App Store / Mac App Store のアップロードが
+`Invalid Pre-Release Train` / `CFBundleShortVersionString must be higher` で失敗する（過去事例: Issue #163）。
 
 ### 5. リリースノートを更新
 
