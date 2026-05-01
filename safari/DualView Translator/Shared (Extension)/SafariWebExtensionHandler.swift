@@ -57,34 +57,23 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 respond(context: context, body: handlePing())
                 return
             case "checkLanguageAvailability":
-                // Task は macOS 10.15+ / iOS 13+ で利用可能。
-                // それ未満では Translation framework 自体も使えないので機能無効レスポンスを返す。
+                // Translation framework を内部で呼ぶため iOS 13+ / macOS 10.15+ が必要。
                 if #available(iOS 13.0, macOS 10.15, *) {
-                    Task {
-                        let body = await handleCheckLanguageAvailability(payload: payload ?? [:])
-                        respond(context: context, body: body)
+                    runAsync(context: context) {
+                        await self.handleCheckLanguageAvailability(payload: payload ?? [:])
                     }
                 } else {
-                    respond(context: context, body: [
-                        "ok": false,
-                        "error": "Requires iOS 13+ / macOS 10.15+ runtime"
-                    ])
+                    respond(context: context, body: makeError("Requires iOS 13+ / macOS 10.15+ runtime"))
                 }
                 return
             case "listSupportedLanguages":
-                // 対応言語リストを返す診断用アクション。
-                // checkLanguageAvailability が unsupported を返す場合に、
-                // フレームワークが期待する identifier 形式を確認するために使用する。
+                // checkLanguageAvailability が unsupported を返したときの切り分け用診断 action。
                 if #available(iOS 13.0, macOS 10.15, *) {
-                    Task {
-                        let body = await handleListSupportedLanguages()
-                        respond(context: context, body: body)
+                    runAsync(context: context) {
+                        await self.handleListSupportedLanguages()
                     }
                 } else {
-                    respond(context: context, body: [
-                        "ok": false,
-                        "error": "Requires iOS 13+ / macOS 10.15+ runtime"
-                    ])
+                    respond(context: context, body: makeError("Requires iOS 13+ / macOS 10.15+ runtime"))
                 }
                 return
             case "translate":
@@ -92,15 +81,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 // NSHostingController + 画面外 NSWindow で隠し SwiftUI ビューをホストする戦略。
                 // macOS のみ対応。iOS 拡張プロセスは UIWindowScene 非保有のため別途検討。
                 if #available(iOS 18.0, macOS 15.0, *) {
-                    Task {
-                        let body = await handleTranslate(payload: payload ?? [:])
-                        respond(context: context, body: body)
+                    runAsync(context: context) {
+                        await self.handleTranslate(payload: payload ?? [:])
                     }
                 } else {
-                    respond(context: context, body: [
-                        "ok": false,
-                        "error": "Requires iOS 18+ / macOS 15+"
-                    ])
+                    respond(context: context, body: makeError("Requires iOS 18+ / macOS 15+"))
                 }
                 return
             case "detectLanguage":
@@ -111,10 +96,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             default:
                 // 未知の action は明示的にエラーを返す（黙って echo にフォールバックすると
                 // JS 側のバグに気付きにくくなるため）
-                respond(context: context, body: [
-                    "ok": false,
-                    "error": "unknown action: \(action)"
-                ])
+                respond(context: context, body: makeError("unknown action: \(action)"))
                 return
             }
         }
@@ -132,6 +114,25 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             response.userInfo = ["message": body]
         }
         context.completeRequest(returningItems: [response], completionHandler: nil)
+    }
+
+    // 失敗レスポンスを統一フォーマットで生成するヘルパー
+    private func makeError(_ message: String) -> [String: Any] {
+        return ["ok": false, "error": message]
+    }
+
+    // 非同期ハンドラを Task で走らせて結果を respond する小さなラッパー。
+    // 呼び出し側で availability ガードした上で使う想定（closure に availability 注釈を
+    // 伝播させる手段が無いため、availability check 自体は呼び出し側に残す）。
+    @available(iOS 13.0, macOS 10.15, *)
+    private func runAsync(
+        context: NSExtensionContext,
+        handler: @escaping () async -> [String: Any]
+    ) {
+        Task {
+            let body = await handler()
+            respond(context: context, body: body)
+        }
     }
 
     // ─── ping: ブリッジ動作確認 ────────────────────────────────────
@@ -166,7 +167,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     private func handleCheckLanguageAvailability(payload: [String: Any]) async -> [String: Any] {
         guard let source = payload["source"] as? String,
               let target = payload["target"] as? String else {
-            return ["ok": false, "error": "missing source/target"]
+            return makeError("missing source/target")
         }
 
         // LanguageAvailability は iOS 18+ / macOS 15+ で programmatic に呼び出し可能。
@@ -207,16 +208,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 }
             }
 
-            let statusString: String
-            switch bestStatus {
-            case .installed: statusString = "installed"
-            case .supported: statusString = "supported"
-            case .unsupported: statusString = "unsupported"
-            @unknown default: statusString = "unknown"
-            }
             return [
                 "ok": true,
-                "status": statusString,
+                "status": Self.statusToString(bestStatus),
                 "source": source,
                 "target": target,
                 "sourceMaximalIdentifier": bestSource.maximalIdentifier,
@@ -225,10 +219,22 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 "targetCandidatesCount": targetCandidates.count,
             ]
             #else
-            return ["ok": false, "error": "Translation framework not importable"]
+            return makeError("Translation framework not importable")
             #endif
         } else {
-            return ["ok": false, "error": "Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability"]
+            return makeError("Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability")
+        }
+    }
+
+    // LanguageAvailability.Status → 文字列マッピング。
+    // 拡張プロセス境界を JSON で渡すため、enum を string で安定化させる。
+    @available(iOS 18.0, macOS 15.0, *)
+    private static func statusToString(_ status: LanguageAvailability.Status) -> String {
+        switch status {
+        case .installed: return "installed"
+        case .supported: return "supported"
+        case .unsupported: return "unsupported"
+        @unknown default: return "unknown"
         }
     }
 
@@ -268,21 +274,23 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
     }
 
+    // 主要言語ごとの preferred region。新言語追加時はここに追記する。
+    private static let preferredRegionsTable: [String: [String]] = [
+        "en": ["US", "GB", "AU", "CA", "IE", "NZ", "SG", "ZA", "IN"],
+        "ja": ["JP"],
+        "ko": ["KR"],
+        "zh": ["CN", "TW", "HK"],
+        "fr": ["FR", "CA"],
+        "de": ["DE", "CH"],
+        "es": ["ES", "MX", "US"],
+        "pt": ["PT", "BR"],
+        "it": ["IT", "CH"],
+        "ar": ["AE"],
+        "ru": ["RU"],
+    ]
+
     private func preferredRegions(for code: String) -> [String] {
-        switch code {
-        case "en": return ["US", "GB", "AU", "CA", "IE", "NZ", "SG", "ZA", "IN"]
-        case "ja": return ["JP"]
-        case "ko": return ["KR"]
-        case "zh": return ["CN", "TW", "HK"]
-        case "fr": return ["FR", "CA"]
-        case "de": return ["DE", "CH"]
-        case "es": return ["ES", "MX", "US"]
-        case "pt": return ["PT", "BR"]
-        case "it": return ["IT", "CH"]
-        case "ar": return ["AE"]
-        case "ru": return ["RU"]
-        default: return []
-        }
+        return Self.preferredRegionsTable[code] ?? []
     }
 
     // ─── listSupportedLanguages: 対応言語リストを返す ────────────────
@@ -309,10 +317,10 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 "languages": entries,
             ]
             #else
-            return ["ok": false, "error": "Translation framework not importable"]
+            return makeError("Translation framework not importable")
             #endif
         } else {
-            return ["ok": false, "error": "Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability"]
+            return makeError("Requires iOS 18+ / macOS 15+ for programmatic LanguageAvailability")
         }
     }
 
@@ -323,7 +331,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     //   or  { ok: false, error: "..." }
     private func handleDetectLanguage(payload: [String: Any]) -> [String: Any] {
         guard let text = payload["text"] as? String, !text.isEmpty else {
-            return ["ok": false, "error": "missing or empty text"]
+            return makeError("missing or empty text")
         }
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
@@ -348,7 +356,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         guard let source = payload["source"] as? String,
               let target = payload["target"] as? String,
               let text = payload["text"] as? String else {
-            return ["ok": false, "error": "missing source/target/text"]
+            return makeError("missing source/target/text")
         }
         if text.isEmpty {
             return ["ok": true, "translated": ""]
@@ -356,46 +364,68 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
         #if canImport(Translation)
         // 言語ペアを supportedLanguages から解決する（PR #147 のロジック流用）
+        let pair = await resolveLanguagePair(source: source, target: target)
+        switch pair {
+        case .resolveFailure(let err):
+            return makeError(err)
+        case .resolved(let sourceLang, let targetLang):
+            #if os(macOS)
+            do {
+                let translated = try await translateUsingHiddenHost_macOS(
+                    text: text,
+                    source: sourceLang,
+                    target: targetLang
+                )
+                return [
+                    "ok": true,
+                    "translated": translated,
+                    "sourceMaximalIdentifier": sourceLang.maximalIdentifier,
+                    "targetMaximalIdentifier": targetLang.maximalIdentifier,
+                ]
+            } catch {
+                return makeError("translation failed: \(error.localizedDescription)")
+            }
+            #else
+            // iOS の Safari Web Extension ハンドラは UIWindowScene を持たないため、
+            // SwiftUI ホスト戦略は使えない。別途 App Group 経由などの戦略が必要（次段階）。
+            return makeError("iOS translation not yet implemented (requires App Group bridge to container app)")
+            #endif
+        }
+        #else
+        return makeError("Translation framework not importable")
+        #endif
+    }
+
+    // resolveLanguagePair の結果。
+    // Result<_, Error> を使わない理由: Failure は Error 準拠が必要だが、
+    // ここでは単純なエラー文字列で十分なため専用 enum にする。
+    @available(iOS 18.0, macOS 15.0, *)
+    private enum LanguagePairResolution {
+        case resolved(Locale.Language, Locale.Language)
+        case resolveFailure(String)
+    }
+
+    // 入力された source/target コードを supportedLanguages から解決して Locale.Language ペアを返す。
+    // 候補が無い場合は失敗を返す（呼び出し側でエラー応答に変換）。
+    @available(iOS 18.0, macOS 15.0, *)
+    private func resolveLanguagePair(
+        source: String,
+        target: String
+    ) async -> LanguagePairResolution {
+        #if canImport(Translation)
         let availability = LanguageAvailability()
         let supported = await availability.supportedLanguages
         let sourceCandidates = candidateLanguages(code: source, from: supported)
         let targetCandidates = candidateLanguages(code: target, from: supported)
         guard let sourceLang = sourceCandidates.first else {
-            return ["ok": false, "error": "source language not in supportedLanguages: \(source)"]
+            return .resolveFailure("source language not in supportedLanguages: \(source)")
         }
         guard let targetLang = targetCandidates.first else {
-            return ["ok": false, "error": "target language not in supportedLanguages: \(target)"]
+            return .resolveFailure("target language not in supportedLanguages: \(target)")
         }
-
-        #if os(macOS)
-        do {
-            let translated = try await translateUsingHiddenHost_macOS(
-                text: text,
-                source: sourceLang,
-                target: targetLang
-            )
-            return [
-                "ok": true,
-                "translated": translated,
-                "sourceMaximalIdentifier": sourceLang.maximalIdentifier,
-                "targetMaximalIdentifier": targetLang.maximalIdentifier,
-            ]
-        } catch {
-            return [
-                "ok": false,
-                "error": "translation failed: \(error.localizedDescription)",
-            ]
-        }
+        return .resolved(sourceLang, targetLang)
         #else
-        // iOS の Safari Web Extension ハンドラは UIWindowScene を持たないため、
-        // SwiftUI ホスト戦略は使えない。別途 App Group 経由などの戦略が必要（次段階）。
-        return [
-            "ok": false,
-            "error": "iOS translation not yet implemented (requires App Group bridge to container app)",
-        ]
-        #endif
-        #else
-        return ["ok": false, "error": "Translation framework not importable"]
+        return .resolveFailure("Translation framework not importable")
         #endif
     }
 
@@ -473,8 +503,11 @@ private final class HiddenHostHolder {
     var hostingController: NSHostingController<TranslationHostView>?
 
     func cleanup() {
+        // 表示外しに加え、close() で NSWindow のライフサイクルを明示的に終了させる。
+        // contentViewController を先に nil にしておかないと close 中に SwiftUI 側の view 解放が遅れることがある。
         window?.orderOut(nil)
         window?.contentViewController = nil
+        window?.close()
         window = nil
         hostingController = nil
     }
