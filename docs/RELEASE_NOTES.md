@@ -10,12 +10,6 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
-### マイルストーン
-
-- **macOS Safari 版が Mac App Store で配信開始**（2026-05-01）
-  - 公開 URL: https://apps.apple.com/jp/app/dualview-translator/id6763488360
-  - これで Chrome / Firefox / iOS Safari / macOS Safari の 4 チャネルすべてが正規ストアから配信される状態に
-
 ---
 
 ## v1.5.0（2026-05-01）
@@ -38,7 +32,9 @@ permalink: /RELEASE_NOTES.html
 
 - **Chrome Web Store で配信開始**（#142）
   - 公開 URL: https://chromewebstore.google.com/detail/dualview-translator/hmnlfemcpbkcfppjnghiofddiiclkbmg
-  - これで Chrome / Firefox / iOS Safari の3チャネルが正規ストアから配信される状態に（macOS Safari は引き続き Mac App Store 審査中）
+- **macOS Safari 版が Mac App Store で配信開始**（2026-05-01）
+  - 公開 URL: https://apps.apple.com/jp/app/dualview-translator/id6763488360
+  - これで Chrome / Firefox / iOS Safari / macOS Safari の 4 チャネルすべてが正規ストアから配信される状態に
 
 ### 改善
 

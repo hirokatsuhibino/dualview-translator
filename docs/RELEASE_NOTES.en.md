@@ -10,12 +10,6 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
-### Milestones
-
-- **macOS Safari extension is now live on the Mac App Store** (2026-05-01)
-  - Public URL: https://apps.apple.com/app/dualview-translator/id6763488360
-  - All four of Chrome / Firefox / iOS Safari / macOS Safari are now served from official stores
-
 ---
 
 ## v1.5.0 (2026-05-01)
@@ -38,7 +32,9 @@ permalink: /RELEASE_NOTES.en.html
 
 - **Now live on the Chrome Web Store** (#142)
   - Public URL: https://chromewebstore.google.com/detail/dualview-translator/hmnlfemcpbkcfppjnghiofddiiclkbmg
-  - All three of Chrome / Firefox / iOS Safari are now served from official stores (macOS Safari is still in Mac App Store review)
+- **macOS Safari extension is now live on the Mac App Store** (2026-05-01)
+  - Public URL: https://apps.apple.com/app/dualview-translator/id6763488360
+  - All four of Chrome / Firefox / iOS Safari / macOS Safari are now served from official stores
 
 ### Improvements
 
