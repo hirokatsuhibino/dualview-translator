@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Milestones
+
+- **macOS Safari extension is now live on the Mac App Store** (2026-05-01)
+  - Public URL: https://apps.apple.com/app/dualview-translator/id6763488360
+  - All four of Chrome / Firefox / iOS Safari / macOS Safari are now served from official stores
+
 ---
 
 ## v1.5.0 (2026-05-01)

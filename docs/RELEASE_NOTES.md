@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### マイルストーン
+
+- **macOS Safari 版が Mac App Store で配信開始**（2026-05-01）
+  - 公開 URL: https://apps.apple.com/jp/app/dualview-translator/id6763488360
+  - これで Chrome / Firefox / iOS Safari / macOS Safari の 4 チャネルすべてが正規ストアから配信される状態に
+
 ---
 
 ## v1.5.0（2026-05-01）
