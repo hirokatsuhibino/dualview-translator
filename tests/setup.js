@@ -26,6 +26,12 @@ if (typeof Range !== 'undefined' && !Range.prototype.getClientRects) {
   };
 }
 
+// jsdom は Element.scrollIntoView() を実装していない
+// content-page.js の runSummarize 等で要約ブロック挿入後に呼ばれるためダミーを置く
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function () {};
+}
+
 // content-selection.js は selectionchange リスナーをタッチデバイスのみで登録するため、
 // jsdom 環境を「タッチデバイス」と判定させて selectionchange 経路もテストできるようにする。
 // (`'ontouchstart' in document.documentElement` の判定で true を返させる)
