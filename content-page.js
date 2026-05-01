@@ -488,7 +488,17 @@ var DVT_PAGE = (function () {
     summaryText.appendChild(summarySpinner);
     summaryText.appendChild(document.createTextNode(' ' + t('summarizing')));
     summaryBlock.appendChild(summaryText);
-    insertTarget.insertBefore(summaryBlock, insertTarget.firstChild);
+    // 要約ブロックの挿入位置:
+    // - ページ全体翻訳 (isPageSummary=true): insertTarget=document.body の先頭に挿入
+    // - 要素ピッカー / 領域選択 / 自動翻訳ルール: 選択要素の **前** に挿入する。
+    //   選択要素自身の中に挿入すると、ホストの flex/inline-block レイアウトで横並びになっている
+    //   要素の幅を破壊して隣接要素に重なる（safeAttach 等の添付ファイル一覧で発生・Issue #167）。
+    //   parentNode が無いレアケース（document 等）は従来挙動にフォールバック。
+    if (!isPageSummary && insertTarget.parentNode) {
+      insertTarget.parentNode.insertBefore(summaryBlock, insertTarget);
+    } else {
+      insertTarget.insertBefore(summaryBlock, insertTarget.firstChild);
+    }
     summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     // LLM APIで要約

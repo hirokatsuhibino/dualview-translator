@@ -155,6 +155,28 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('runSummarize — 要約ブロックの挿入位置（#167）', () => {
+    // Issue #167: 要素ピッカー/領域選択で選んだ要素の「内側」に要約ブロックを挿入すると
+    // ホストの flex/inline-block レイアウトを壊すため、要素の「前」に挿入する。
+    // ページ全体翻訳の場合は従来どおり insertTarget の先頭に挿入する。
+    it('content-page.js: 要素ピッカー時 (isPageSummary=false) は parentNode.insertBefore で要素の前に挿入する', () => {
+      const { readFileSync } = require('fs');
+      const { resolve } = require('path');
+      const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+      // isPageSummary が false かつ parentNode がある場合に parentNode.insertBefore を使う条件分岐が存在
+      expect(code).toContain('!isPageSummary && insertTarget.parentNode');
+      expect(code).toContain('insertTarget.parentNode.insertBefore(summaryBlock, insertTarget)');
+    });
+
+    it('content-page.js: ページ全体翻訳時 (isPageSummary=true) は従来どおり insertTarget.firstChild の前に挿入する', () => {
+      const { readFileSync } = require('fs');
+      const { resolve } = require('path');
+      const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+      // isPageSummary=true ルートで insertTarget.insertBefore(..., insertTarget.firstChild) が残る
+      expect(code).toContain('insertTarget.insertBefore(summaryBlock, insertTarget.firstChild)');
+    });
+  });
+
   describe('runConcurrentTranslation — 二重翻訳防止（dvt-pendingマーカー）', () => {
     it('翻訳開始直後に要素が dvt-pending マークされ filterTranslatableElements から除外される', async () => {
       // jsdom は innerText 未サポートのため textContent で代用するモックを設定
