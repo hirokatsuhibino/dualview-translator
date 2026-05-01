@@ -2,7 +2,7 @@
 
 [日本語](README.md) | English
 
-A browser translation extension that shows the translation **right below the original** in a dual view. Chrome / Firefox / iOS Safari supported (macOS Safari is still in App Store review).
+A browser translation extension that shows the translation **right below the original** in a dual view. Chrome / Firefox / iOS Safari / macOS Safari supported.
 
 The original text doesn't disappear when you translate, so you can always read with full context.
 
@@ -126,9 +126,13 @@ Live on the App Store since 2026-04-28:
 
 https://apps.apple.com/app/dualview-translator/id6763488360
 
-### macOS Safari (in App Store review)
+### macOS Safari
 
-Submitted to the Mac App Store on 2026-04-25, currently awaiting Apple's review. The Safari Web Extension Xcode project lives under `safari/` if you want to build locally. Build instructions are in [safari/README.md](safari/README.md).
+Live on the Mac App Store since 2026-05-01:
+
+https://apps.apple.com/app/dualview-translator/id6763488360
+
+The Safari Web Extension Xcode project lives under `safari/` if you want to build locally. Build instructions are in [safari/README.md](safari/README.md).
 
 ## How to use
 

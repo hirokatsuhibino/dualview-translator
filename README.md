@@ -2,7 +2,7 @@
 
 日本語 | [English](README.en.md)
 
-原文と翻訳を**並べて表示**するブラウザ翻訳拡張。Chrome / Firefox / iOS Safari 対応（macOS Safari は App Store 審査中）。
+原文と翻訳を**並べて表示**するブラウザ翻訳拡張。Chrome / Firefox / iOS Safari / macOS Safari に対応。
 
 翻訳しても原文が消えないので、原文を確認しながら読めます。
 
@@ -126,9 +126,13 @@ iOS App Store で配信中（2026-04-28〜）:
 
 https://apps.apple.com/jp/app/dualview-translator/id6763488360
 
-### macOS Safari（App Store 審査中）
+### macOS Safari
 
-2026-04-25 に Mac App Store へ申請済み、現在 Apple の審査結果待ちです。Safari Web Extension 対応の Xcode プロジェクトは `safari/` 以下に含まれており、ローカルビルドの手順は [safari/README.md](safari/README.md) を参照してください。
+Mac App Store で配信中（2026-05-01〜）:
+
+https://apps.apple.com/jp/app/dualview-translator/id6763488360
+
+Safari Web Extension 対応の Xcode プロジェクトは `safari/` 以下に含まれており、ローカルビルドの手順は [safari/README.md](safari/README.md) を参照してください。
 
 ## 使い方
 
