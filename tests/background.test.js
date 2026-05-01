@@ -35,9 +35,13 @@ beforeAll(() => {
   const hasKeyMatch = code.match(/function hasLLMApiKey\(data\)\s*\{[\s\S]*?\n\}/);
   if (hasKeyMatch) hasLLMApiKey = new Function('data', hasKeyMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 
-  // isTranslateAvailable を抽出
+  // isTranslateAvailable を抽出（ENGINES 定数を参照するので一緒に eval する）
+  const enginesMatch = code.match(/const ENGINES = Object\.freeze\(\{[^}]+\}\);/);
   const translateMatch = code.match(/function isTranslateAvailable\(data\)\s*\{[\s\S]*?\n\}/);
-  if (translateMatch) isTranslateAvailable = new Function('data', translateMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
+  if (translateMatch && enginesMatch) {
+    const combined = `${enginesMatch[0]}\n${translateMatch[0]}\nreturn isTranslateAvailable;`;
+    isTranslateAvailable = new Function(combined)();
+  }
 
   // isNetworkError を抽出
   const networkErrorMatch = code.match(/function isNetworkError\(err\)\s*\{[\s\S]*?\n\}/);

@@ -266,6 +266,15 @@ function sendToContentSync(msg) {
   }
 }
 
+// region 系・要素ピッカー系の共通シーケンス: 同期送信 → 失敗時 async fallback → 同期 close。
+// macOS Safari では await を挟むと user gesture context が失われ window.close() が無視される
+// ため、必ず click ハンドラ末尾で同期的に close を呼ぶ必要がある。
+function sendToContentAndClose(msg) {
+  const sent = sendToContentSync(msg);
+  if (!sent) sendToContent(msg);
+  window.close();
+}
+
 // ── Status helpers ─────────────────────────────────────────────────────
 function setStatus(type, text) {
   statusText.textContent = text;
@@ -354,34 +363,23 @@ btnUndo.addEventListener('click', async () => {
 });
 
 // ── Region mode ────────────────────────────────────────────────────────
-// macOS Safari では await を挟んだ後の window.close() が user gesture context を失い
-// 無視されるため、初期化時にキャッシュした tabId で sendToContentSync を使い、
-// click ハンドラ末尾で同期的に window.close() する。
-// content script 側は popup が閉じても messaging を受信して動作する。
 btnRegion.addEventListener('click', () => {
   setStatus('translating', t('statusSelectRegion'));
-  const sent = sendToContentSync({
+  sendToContentAndClose({
     action: 'enterRegionMode',
     lang: targetLangSel.value,
-    mode: 'translate'
+    mode: 'translate',
   });
-  // tabId キャッシュ未取得（極めてレア）の場合は async 経路にフォールバック。
-  // この経路では window.close() のタイミングが macOS Safari で不安定になり得るが、
-  // 普段は cachedTabId が早期に解決するため実質発生しない。
-  if (!sent) sendToContent({ action: 'enterRegionMode', lang: targetLangSel.value, mode: 'translate' });
-  window.close();
 });
 
 // ── Region mode & summarize ───────────────────────────────────────────
 btnRegionSummary.addEventListener('click', () => {
   setStatus('translating', t('statusSelectRegion'));
-  const sent = sendToContentSync({
+  sendToContentAndClose({
     action: 'enterRegionMode',
     lang: targetLangSel.value,
-    mode: 'summarize'
+    mode: 'summarize',
   });
-  if (!sent) sendToContent({ action: 'enterRegionMode', lang: targetLangSel.value, mode: 'summarize' });
-  window.close();
 });
 
 // ── Check current state on popup open ─────────────────────────────────
@@ -618,12 +616,8 @@ loadAutoRules();
 
 // ── 要素ピッカーボタン ─────────────────────────────────────────────
 document.getElementById('btnPickSelector').addEventListener('click', () => {
-  // macOS Safari の user gesture 制約に合わせて、キャッシュ済 tabId で同期送信してから
-  // 同期 window.close() する。
   const urlPattern = document.getElementById('ruleUrlPattern').value.trim();
-  const sent = sendToContentSync({ action: 'enterSelectorPickMode', urlPattern });
-  if (!sent) sendToContent({ action: 'enterSelectorPickMode', urlPattern });
-  window.close();
+  sendToContentAndClose({ action: 'enterSelectorPickMode', urlPattern });
 });
 
 // ── 起動時の初期化: URL自動補完 + ピッカー結果の復元 ───────────────────
