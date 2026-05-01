@@ -14,10 +14,10 @@ function loadCacheModule() {
     'SC_PREFIX', 'SC_MAX_ENTRIES', 'SC_TTL_MS', 'SC_EVICT_RATIO',
     'HIT_STATS_KEY', 'CLAUDE_SUMMARY_MODEL',
     '_hitStatsQueue',
-    'storageGet', 'storageSet', 'storageRemove',
+    'storageGet', 'storageSet', 'storageRemove', 'storageGetKeys',
     'recordCacheAccess', 'calcHitRate',
     'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
-    'getCacheEntriesByPrefix',
+    'getCacheEntriesByPrefix', 'pickEntriesByPrefix', 'evictEntries',
     'evictByPrefix', 'evictIfNeeded', 'clearCache', 'getCacheStats',
   ];
   const defs = names.map(n => {

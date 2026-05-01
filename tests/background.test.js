@@ -267,9 +267,9 @@ describe('mapWithConcurrency()', () => {
 describe('getEngineConfig() キャッシュ化（#176）', () => {
   // Issue #176: ホットパス（翻訳メッセージごと）の storage IO を削減するため、
   // モジュールキャッシュ + onChanged invalidate の構造に変更。挙動のソースガード。
-  it('content の getEngineConfig が engineConfigCache を参照する形になっている', () => {
+  it('background の getEngineConfig が engineConfigCache を参照する形になっている', () => {
     expect(code).toMatch(/let\s+engineConfigCache\s*=\s*null/);
-    expect(code).toMatch(/if\s*\(engineConfigCache\)\s*return\s+engineConfigCache/);
+    expect(code).toMatch(/if\s*\(!engineConfigCache\)/);
   });
 
   it('chrome.storage.onChanged で関連キー変更時に engineConfigCache を invalidate する', () => {
