@@ -493,9 +493,12 @@ var DVT_PAGE = (function () {
     // - 要素ピッカー / 領域選択 / 自動翻訳ルール: 選択要素の **前** に挿入する。
     //   選択要素自身の中に挿入すると、ホストの flex/inline-block レイアウトで横並びになっている
     //   要素の幅を破壊して隣接要素に重なる（safeAttach 等の添付ファイル一覧で発生・Issue #167）。
-    //   parentNode が無いレアケース（document 等）は従来挙動にフォールバック。
-    if (!isPageSummary && insertTarget.parentNode) {
-      insertTarget.parentNode.insertBefore(summaryBlock, insertTarget);
+    // parentElement を使う理由: parentNode は Document を返しうる（insertTarget が
+    // documentElement の場合）が、Document.insertBefore で要素を直接挿入すると
+    // HierarchyRequestError になるため。parentElement は要素のみを返し、
+    // Document/DocumentFragment 等のレアケースでは null になり else 節へフォールバックする。
+    if (!isPageSummary && insertTarget.parentElement) {
+      insertTarget.parentElement.insertBefore(summaryBlock, insertTarget);
     } else {
       insertTarget.insertBefore(summaryBlock, insertTarget.firstChild);
     }
