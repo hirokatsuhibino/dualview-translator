@@ -10,6 +10,24 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.5.0 (2026-05-01)
+
+### New features
+
+- **Apple Translation integration (macOS Safari only)** (#144, #146, #148, #151)
+  - You can now pick **Apple Translation** as your translation engine. It uses the on-device `Translation.framework`, so no API keys, no network — it just works offline.
+  - The new option only shows up in the engine picker on Safari (you won't see it on Chrome / Firefox at all).
+  - We auto-detect Safari at startup with a `ping` round-trip — no manual setup.
+  - Under the hood: `chrome.runtime.sendNativeMessage` calls into `SafariWebExtensionHandler`, which hosts a hidden SwiftUI view via `NSHostingController` so we can pull a `TranslationSession` out of `.translationTask` and translate from the extension process.
+- **Automatic offline fallback** (#150, #155)
+  - If you're on Google or DeepL and your network drops, we automatically switch to Apple Translation (macOS Safari only).
+  - Cache-first: if Google / DeepL already has the chunks cached, we serve those instead of unnecessarily falling back.
+  - Offline language detection via Apple's `NLLanguageRecognizer` (`NaturalLanguage` framework) means `sl='auto'` keeps working even when you're offline.
+  - We pop a small toast in the bottom-right when the fallback kicks in (just once per page load — no spam).
+  - Added `engineApple` / `fallbackToApple` i18n keys across all 11 languages.
+
 ### Milestones
 
 - **Now live on the Chrome Web Store** (#142)
@@ -26,6 +44,13 @@ permalink: /RELEASE_NOTES.en.html
   - Each summary block now has a small × button in its top-right corner — click it to remove just that summary
   - The popup's "Reset translations" button now also clears every `.dvt-summary` block (not only the page-summary one), so region-translation summaries are cleaned up too
   - Added an `undoSummary` i18n key across all 11 languages for the new button's aria-label / title
+
+### Bug fixes
+
+- **Fix: "Pick a region to translate" button in the popup didn't close the popup or enter region mode on macOS Safari** (#157)
+  - Two macOS-Safari-specific issues: the content-script listener returned `true` even though all responses were sync (so macOS Safari kept the message channel open and the popup never got the response), and the `window.close()` after `await` lost its user-gesture context (so it was silently ignored).
+  - Fix: drop the unconditional `return true` from the listener, cache the active tab id at popup startup, and have the region buttons fire `sendMessage` synchronously before calling `window.close()`.
+  - iOS Safari / Chrome / Firefox were unaffected and still behave the same.
 
 ---
 

@@ -12,7 +12,7 @@ The original text doesn't disappear when you translate, so you can always read w
 - **8 translation modes** — pick the one that fits the moment
 - **Auto-translation rules** — match a URL pattern + CSS selector and you're done. Works with SPAs and dynamic content
 - **Translation reset** — × button per element, or wipe the page from the popup
-- **2 translation engines** — Google Translate (free) or DeepL (sharper)
+- **3 translation engines** — Google Translate (free) / DeepL (sharper) / Apple Translation (offline, macOS Safari only). When you're offline, we automatically fall back to Apple Translation
 - **AI summaries** — Claude or Gemini auto-summarizes the translated content
 - **Translation & summary cache** — same text won't hit the API twice. Faster, cheaper. Hit rate shown in settings
 - **Tabbed popup** — translate stuff on one tab, configure on the other
@@ -69,8 +69,11 @@ Tell DualView to auto-translate certain sites whenever you open them.
 |--------|---------|-------|
 | **Google Translate** | None | Free, ready to use. Default |
 | **DeepL** | Required (free tier) | Sharper translations. 500,000 characters/month free |
+| **Apple Translation** | None | macOS Safari only. On-device — no network, no API key |
 
 For DeepL, sign up at [DeepL API](https://www.deepl.com/pro-api) and paste your key into the popup settings.
+
+Apple Translation only shows up on macOS Safari (we auto-detect it at startup and add it to the engine picker). If you're on Google or DeepL and your network drops, we automatically fall back to Apple Translation — but if the cache already has what you need, we just serve from cache and skip the fallback.
 
 ## AI summarization
 
