@@ -208,6 +208,51 @@ describe('isTranslateAvailable()', () => {
   });
 });
 
+describe('mapWithConcurrency()', () => {
+  // Issue #173: fetchChunkedWithCache の並列度制御コア。Promise.all は無制限なので
+  // レート対策のために自作した。順序保持と並列度上限の両方を保証する必要がある。
+  let mapWithConcurrency;
+  beforeAll(() => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
+    const m = code.match(/async function mapWithConcurrency\(items, concurrency, fn\)\s*\{[\s\S]*?\n\}/);
+    if (!m) throw new Error('mapWithConcurrency の正規表現抽出に失敗');
+    mapWithConcurrency = new Function(`${m[0]}\nreturn mapWithConcurrency;`)();
+  });
+
+  it('入力順を保持して結果を返す', async () => {
+    const items = [10, 20, 30, 40, 50];
+    const result = await mapWithConcurrency(items, 2, async (n) => n * 2);
+    expect(result).toEqual([20, 40, 60, 80, 100]);
+  });
+
+  it('並列度を超えて同時実行しない', async () => {
+    const items = [1, 2, 3, 4, 5, 6];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    await mapWithConcurrency(items, 2, async () => {
+      inFlight++;
+      if (inFlight > maxInFlight) maxInFlight = inFlight;
+      // microtask 1 つ進めて他のワーカーが起動できる隙を作る
+      await new Promise(resolve => setTimeout(resolve, 1));
+      inFlight--;
+    });
+    expect(maxInFlight).toBeLessThanOrEqual(2);
+    expect(maxInFlight).toBeGreaterThan(0);
+  });
+
+  it('items.length < concurrency でも全件処理される', async () => {
+    const result = await mapWithConcurrency([1, 2], 10, async (n) => n + 100);
+    expect(result).toEqual([101, 102]);
+  });
+
+  it('空配列はすぐに空配列を返す', async () => {
+    const result = await mapWithConcurrency([], 4, async (n) => n);
+    expect(result).toEqual([]);
+  });
+});
+
 describe('isNetworkError()', () => {
   it('TypeError + "Failed to fetch" は network error 扱い（fetch ネットワーク不通の典型）', () => {
     expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true);
