@@ -441,13 +441,25 @@ var DVT_PAGE = (function () {
       return;
     }
 
-    // 翻訳テキストを収集（翻訳があればそれを、同一言語でスキップされた場合は原文を使用）
+    // 翻訳テキストを収集（要約対象として LLM に渡すため）
+    // 同一言語スキップ（PR #138/#140）で wrapper が解体されているケースでは
+    // .dvt-trans / .dvt-orig が両方 null になるので、要素自身の textContent を
+    // フォールバックとして使う（日本語ページの日本語要約等で必要・Issue #169）
     const texts = [];
     elements.forEach(el => {
       const transEl = el.querySelector('.dvt-trans');
+      if (transEl && transEl.textContent.trim()) {
+        texts.push(transEl.textContent);
+        return;
+      }
       const origEl = el.querySelector('.dvt-orig');
-      if (transEl) texts.push(transEl.textContent);
-      else if (origEl) texts.push(origEl.textContent);
+      if (origEl && origEl.textContent.trim()) {
+        texts.push(origEl.textContent);
+        return;
+      }
+      // wrapper 解体後（同一言語スキップ）: 要素自身のテキストを使う
+      const fallback = el.textContent?.trim();
+      if (fallback) texts.push(fallback);
     });
     if (texts.length === 0) return;
 

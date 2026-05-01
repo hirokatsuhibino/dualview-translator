@@ -177,6 +177,27 @@ describe('DVT_PAGE (content-page)', () => {
     });
   });
 
+  describe('runSummarize — 同一言語スキップ後のテキスト収集フォールバック（#169）', () => {
+    // Issue #169: 日本語ページを日本語で要約するケースで、同一言語翻訳スキップにより
+    // wrapper が解体されると .dvt-trans / .dvt-orig 両方 null になり、要約に渡される
+    // テキストが空になっていた。要素自身の textContent をフォールバックとして使う。
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
+
+    it('content-page.js: wrapper 解体後は el.textContent をフォールバックとして使う', () => {
+      // .dvt-trans / .dvt-orig 両方 null のとき el.textContent を push するフォールバック分岐
+      expect(code).toMatch(/wrapper\s*解体後/);
+      expect(code).toMatch(/el\.textContent/);
+    });
+
+    it('content-page.js: trans/orig は trim() で空文字をスキップしてフォールバックに進む', () => {
+      // 空白だけの翻訳結果や原文ブロックを誤って要約対象にしないため、trim() で空判定する
+      expect(code).toMatch(/transEl[\s\S]{0,200}textContent\.trim\(\)/);
+      expect(code).toMatch(/origEl[\s\S]{0,200}textContent\.trim\(\)/);
+    });
+  });
+
   describe('runConcurrentTranslation — 二重翻訳防止（dvt-pendingマーカー）', () => {
     it('翻訳開始直後に要素が dvt-pending マークされ filterTranslatableElements から除外される', async () => {
       // jsdom は innerText 未サポートのため textContent で代用するモックを設定
