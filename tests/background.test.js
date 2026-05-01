@@ -264,6 +264,22 @@ describe('mapWithConcurrency()', () => {
   });
 });
 
+describe('getEngineConfig() キャッシュ化（#176）', () => {
+  // Issue #176: ホットパス（翻訳メッセージごと）の storage IO を削減するため、
+  // モジュールキャッシュ + onChanged invalidate の構造に変更。挙動のソースガード。
+  it('background の getEngineConfig が engineConfigCache を参照する形になっている', () => {
+    expect(code).toMatch(/let\s+engineConfigCache\s*=\s*null/);
+    expect(code).toMatch(/if\s*\(!engineConfigCache\)/);
+  });
+
+  it('chrome.storage.onChanged で関連キー変更時に engineConfigCache を invalidate する', () => {
+    expect(code).toMatch(/chrome\.storage\.onChanged\.addListener/);
+    // ENGINE_CONFIG_KEYS のいずれかが変わったら null 化する経路が存在
+    expect(code).toMatch(/ENGINE_CONFIG_KEYS\.some/);
+    expect(code).toMatch(/engineConfigCache\s*=\s*null/);
+  });
+});
+
 describe('isNetworkError()', () => {
   it('TypeError + "Failed to fetch" は network error 扱い（fetch ネットワーク不通の典型）', () => {
     expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true);

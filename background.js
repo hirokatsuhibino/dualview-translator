@@ -239,10 +239,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// ─── エンジン設定をstorageから取得 ────────────────────────────────────
-function getEngineConfig() {
+// ─── エンジン設定をstorageから取得（Promise キャッシュ + onChanged 連動） ──
+// ページ全体翻訳・MutationObserver 連動翻訳では数十〜数百要素を並行翻訳するため、
+// 毎回 storage.local.get するとホットパスで storage IO が多重発生する。
+// engineConfigCache に Promise<Config> を保持することで:
+// - 並列で getEngineConfig() が呼ばれても in-flight の Promise を共有（重複 IO なし）
+// - resolve 後は同じ Promise を返すだけなのでキャッシュとして機能
+// 関連キーが変わったら null にして次回呼び出しで再ロードする。
+const ENGINE_CONFIG_KEYS = ['translateEngine', 'deeplApiKey', 'appleAvailable'];
+let engineConfigCache = null; // Promise<Config> | null
+
+function loadEngineConfig() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['translateEngine', 'deeplApiKey', 'appleAvailable'], (data) => {
+    chrome.storage.local.get(ENGINE_CONFIG_KEYS, (data) => {
       resolve({
         engine: data.translateEngine || ENGINES.GOOGLE,
         deeplApiKey: data.deeplApiKey || '',
@@ -251,6 +260,20 @@ function getEngineConfig() {
     });
   });
 }
+
+function getEngineConfig() {
+  if (!engineConfigCache) {
+    engineConfigCache = loadEngineConfig();
+  }
+  return engineConfigCache;
+}
+
+// 関連キーの変更を監視してキャッシュを invalidate
+chrome.storage.onChanged.addListener((changes) => {
+  if (ENGINE_CONFIG_KEYS.some((k) => k in changes)) {
+    engineConfigCache = null;
+  }
+});
 
 // ─── 翻訳・要約キャッシュ ────────────────────────────────────────────
 // Google/DeepL 翻訳結果を tc: プレフィックス、Claude/Gemini 要約を sc: プレフィックスでキャッシュ。
@@ -275,6 +298,27 @@ const CLAUDE_SUMMARY_MODEL = 'claude-haiku-4-5-20251001';
 const storageGet = (keys) => new Promise(resolve => chrome.storage.local.get(keys, resolve));
 const storageSet = (items) => new Promise(resolve => chrome.storage.local.set(items, resolve));
 const storageRemove = (keys) => new Promise(resolve => chrome.storage.local.remove(keys, resolve));
+
+// chrome.storage.local.getKeys (Chrome 121+) は Promise / callback 両形式の実装が
+// 混在しうる。await が undefined にならないよう Promise 化のラッパーで吸収する。
+// 関数自体が無い環境では null を返し、呼び出し側でフォールバックする。
+function storageGetKeys() {
+  if (typeof chrome.storage.local.getKeys !== 'function') return null;
+  return new Promise((resolve, reject) => {
+    try {
+      const result = chrome.storage.local.getKeys((keys) => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve(keys);
+      });
+      // Promise を返す実装（Chrome MV3 / Firefox）に対応
+      if (result && typeof result.then === 'function') {
+        result.then(resolve, reject);
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
 // text の SHA-256 先頭16文字（8バイト）をキーに使う。<10000件なら衝突実質ゼロ
 async function hashText(text) {
@@ -343,27 +387,70 @@ async function setCached(key, entry) {
 }
 
 // プレフィックス単位の LRU eviction
-async function evictByPrefix(all, prefix, maxEntries, evictRatio) {
-  const keys = Object.keys(all).filter(k => k.startsWith(prefix));
+// 指定 prefix に該当するキャッシュエントリだけを storage から取得する。
+// chrome.storage.local.getKeys() (Chrome 121+) があればキー一覧だけ取って必要分を
+// get（軽量）、無ければ get(null) フォールバック（自動翻訳ルール等まで含む全件取得）。
+async function getCacheEntriesByPrefix(prefix) {
+  const keys = await storageGetKeys();
+  if (keys) {
+    const filtered = keys.filter((k) => k.startsWith(prefix));
+    if (filtered.length === 0) return {};
+    return await storageGet(filtered);
+  }
+  return pickEntriesByPrefix(await storageGet(null), prefix);
+}
+
+// オブジェクトから指定 prefix のエントリを抽出するピュア関数。
+// フォールバックパスで storageGet(null) を 1 回だけ呼んで複数 prefix を処理するときに使う。
+function pickEntriesByPrefix(all, prefix) {
+  const filtered = {};
+  for (const k of Object.keys(all)) {
+    if (k.startsWith(prefix)) filtered[k] = all[k];
+  }
+  return filtered;
+}
+
+// LRU evict 本体。entries は { key: {translated, ts}, ... } の形。
+async function evictEntries(entries, maxEntries, evictRatio) {
+  const keys = Object.keys(entries);
   if (keys.length <= maxEntries) return;
   const sorted = keys
-    .map(k => ({ key: k, ts: all[k]?.ts || 0 }))
+    .map(k => ({ key: k, ts: entries[k]?.ts || 0 }))
     .sort((a, b) => a.ts - b.ts);
   const toEvict = Math.ceil(keys.length * evictRatio);
   await storageRemove(sorted.slice(0, toEvict).map(x => x.key));
 }
 
+async function evictByPrefix(prefix, maxEntries, evictRatio) {
+  await evictEntries(await getCacheEntriesByPrefix(prefix), maxEntries, evictRatio);
+}
+
 async function evictIfNeeded() {
+  // 翻訳キャッシュ・要約キャッシュをそれぞれ独立して evict。
+  // getKeys 対応環境では各 prefix 個別に軽量取得で問題ない。
+  // 非対応環境では get(null) を 1 回だけ呼んで両 prefix を処理し、IO を節約する。
+  const keys = await storageGetKeys();
+  if (keys) {
+    await evictByPrefix(TC_PREFIX, TC_MAX_ENTRIES, TC_EVICT_RATIO);
+    await evictByPrefix(SC_PREFIX, SC_MAX_ENTRIES, SC_EVICT_RATIO);
+    return;
+  }
   const all = await storageGet(null);
-  // 翻訳キャッシュ・要約キャッシュをそれぞれ独立して evict
-  await evictByPrefix(all, TC_PREFIX, TC_MAX_ENTRIES, TC_EVICT_RATIO);
-  await evictByPrefix(all, SC_PREFIX, SC_MAX_ENTRIES, SC_EVICT_RATIO);
+  await evictEntries(pickEntriesByPrefix(all, TC_PREFIX), TC_MAX_ENTRIES, TC_EVICT_RATIO);
+  await evictEntries(pickEntriesByPrefix(all, SC_PREFIX), SC_MAX_ENTRIES, SC_EVICT_RATIO);
 }
 
 // 翻訳・要約キャッシュを両方クリア（ヒット率統計もリセット）
 async function clearCache() {
-  const all = await storageGet(null);
-  const cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX));
+  // evictIfNeeded と同じく、フォールバック時は get(null) を 1 回だけ呼ぶ
+  const keys = await storageGetKeys();
+  let cacheKeys;
+  if (keys) {
+    cacheKeys = keys.filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX));
+  } else {
+    const all = await storageGet(null);
+    cacheKeys = Object.keys(all).filter(k => k.startsWith(TC_PREFIX) || k.startsWith(SC_PREFIX));
+  }
   const keysToRemove = cacheKeys.length > 0 ? [...cacheKeys, HIT_STATS_KEY] : [HIT_STATS_KEY];
   await storageRemove(keysToRemove);
   return cacheKeys.length;
@@ -376,11 +463,17 @@ function calcHitRate(hits, misses) {
 }
 
 async function getCacheStats() {
-  const all = await storageGet(null);
-  const keys = Object.keys(all);
-  const tcEntries = keys.filter(k => k.startsWith(TC_PREFIX)).length;
-  const scEntries = keys.filter(k => k.startsWith(SC_PREFIX)).length;
-  const s = all[HIT_STATS_KEY] || { tcHits: 0, tcMisses: 0, scHits: 0, scMisses: 0 };
+  // entries 数と hit rate しか必要ないので prefix 別にキー数だけ数える。
+  let tcEntries = 0;
+  let scEntries = 0;
+  const keys = await storageGetKeys();
+  const sourceKeys = keys || Object.keys(await storageGet(null));
+  for (const k of sourceKeys) {
+    if (k.startsWith(TC_PREFIX)) tcEntries++;
+    else if (k.startsWith(SC_PREFIX)) scEntries++;
+  }
+  const data = await storageGet(HIT_STATS_KEY);
+  const s = data[HIT_STATS_KEY] || { tcHits: 0, tcMisses: 0, scHits: 0, scMisses: 0 };
   return {
     tcEntries,
     scEntries,
