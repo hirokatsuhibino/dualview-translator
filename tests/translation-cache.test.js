@@ -17,6 +17,7 @@ function loadCacheModule() {
     'storageGet', 'storageSet', 'storageRemove',
     'recordCacheAccess', 'calcHitRate',
     'hashText', 'buildCacheKey', 'buildSummaryCacheKey', 'getCached', 'setCached',
+    'getCacheEntriesByPrefix',
     'evictByPrefix', 'evictIfNeeded', 'clearCache', 'getCacheStats',
   ];
   const defs = names.map(n => {
