@@ -493,6 +493,57 @@ async function fetchTranslation(text, tl, sl, config) {
   }
 }
 
+// ─── 並列度制御付き map ───────────────────────────────────────────────
+// 入力配列を最大 concurrency 個ずつ並列に処理する。Promise.all は無制限なので
+// 翻訳 API のレート対策として独自に書く（依存追加を避ける目的もある）。
+// 戻り値は入力順を保持する（results[i] = fn(items[i]) の値）。
+// 1 件失敗した時点で他ワーカーの新規タスク取得を止める短絡終了で、
+// 不要な API 呼び出し・キャッシュ書き込みの並行継続を防ぐ。
+async function mapWithConcurrency(items, concurrency, fn) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  let stopped = false;
+  let firstError = null;
+  async function worker() {
+    while (!stopped) {
+      const i = nextIndex++;
+      if (i >= items.length) return;
+      try {
+        results[i] = await fn(items[i], i);
+      } catch (err) {
+        if (!stopped) {
+          stopped = true;
+          firstError = err;
+        }
+        return;
+      }
+    }
+  }
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  await Promise.all(workers);
+  if (firstError) throw firstError;
+  return results;
+}
+
+// ─── 翻訳エンジン共通: チャンク分割 + キャッシュ + 並列実行 ────────
+// 各エンジンは fetchChunkFn(chunk, sl, tl) を渡すだけで、チャンク分割・キャッシュ
+// 参照・並列実行・detectedLang の集約を統一できる。エンジンの増減は薄いラッパー
+// 1 つだけで対応可能になる。
+async function fetchChunkedWithCache(engine, text, sl, tl, { chunkSize, concurrency, fetchChunkFn }) {
+  const chunks = splitIntoChunks(text, chunkSize);
+  const entries = await mapWithConcurrency(chunks, concurrency, async (chunk) => {
+    const cacheKey = await buildCacheKey(engine, sl, tl, chunk);
+    const cached = await getCached(cacheKey);
+    if (cached) return cached;
+    const fetched = await fetchChunkFn(chunk, sl, tl);
+    const entry = { translated: fetched.translated, detectedLang: fetched.detectedLang ?? null };
+    await setCached(cacheKey, entry);
+    return entry;
+  });
+  const detectedLang = entries.reduce((acc, e) => acc || e.detectedLang, null);
+  return { text: entries.map(e => e.translated).join(' '), detectedLang };
+}
+
 // ─── Google Translate ────────────────────────────────────────────────
 // 実 API 呼び出し（1 チャンク分）
 async function fetchGoogleChunk(chunk, sl, tl) {
@@ -505,24 +556,13 @@ async function fetchGoogleChunk(chunk, sl, tl) {
   return { translated, detectedLang };
 }
 
+// 非公式エンドポイントなのでレート対策に並列度を抑える
 async function fetchGoogle(text, tl, sl) {
-  const chunks = splitIntoChunks(text, 4500);
-  const results = [];
-  let detectedLang = null;
-
-  for (const chunk of chunks) {
-    const cacheKey = await buildCacheKey(ENGINES.GOOGLE, sl, tl, chunk);
-    let entry = await getCached(cacheKey);
-    if (!entry) {
-      const fetched = await fetchGoogleChunk(chunk, sl, tl);
-      entry = { translated: fetched.translated, detectedLang: fetched.detectedLang };
-      await setCached(cacheKey, entry);
-    }
-    results.push(entry.translated);
-    if (!detectedLang && entry.detectedLang) detectedLang = entry.detectedLang;
-  }
-
-  return { text: results.join(' '), detectedLang };
+  return fetchChunkedWithCache(ENGINES.GOOGLE, text, sl, tl, {
+    chunkSize: 4500,
+    concurrency: 4,
+    fetchChunkFn: fetchGoogleChunk,
+  });
 }
 
 // ─── Apple Translation（Safari ネイティブ呼び出し） ───────────────────
@@ -544,22 +584,13 @@ async function fetchAppleChunk(chunk, sl, tl) {
   return { translated: response.translated, detectedLang: null };
 }
 
+// Apple Translation は隠し SwiftUI ホスト + 30 秒タイムアウトのため並列化せず逐次
 async function fetchApple(text, tl, sl) {
-  const chunks = splitIntoChunks(text, 4000);
-  const results = [];
-
-  for (const chunk of chunks) {
-    const cacheKey = await buildCacheKey(ENGINES.APPLE, sl, tl, chunk);
-    let entry = await getCached(cacheKey);
-    if (!entry) {
-      const fetched = await fetchAppleChunk(chunk, sl, tl);
-      entry = { translated: fetched.translated, detectedLang: fetched.detectedLang };
-      await setCached(cacheKey, entry);
-    }
-    results.push(entry.translated);
-  }
-
-  return { text: results.join(' '), detectedLang: null };
+  return fetchChunkedWithCache(ENGINES.APPLE, text, sl, tl, {
+    chunkSize: 4000,
+    concurrency: 1,
+    fetchChunkFn: fetchAppleChunk,
+  });
 }
 
 // ─── DeepL API ───────────────────────────────────────────────────────
@@ -622,23 +653,11 @@ async function fetchDeepLChunk(chunk, sl, tl, apiKey) {
 }
 
 async function fetchDeepL(text, tl, sl, apiKey) {
-  const chunks = splitIntoChunks(text, 4500);
-  const results = [];
-  let detectedLang = null;
-
-  for (const chunk of chunks) {
-    const cacheKey = await buildCacheKey(ENGINES.DEEPL, sl, tl, chunk);
-    let entry = await getCached(cacheKey);
-    if (!entry) {
-      const fetched = await fetchDeepLChunk(chunk, sl, tl, apiKey);
-      entry = { translated: fetched.translated, detectedLang: fetched.detectedLang };
-      await setCached(cacheKey, entry);
-    }
-    results.push(entry.translated);
-    if (!detectedLang && entry.detectedLang) detectedLang = entry.detectedLang;
-  }
-
-  return { text: results.join(' '), detectedLang };
+  return fetchChunkedWithCache(ENGINES.DEEPL, text, sl, tl, {
+    chunkSize: 4500,
+    concurrency: 4,
+    fetchChunkFn: (chunk, srcLang, tgtLang) => fetchDeepLChunk(chunk, srcLang, tgtLang, apiKey),
+  });
 }
 
 // ─── LLM設定をstorageから取得 ─────────────────────────────────────────
