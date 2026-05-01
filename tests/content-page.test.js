@@ -1,5 +1,5 @@
 // content-page.js のDOMロジックテスト（jsdom環境）
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { loadScript } from './helpers.js';
 
 describe('DVT_PAGE (content-page)', () => {
@@ -174,6 +174,89 @@ describe('DVT_PAGE (content-page)', () => {
     it('content-page.js: ページ全体翻訳時 (isPageSummary=true) は従来どおり insertTarget.firstChild の前に挿入する', () => {
       // isPageSummary=true ルートで insertTarget.insertBefore(..., insertTarget.firstChild) が残る
       expect(code).toMatch(/insertTarget\.insertBefore\(summaryBlock,\s*insertTarget\.firstChild\)/);
+    });
+  });
+
+  describe('runSummarize — 同一言語スキップ後のテキスト収集フォールバック（#169）', () => {
+    // Issue #169: 日本語ページを日本語で要約するケースで、同一言語翻訳スキップにより
+    // wrapper が解体されると .dvt-trans / .dvt-orig 両方 null になり、要約に渡される
+    // テキストが空になっていた。要素自身の textContent をフォールバックとして使う。
+    //
+    // PR #170 レビュー対応: 文字列マッチでは applyTranslation 側の同類コードにも
+    // 当たって誤ってパスし得るため、jsdom 上で実 DOM 動作を検証する統合テストに
+    // 置き換える（.claude/rules/test.md 方針）。
+    let originalSendMessage;
+    let summarizeCalls;
+
+    beforeEach(() => {
+      // 前テストで pageTranslateActive=true のままだと translatePageAndSummarize が
+      // undoPageTranslate して early return するため明示的にリセット
+      DVT.state.pageTranslateActive = false;
+
+      // jsdom は innerText 未サポートのため textContent で代用
+      Object.defineProperty(HTMLElement.prototype, 'innerText', {
+        get() { return this.textContent; },
+        configurable: true,
+      });
+
+      // chrome.runtime.sendMessage をスタブ
+      // - 'translate': 同一言語（detectedLang='ja', tl='ja'）として原文をそのまま返す
+      //   → applyTranslation で同一言語スキップ → wrapper 解体される
+      // - 'summarize': 受け取ったテキストを記録して mock summary を返す
+      summarizeCalls = [];
+      originalSendMessage = chrome.runtime.sendMessage;
+      chrome.runtime.sendMessage = vi.fn((msg, cb) => {
+        if (msg.action === 'translate') {
+          cb({ ok: true, result: { text: msg.text, detectedLang: 'ja' } });
+        } else if (msg.action === 'summarize') {
+          summarizeCalls.push(msg);
+          cb({ ok: true, summary: '【要約】テスト' });
+        } else {
+          cb({ ok: true });
+        }
+      });
+
+      // LLM API キー設定（runSummarize の早期 return を回避）
+      chrome.storage.local.set({ claudeApiKey: 'test-key', geminiApiKey: '' });
+    });
+
+    afterEach(() => {
+      chrome.runtime.sendMessage = originalSendMessage;
+      // DOM クリア
+      document.body.innerHTML = '';
+      DVT.state.pageTranslateActive = false;
+    });
+
+    it('日本語ページを日本語で要約: wrapper 解体後の要素から本文を収集して LLM に渡す', async () => {
+      const bodyText = 'これは日本語のテスト本文です。要約対象として LLM に渡されるべき。';
+      document.body.innerHTML = `<p>${bodyText}</p>`;
+
+      DVT.state.targetLang = 'ja';
+      await DVT_PAGE.translatePageAndSummarize('ja');
+
+      // 同一言語スキップで wrapper が解体されているはず
+      expect(document.querySelector('.dvt-trans')).toBeFalsy();
+      expect(document.querySelector('.dvt-orig')).toBeFalsy();
+
+      // 要約 API が呼ばれていて、本文がテキストとして渡されている
+      expect(summarizeCalls.length).toBe(1);
+      expect(summarizeCalls[0].text).toContain('これは日本語のテスト本文です');
+
+      // 要約ブロックが DOM に挿入されている
+      expect(document.querySelector('.dvt-summary')).toBeTruthy();
+    });
+
+    it('修正前の挙動: el.textContent フォールバックが無いと texts が空になり要約 API が呼ばれない', async () => {
+      // 修正コードが将来失われた場合の検知テスト。
+      // wrapper 解体された後の要素から要約用テキストを取れない実装に戻ると、
+      // texts が空 → early return → summarizeCalls.length === 0 になる。
+      // 現行修正下では texts に el.textContent が入るので >= 1 件記録されるはず。
+      document.body.innerHTML = '<p>日本語の段落テキストです。</p>';
+      DVT.state.targetLang = 'ja';
+      await DVT_PAGE.translatePageAndSummarize('ja');
+
+      expect(summarizeCalls.length).toBeGreaterThanOrEqual(1);
+      expect(summarizeCalls[0].text.trim().length).toBeGreaterThan(0);
     });
   });
 
