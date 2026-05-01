@@ -95,7 +95,8 @@ npm test
 ### 7. コミット・push・PR作成
 
 ```bash
-git add manifest.json package.json docs/RELEASE_NOTES.md
+git add manifest.json package.json docs/RELEASE_NOTES.md \
+  "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
 git commit -m "chore: v<VERSION> リリース準備（バージョン番号更新・リリースノート整備）"
 git push -u origin release/v<VERSION>
 gh pr create \
