@@ -21,6 +21,19 @@ function getMenuTitles(lang) {
   return CONTEXT_MENU_TITLES[lang] || CONTEXT_MENU_TITLES['en'];
 }
 
+// ─── 翻訳エンジン名（typo 防止のため定数化） ──────────────────────
+const ENGINES = Object.freeze({ GOOGLE: 'google', DEEPL: 'deepl', APPLE: 'apple' });
+
+// SafariWebExtensionHandler.swift と一致する action 名。Swift 側と JS 側で
+// string が一致する必要があるため、定数として一元管理する。
+const NATIVE_ACTIONS = Object.freeze({
+  PING: 'ping',
+  TRANSLATE: 'translate',
+  DETECT_LANGUAGE: 'detectLanguage',
+  CHECK_LANGUAGE_AVAILABILITY: 'checkLanguageAvailability',
+  LIST_SUPPORTED_LANGUAGES: 'listSupportedLanguages',
+});
+
 // ─── LLM APIキーの有無を判定 ─────────────────────────────────────────
 function hasLLMApiKey(data) {
   return !!(data.claudeApiKey || data.geminiApiKey);
@@ -29,8 +42,8 @@ function hasLLMApiKey(data) {
 // ─── 翻訳エンジンが利用可能か判定 ──────────────────────────────────
 // DeepL: APIキーが必要 / Apple: Safari (Native Messaging が動く環境) のみ
 function isTranslateAvailable(data) {
-  if (data.translateEngine === 'deepl') return !!data.deeplApiKey;
-  if (data.translateEngine === 'apple') return !!data.appleAvailable;
+  if (data.translateEngine === ENGINES.DEEPL) return !!data.deeplApiKey;
+  if (data.translateEngine === ENGINES.APPLE) return !!data.appleAvailable;
   return true; // google はキー不要・常に利用可能
 }
 
@@ -43,20 +56,17 @@ const HAS_NATIVE_MESSAGING = typeof chrome.runtime?.sendNativeMessage === 'funct
 // Native Messaging Host (Safari ネイティブハンドラ) の bundle ID
 const NATIVE_HOST_ID = 'jp.co.orangesoft.dualview-translator';
 
-// ─── Apple Translation 利用可否を検出（Safari かどうかの実体判定） ──
-// 拡張起動時に ping を1回投げて応答を見る。Safari なら ok:true が返り、
-// Chrome / Firefox では送信自体が失敗するか応答が来ない。
-// 結果は chrome.storage.local.appleAvailable にキャッシュして popup 等から参照する。
+// ─── Apple Translation 利用可否を検出 ──────────────────────────────
+// ping を 1 回投げて応答を見て Safari かどうかを判定し、appleAvailable に永続化する。
 async function detectAppleAvailability() {
   if (!HAS_NATIVE_MESSAGING) {
     await chrome.storage.local.set({ appleAvailable: false });
     return false;
   }
   try {
-    // Promise.race でタイムアウト付き（Chrome では応答が来ずハングする）。
-    // タイムアウトが先に勝った場合、native 側の Promise が後から reject すると
-    // unhandled rejection になるため、先に空の catch を付けて握りつぶす。
-    const nativePromise = chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, { action: 'ping' });
+    // タイムアウト勝利時に native promise が遅延 reject すると unhandled になるため
+    // 事前に空の catch を付けて握りつぶす。
+    const nativePromise = chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, { action: NATIVE_ACTIONS.PING });
     nativePromise.catch(() => {});
     const response = await Promise.race([
       nativePromise,
@@ -234,7 +244,7 @@ function getEngineConfig() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['translateEngine', 'deeplApiKey', 'appleAvailable'], (data) => {
       resolve({
-        engine: data.translateEngine || 'google',
+        engine: data.translateEngine || ENGINES.GOOGLE,
         deeplApiKey: data.deeplApiKey || '',
         appleAvailable: !!data.appleAvailable,
       });
@@ -417,7 +427,7 @@ async function detectLanguageNative(text) {
   try {
     const sample = text.slice(0, 500);
     const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, {
-      action: 'detectLanguage',
+      action: NATIVE_ACTIONS.DETECT_LANGUAGE,
       text: sample,
     });
     if (!response?.ok || !response.detectedLang) return null;
@@ -428,10 +438,16 @@ async function detectLanguageNative(text) {
   }
 }
 
+// 言語コードが auto/und/空 のいずれか（=具体的な言語コードが指定されていない状態）。
+// Apple Translation は auto 検出非対応のため、これを判定して native detect に分岐する。
+function isUnspecifiedLang(sl) {
+  return !sl || sl === 'auto' || sl === 'und';
+}
+
 // Apple Translation 呼び出し前に sl を必ず具体コードに解決する。
-// すでに具体コードならそのまま、auto / und / 空 ならネイティブ言語検出を経由する。
+// 具体コードならそのまま、auto/und/空 ならネイティブ言語検出を経由する。
 async function ensureExplicitSourceLang(sl, text) {
-  if (sl && sl !== 'auto' && sl !== 'und') return sl;
+  if (!isUnspecifiedLang(sl)) return sl;
   const detected = await detectLanguageNative(text);
   if (!detected) {
     throw new Error('Apple Translation: language detection failed (offline)');
@@ -440,42 +456,38 @@ async function ensureExplicitSourceLang(sl, text) {
 }
 
 // ─── 翻訳ディスパッチャー ────────────────────────────────────────────
-// オフラインフォールバック動作:
-// - apple が明示選択されていればそのまま fetchApple（sl が auto なら native 検出で解決）
-// - 主エンジン (Google/DeepL) はチャンク単位に内部キャッシュを参照するため、
-//   フル cache hit ならネットワーク要求を発行せずオフラインでも成功する。
-//   キャッシュを優先するため `navigator.onLine` 早期バイパスは行わない
-//   （cache を無視して無駄に Apple ネイティブ呼び出しになることを防ぐ）。
-// - 主エンジン実行中に network error が発生した場合に apple にフォールバック
-// - sl が auto/未指定でも NLLanguageRecognizer でオフライン検出するため、フォールバックは
-//   主要言語に対しては問題なく動作する（ただし検出失敗時はエラー）
+// 主エンジン (Google/DeepL) はチャンク単位の内部キャッシュを持つため、cache hit
+// ではネットワーク要求が発行されずオフラインでも成功する。よって navigator.onLine
+// での早期バイパスはせず、cache 優先で動かす。主エンジンが network error で失敗
+// したときのみ Apple にフォールバックする。
 async function fetchTranslation(text, tl, sl, config) {
   if (!text || !text.trim()) return { text: '', detectedLang: null, engineUsed: null };
 
   // 明示選択された apple は直行（sl が auto なら native 検出で具体コードに解決）
-  if (config.engine === 'apple' && config.appleAvailable) {
+  if (config.engine === ENGINES.APPLE && config.appleAvailable) {
     const finalSl = await ensureExplicitSourceLang(sl, text);
     const result = await fetchApple(text, tl, finalSl);
-    return { ...result, engineUsed: 'apple' };
+    return { ...result, engineUsed: ENGINES.APPLE };
   }
 
-  // 主エンジン実行（network error は apple フォールバック対象）。
-  // config.engine='deepl' でも APIキー未設定なら Google にフォールスルーするため、
-  // 実際に呼ばれたエンジンを primaryEngine として保持し、ログ・engineUsed の出力を一致させる。
-  const primaryEngine = (config.engine === 'deepl' && config.deeplApiKey) ? 'deepl' : 'google';
+  // 主エンジン実行。deepl 選択中で APIキー未設定なら Google にフォールスルーするため、
+  // 実際に呼ばれたエンジンを primaryEngine として保持してログ・engineUsed と一致させる。
+  const primaryEngine = (config.engine === ENGINES.DEEPL && config.deeplApiKey)
+    ? ENGINES.DEEPL
+    : ENGINES.GOOGLE;
   try {
-    if (primaryEngine === 'deepl') {
+    if (primaryEngine === ENGINES.DEEPL) {
       const result = await fetchDeepL(text, tl, sl, config.deeplApiKey);
-      return { ...result, engineUsed: 'deepl' };
+      return { ...result, engineUsed: ENGINES.DEEPL };
     }
     const result = await fetchGoogle(text, tl, sl);
-    return { ...result, engineUsed: 'google' };
+    return { ...result, engineUsed: ENGINES.GOOGLE };
   } catch (err) {
     if (config.appleAvailable && isNetworkError(err)) {
       console.warn(`[DVT] ${primaryEngine} network error → apple fallback:`, err.message);
       const finalSl = await ensureExplicitSourceLang(sl, text);
       const result = await fetchApple(text, tl, finalSl);
-      return { ...result, engineUsed: 'apple', fallback: true, fallbackReason: 'network-error' };
+      return { ...result, engineUsed: ENGINES.APPLE, fallback: true, fallbackReason: 'network-error' };
     }
     throw err;
   }
@@ -499,7 +511,7 @@ async function fetchGoogle(text, tl, sl) {
   let detectedLang = null;
 
   for (const chunk of chunks) {
-    const cacheKey = await buildCacheKey('google', sl, tl, chunk);
+    const cacheKey = await buildCacheKey(ENGINES.GOOGLE, sl, tl, chunk);
     let entry = await getCached(cacheKey);
     if (!entry) {
       const fetched = await fetchGoogleChunk(chunk, sl, tl);
@@ -514,21 +526,14 @@ async function fetchGoogle(text, tl, sl) {
 }
 
 // ─── Apple Translation（Safari ネイティブ呼び出し） ───────────────────
-// PR #149 で実装した SafariWebExtensionHandler の translate アクションを呼ぶ。
-// ネットワーク不要・オンデバイスで動作するが Safari でしか利用できない。
-//
-// sendNativeMessage は Safari MV3 では Promise を返す（Chrome でも MV3 は Promise 対応）。
-// callback シグネチャだと Safari で undefined response になるケースがあるため Promise 形式で呼ぶ。
-//
-// Apple Translation framework は source 言語の "auto" 検出を提供しない。
-// sl が "auto" / 空 / "und" の場合は誤訳を避けるため明示エラーを返す。
-// 上位層（content-bar の言語検出 / popup の sl 選択）で具体的な言語コードを渡す責務を持つ。
+// SafariWebExtensionHandler の translate アクションを Promise 形式で呼ぶ
+// （callback 形式だと Safari で undefined response になるケースがあるため）。
 async function fetchAppleChunk(chunk, sl, tl) {
-  if (!sl || sl === 'auto' || sl === 'und') {
+  if (isUnspecifiedLang(sl)) {
     throw new Error('Apple Translation requires explicit source language; "auto" detection is not supported');
   }
   const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, {
-    action: 'translate',
+    action: NATIVE_ACTIONS.TRANSLATE,
     source: sl,
     target: tl,
     text: chunk,
@@ -544,7 +549,7 @@ async function fetchApple(text, tl, sl) {
   const results = [];
 
   for (const chunk of chunks) {
-    const cacheKey = await buildCacheKey('apple', sl, tl, chunk);
+    const cacheKey = await buildCacheKey(ENGINES.APPLE, sl, tl, chunk);
     let entry = await getCached(cacheKey);
     if (!entry) {
       const fetched = await fetchAppleChunk(chunk, sl, tl);
@@ -622,7 +627,7 @@ async function fetchDeepL(text, tl, sl, apiKey) {
   let detectedLang = null;
 
   for (const chunk of chunks) {
-    const cacheKey = await buildCacheKey('deepl', sl, tl, chunk);
+    const cacheKey = await buildCacheKey(ENGINES.DEEPL, sl, tl, chunk);
     let entry = await getCached(cacheKey);
     if (!entry) {
       const fetched = await fetchDeepLChunk(chunk, sl, tl, apiKey);

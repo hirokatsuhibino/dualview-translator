@@ -14,9 +14,7 @@ var DVT = (function () {
     translateBar: null,
     lastContextMenuTarget: null,
     regionMode: false,
-    // ページの life cycle 内で 1 度だけフォールバック通知トーストを表示するフラグ。
-    // 連続翻訳でトーストが大量に出ないよう、最初の 1 回だけ表示する。
-    // ページ遷移で content script が再読み込みされるとリセットされる。
+    // フォールバック通知トーストを 1 ページ life cycle 内で 1 度だけ表示するためのフラグ
     fallbackToastShown: false,
   };
 
@@ -40,8 +38,7 @@ var DVT = (function () {
       chrome.runtime.sendMessage({ action: 'translate', text, tl, sl }, (res) => {
         if (chrome.runtime.lastError) { resolve({ text: t('error'), detectedLang: null }); return; }
         if (res?.ok) {
-          // Apple Translation へのオフラインフォールバックが発生したらトーストで通知。
-          // ページ life cycle 内で 1 度だけ表示し、連続翻訳での通知スパムを避ける。
+          // Apple フォールバック発生時の通知（ページ life cycle 内 1 回まで）
           if (res.result?.fallback && !state.fallbackToastShown) {
             state.fallbackToastShown = true;
             showToast(t('fallbackToApple'), false, 5000);
@@ -203,10 +200,8 @@ var DVT = (function () {
       const hasTranslations = document.querySelectorAll('[data-dvt-id]').length > 0;
       sendResponse({ pageTranslateActive: state.pageTranslateActive, targetLang: state.targetLang, hasTranslations });
     }
-    // 全アクションで sendResponse を同期呼び出ししているため return true は不要。
-    // 不用意に true を返すと macOS Safari ではメッセージチャンネルが非同期応答待ちのまま
-    // ハングし、popup 側の await が undefined を受け取って window.close() が動かない等の
-    // 不具合になる（iOS Safari / Chrome / Firefox では症状が出ない）。
+    // macOS Safari は同期 sendResponse + return true でチャンネルがハングするため、
+    // 全アクション同期応答のここでは return true を返さない（= 非同期応答にしない）。
   });
 
   // ─── 公開API ───────────────────────────────────────────────────────

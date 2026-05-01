@@ -35,9 +35,14 @@ beforeAll(() => {
   const hasKeyMatch = code.match(/function hasLLMApiKey\(data\)\s*\{[\s\S]*?\n\}/);
   if (hasKeyMatch) hasLLMApiKey = new Function('data', hasKeyMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 
-  // isTranslateAvailable を抽出
-  const translateMatch = code.match(/function isTranslateAvailable\(data\)\s*\{[\s\S]*?\n\}/);
-  if (translateMatch) isTranslateAvailable = new Function('data', translateMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
+  // isTranslateAvailable を抽出（ENGINES 定数を参照するので一緒に eval する）。
+  // どちらかの正規表現が match 失敗するとテスト全体が無音で壊れるため fail-fast にする。
+  const enginesMatch = code.match(/const\s+ENGINES\s*=\s*Object\.freeze\(\{[\s\S]*?\}\);/);
+  const translateMatch = code.match(/function\s+isTranslateAvailable\s*\(data\)\s*\{[\s\S]*?\n\}/);
+  if (!enginesMatch) throw new Error('background.test.js: ENGINES 定数の正規表現抽出に失敗（background.js のフォーマット変更を確認）');
+  if (!translateMatch) throw new Error('background.test.js: isTranslateAvailable の正規表現抽出に失敗（background.js のフォーマット変更を確認）');
+  const combined = `${enginesMatch[0]}\n${translateMatch[0]}\nreturn isTranslateAvailable;`;
+  isTranslateAvailable = new Function(combined)();
 
   // isNetworkError を抽出
   const networkErrorMatch = code.match(/function isNetworkError\(err\)\s*\{[\s\S]*?\n\}/);
