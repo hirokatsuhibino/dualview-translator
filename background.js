@@ -497,18 +497,31 @@ async function fetchTranslation(text, tl, sl, config) {
 // 入力配列を最大 concurrency 個ずつ並列に処理する。Promise.all は無制限なので
 // 翻訳 API のレート対策として独自に書く（依存追加を避ける目的もある）。
 // 戻り値は入力順を保持する（results[i] = fn(items[i]) の値）。
+// 1 件失敗した時点で他ワーカーの新規タスク取得を止める短絡終了で、
+// 不要な API 呼び出し・キャッシュ書き込みの並行継続を防ぐ。
 async function mapWithConcurrency(items, concurrency, fn) {
   const results = new Array(items.length);
   let nextIndex = 0;
+  let stopped = false;
+  let firstError = null;
   async function worker() {
-    while (true) {
+    while (!stopped) {
       const i = nextIndex++;
       if (i >= items.length) return;
-      results[i] = await fn(items[i], i);
+      try {
+        results[i] = await fn(items[i], i);
+      } catch (err) {
+        if (!stopped) {
+          stopped = true;
+          firstError = err;
+        }
+        return;
+      }
     }
   }
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
   await Promise.all(workers);
+  if (firstError) throw firstError;
   return results;
 }
 

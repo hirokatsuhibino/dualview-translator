@@ -12,9 +12,11 @@ let hasLLMApiKey;
 let isTranslateAvailable;
 let testApiKey;
 let isNetworkError;
+// describe 横断で共有する background.js 全文
+let code;
 
 beforeAll(() => {
-  const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
+  code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
 
   // getDeepLEndpoint を抽出
   const deepLMatch = code.match(/function getDeepLEndpoint\(apiKey\)\s*\{[\s\S]*?\n\}/);
@@ -210,12 +212,9 @@ describe('isTranslateAvailable()', () => {
 
 describe('mapWithConcurrency()', () => {
   // Issue #173: fetchChunkedWithCache の並列度制御コア。Promise.all は無制限なので
-  // レート対策のために自作した。順序保持と並列度上限の両方を保証する必要がある。
+  // レート対策のために自作した。順序保持・並列度上限・エラー時短絡を保証する。
   let mapWithConcurrency;
   beforeAll(() => {
-    const { readFileSync } = require('fs');
-    const { resolve } = require('path');
-    const code = readFileSync(resolve(import.meta.dirname, '..', 'background.js'), 'utf-8');
     const m = code.match(/async function mapWithConcurrency\(items, concurrency, fn\)\s*\{[\s\S]*?\n\}/);
     if (!m) throw new Error('mapWithConcurrency の正規表現抽出に失敗');
     mapWithConcurrency = new Function(`${m[0]}\nreturn mapWithConcurrency;`)();
@@ -234,7 +233,7 @@ describe('mapWithConcurrency()', () => {
     await mapWithConcurrency(items, 2, async () => {
       inFlight++;
       if (inFlight > maxInFlight) maxInFlight = inFlight;
-      // microtask 1 つ進めて他のワーカーが起動できる隙を作る
+      // macrotask を 1 回進めて他のワーカーが起動できる隙を作る
       await new Promise(resolve => setTimeout(resolve, 1));
       inFlight--;
     });
@@ -250,6 +249,18 @@ describe('mapWithConcurrency()', () => {
   it('空配列はすぐに空配列を返す', async () => {
     const result = await mapWithConcurrency([], 4, async (n) => n);
     expect(result).toEqual([]);
+  });
+
+  it('1 件目が reject すると未着手タスクは新規起動されず、最初のエラーが throw される', async () => {
+    // 不要な API 呼び出し・キャッシュ書き込みの並行継続を防ぐ短絡終了の挙動を保証
+    const calls = [];
+    await expect(mapWithConcurrency([1, 2, 3, 4, 5], 1, async (n) => {
+      calls.push(n);
+      if (n === 2) throw new Error('boom');
+      return n;
+    })).rejects.toThrow('boom');
+    // concurrency=1 なので逐次。1, 2 まで処理されて 2 でエラー → 3, 4, 5 は呼ばれない
+    expect(calls).toEqual([1, 2]);
   });
 });
 
