@@ -201,7 +201,7 @@ var DVT = (function () {
       sendResponse({ pageTranslateActive: state.pageTranslateActive, targetLang: state.targetLang, hasTranslations });
     }
     // macOS Safari は同期 sendResponse + return true でチャンネルがハングするため、
-    // 全アクション同期応答のここでは return しない。
+    // 全アクション同期応答のここでは return true を返さない（= 非同期応答にしない）。
   });
 
   // ─── 公開API ───────────────────────────────────────────────────────
