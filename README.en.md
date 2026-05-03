@@ -14,6 +14,7 @@ The original text doesn't disappear when you translate, so you can always read w
 - **Translation reset** — × button per element, or wipe the page from the popup
 - **3 translation engines** — Google Translate (free) / DeepL (sharper) / Apple Translation (offline, macOS Safari only). When you're offline, we automatically fall back to Apple Translation
 - **AI summaries** — Claude or Gemini auto-summarizes the translated content
+- **Text-to-speech** — every translation block gets a 🔊 button. Reads out the translation using your browser's built-in voice (no extra API key needed)
 - **Translation & summary cache** — same text won't hit the API twice. Faster, cheaper. Hit rate shown in settings
 - **Tabbed popup** — translate stuff on one tab, configure on the other
 - **Keyboard shortcuts** — common actions in one keypress
@@ -87,6 +88,22 @@ The extension can summarize translated content into 3–5 lines, shown in a gree
 Pick Claude or Gemini under "Summary engine" in the popup and paste in your key.
 - Claude: get a key at [Anthropic Console](https://console.anthropic.com/)
 - Gemini: get a key at [Google AI Studio](https://aistudio.google.com/apikey)
+
+## Text-to-speech
+
+Every translation block gets a 🔊 button on the right. Click it and the translation is read out in your target language.
+
+| Where | Visibility |
+|-------|------------|
+| Selection panel | Next to the copy button, always visible |
+| Inline translation block | To the left of the ×, only on hover |
+| Summary block | Right after the "Summary" badge, always visible |
+
+- Icon flips to ⏹ while speaking — click again to stop
+- Pressing another speak button stops the current playback and starts the new one
+- `Esc`, switching tabs, or leaving the page also stops it
+- Uses your browser's built-in Web Speech API, so **no extra API key or permission is needed**
+- If the OS doesn't ship a voice for the target language (say, Arabic on a fresh Windows install), you'll see a toast and nothing plays
 
 ## Keyboard shortcuts
 

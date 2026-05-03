@@ -10,6 +10,15 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### New features
+
+- **Text-to-speech for translations** (#181)
+  - Every translation block now has a 🔊 button — click it and the translation gets read out in your target language
+  - Placement: selection panel (next to Copy, always visible), inline translation block (left of the ×, on hover), summary block (next to the badge, always visible)
+  - Icon flips to ⏹ while speaking — click again, press another speak button, hit `Esc`, switch tabs, or leave the page to stop it
+  - Uses your browser's built-in Web Speech API, so no extra API key or permission is required
+  - If the OS doesn't have a voice for the target language, a toast tells you "Your environment does not support speaking {lang}"
+
 ---
 
 ## v1.5.0 (2026-05-01)

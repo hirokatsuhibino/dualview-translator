@@ -300,6 +300,102 @@
   border-color: rgba(245,166,35,0.4) !important;
 }
 
+/* ── 読み上げボタン（共通） ─────────────────────────────────────────── */
+.dvt-speak-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: none !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: -apple-system, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif !important;
+  line-height: 1 !important;
+  border-radius: 4px !important;
+  color: inherit !important;
+  transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s !important;
+}
+
+.dvt-speak-icon {
+  display: inline-block !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* インライン翻訳用（.dvt-trans 内、× の左、ホバー時のみ表示） */
+.dvt-speak-btn-inline {
+  margin-left: 4px !important;
+  padding: 0 4px !important;
+  font-size: 0.85em !important;
+  vertical-align: middle !important;
+  opacity: 0 !important;
+  border: none !important;
+}
+.dvt-trans:hover .dvt-speak-btn-inline {
+  opacity: 0.45 !important;
+}
+.dvt-speak-btn-inline:hover {
+  opacity: 1 !important;
+  background: rgba(245,166,35,0.15) !important;
+  color: #f5a623 !important;
+}
+/* 再生中はホバー外でも常時表示する */
+.dvt-speak-btn-inline[data-dvt-speaking="true"] {
+  opacity: 1 !important;
+  color: #f5a623 !important;
+  background: rgba(245,166,35,0.12) !important;
+}
+
+/* 選択パネル用（.dvt-sel-actions 内、コピーボタンの隣・常時表示） */
+.dvt-speak-btn-panel {
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+  margin-right: 6px !important;
+  color: rgba(255,255,255,0.45) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 5px !important;
+  gap: 4px !important;
+}
+.dvt-speak-btn-panel:hover {
+  color: #f5a623 !important;
+  border-color: rgba(245,166,35,0.4) !important;
+}
+.dvt-speak-btn-panel[data-dvt-speaking="true"] {
+  color: #f5a623 !important;
+  border-color: rgba(245,166,35,0.5) !important;
+  background: rgba(245,166,35,0.12) !important;
+}
+.dvt-speak-btn-panel .dvt-speak-icon { font-size: 12px !important; }
+
+/* 要約用（.dvt-summary 内、バッジの隣・常時表示） */
+.dvt-speak-btn-summary {
+  margin-left: 6px !important;
+  padding: 1px 5px !important;
+  font-size: 0.85em !important;
+  vertical-align: middle !important;
+  opacity: 0.55 !important;
+  color: inherit !important;
+}
+.dvt-speak-btn-summary:hover {
+  opacity: 1 !important;
+  background: rgba(76,175,80,0.15) !important;
+  color: #4caf50 !important;
+  border-color: rgba(76,175,80,0.3) !important;
+}
+.dvt-speak-btn-summary[data-dvt-speaking="true"] {
+  opacity: 1 !important;
+  color: #4caf50 !important;
+  background: rgba(76,175,80,0.12) !important;
+  border-color: rgba(76,175,80,0.4) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dvt-speak-btn { transition: none !important; }
+}
+
 /* ── Spinner ──────────────────────────────────────────────────────────── */
 .dvt-spinner {
   display: inline-block !important;
@@ -610,6 +706,39 @@
     border-color: rgba(212,135,10,0.4) !important;
   }
 
+  /* ── 読み上げボタン（ライト） ── */
+  .dvt-speak-btn-inline:hover {
+    background: rgba(212,135,10,0.15) !important;
+    color: #d4870a !important;
+  }
+  .dvt-speak-btn-inline[data-dvt-speaking="true"] {
+    color: #d4870a !important;
+    background: rgba(212,135,10,0.12) !important;
+  }
+  .dvt-speak-btn-panel {
+    color: rgba(0,0,0,0.4) !important;
+    border-color: rgba(0,0,0,0.12) !important;
+  }
+  .dvt-speak-btn-panel:hover {
+    color: #d4870a !important;
+    border-color: rgba(212,135,10,0.4) !important;
+  }
+  .dvt-speak-btn-panel[data-dvt-speaking="true"] {
+    color: #d4870a !important;
+    border-color: rgba(212,135,10,0.5) !important;
+    background: rgba(212,135,10,0.12) !important;
+  }
+  .dvt-speak-btn-summary:hover {
+    background: rgba(56,142,60,0.15) !important;
+    color: #388e3c !important;
+    border-color: rgba(56,142,60,0.3) !important;
+  }
+  .dvt-speak-btn-summary[data-dvt-speaking="true"] {
+    color: #388e3c !important;
+    background: rgba(56,142,60,0.12) !important;
+    border-color: rgba(56,142,60,0.4) !important;
+  }
+
   /* ── Spinner ── */
   .dvt-spinner {
     border-color: rgba(212,135,10,0.2) !important;
@@ -730,6 +859,14 @@
 .dvt-light .dvt-sel-trans-text { color: #1a1a2e !important; }
 .dvt-light .dvt-copy-btn { color: rgba(0,0,0,0.4) !important; border-color: rgba(0,0,0,0.12) !important; }
 .dvt-light .dvt-copy-btn:hover { color: #d4870a !important; border-color: rgba(212,135,10,0.4) !important; }
+
+.dvt-light .dvt-speak-btn-inline:hover { background: rgba(212,135,10,0.15) !important; color: #d4870a !important; }
+.dvt-light .dvt-speak-btn-inline[data-dvt-speaking="true"] { color: #d4870a !important; background: rgba(212,135,10,0.12) !important; }
+.dvt-light .dvt-speak-btn-panel { color: rgba(0,0,0,0.4) !important; border-color: rgba(0,0,0,0.12) !important; }
+.dvt-light .dvt-speak-btn-panel:hover { color: #d4870a !important; border-color: rgba(212,135,10,0.4) !important; }
+.dvt-light .dvt-speak-btn-panel[data-dvt-speaking="true"] { color: #d4870a !important; border-color: rgba(212,135,10,0.5) !important; background: rgba(212,135,10,0.12) !important; }
+.dvt-light .dvt-speak-btn-summary:hover { background: rgba(56,142,60,0.15) !important; color: #388e3c !important; border-color: rgba(56,142,60,0.3) !important; }
+.dvt-light .dvt-speak-btn-summary[data-dvt-speaking="true"] { color: #388e3c !important; background: rgba(56,142,60,0.12) !important; border-color: rgba(56,142,60,0.4) !important; }
 
 .dvt-light .dvt-spinner { border-color: rgba(212,135,10,0.2) !important; border-top-color: #d4870a !important; }
 

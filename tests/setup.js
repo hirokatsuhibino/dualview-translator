@@ -43,6 +43,38 @@ if (typeof document !== 'undefined' && !('ontouchstart' in document.documentElem
   });
 }
 
+// Web Speech API のモック（読み上げ機能のテスト用）
+// jsdom には未実装なので最低限の挙動を提供する。
+// テスト側からは globalThis.__speakLog で呼び出し履歴を検査できる。
+globalThis.__speakLog = {
+  spoken: [],   // speak() に渡された SpeechSynthesisUtterance の配列
+  cancels: 0,   // cancel() の呼び出し回数
+  reset() { this.spoken = []; this.cancels = 0; },
+};
+class MockSpeechSynthesisUtterance {
+  constructor(text) {
+    this.text = text;
+    this.lang = '';
+    this.onend = null;
+    this.onerror = null;
+  }
+}
+// getVoices() の戻り値はテストごとに上書きできるよう変数で保持
+globalThis.__mockVoices = [
+  { lang: 'ja-JP', name: 'Kyoko' },
+  { lang: 'en-US', name: 'Samantha' },
+  { lang: 'fr-FR', name: 'Thomas' },
+  { lang: 'de-DE', name: 'Anna' },
+];
+globalThis.window.SpeechSynthesisUtterance = MockSpeechSynthesisUtterance;
+globalThis.window.speechSynthesis = {
+  speak: vi.fn((utterance) => {
+    globalThis.__speakLog.spoken.push(utterance);
+  }),
+  cancel: vi.fn(() => { globalThis.__speakLog.cancels++; }),
+  getVoices: vi.fn(() => globalThis.__mockVoices),
+};
+
 const storageData = {};
 
 globalThis.chrome = {
