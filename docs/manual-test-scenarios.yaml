@@ -1317,3 +1317,53 @@ suites:
         expected:
           - すべてのブラウザで読み上げが動作（OS の TTS 音声に依存）
           - iOS Safari でもボタンが描画され、タップで再生される
+
+      - id: TTS-012
+        title: 選択パネルを閉じてもインライン読み上げは継続（過去バグ回帰防止）
+        priority: p1
+        description: "PR #182 の Copilot レビューで指摘。removeSelectionPanel が無条件 stopSpeak を呼んでパネル外の読み上げまで止めていた回帰の確認"
+        related_prs: [182]
+        steps:
+          - インライン翻訳ブロックの 🔊 で読み上げ開始
+          - 別途テキストを選択して翻訳パネルを開く
+          - 翻訳パネルを閉じる（× / ESC / 別箇所クリック）
+        expected:
+          - インライン翻訳ブロックの読み上げは止まらず継続する
+          - パネル close で勝手に止まるのは「パネル内の 🔊 で再生中だった場合のみ」
+
+      - id: TTS-013
+        title: 選択パネル同一言語スキップでも他ブロックの読み上げは止まらない
+        priority: p1
+        description: "PR #182 の Copilot レビューで指摘。同一言語スキップ時の stopSpeak が他ブロックの再生も止めていた回帰の確認"
+        related_prs: [182]
+        steps:
+          - 要約ブロックの 🔊 で読み上げ開始
+          - 翻訳先言語と同じ言語のテキストを選択して翻訳パネルを開く（同一言語スキップが発火）
+        expected:
+          - 要約の読み上げは止まらず継続する
+          - パネルでは「原文と翻訳先の言語が同じです」が表示される
+
+      - id: TTS-014
+        title: キーボード Tab でインライン読み上げボタンにフォーカスすると見える
+        priority: p1
+        description: "PR #182 a11y 改善。:focus-visible / :focus-within で表示する仕様の確認"
+        related_prs: [182]
+        steps:
+          - ページ全体を翻訳
+          - キーボード Tab で翻訳ブロック内のフォーカスを進める
+        expected:
+          - 翻訳ブロック内の 🔊 ボタンにフォーカスが当たると、ホバーしていなくても opacity 0.45+ で表示される
+          - フォーカスリングが描画される（:focus-visible の outline）
+
+      - id: TTS-015
+        title: タッチ環境（iOS / Android）でインライン読み上げボタンが常時表示
+        priority: p1
+        description: "PR #182 a11y 改善。@media (hover: none) で常時表示にする仕様の確認"
+        related_prs: [182]
+        environment: safari-ios / chrome-android
+        steps:
+          - 任意のページを翻訳
+          - 翻訳ブロックを目視確認（タップ前）
+        expected:
+          - インライン翻訳ブロックの 🔊 ボタンが opacity 0.6 程度で常時表示されている
+          - タップで読み上げが始まる

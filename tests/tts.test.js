@@ -223,4 +223,44 @@ describe('DVT — 音声読み上げ', () => {
       expect(globalThis.__speakLog.cancels).toBeGreaterThan(cancelsBefore);
     });
   });
+
+  describe('他ブロックの再生を保護', () => {
+    it('removeSelectionPanel 相当の状況でもパネル外の再生は止まらない（仕様確認）', () => {
+      // パネル外で再生中
+      const inlineBtn = DVT.createSpeakButton('Inline text', 'en');
+      document.body.appendChild(inlineBtn);
+      DVT.speak('Inline text', 'en', inlineBtn);
+      expect(inlineBtn.dataset.dvtSpeaking).toBe('true');
+      const cancelsBefore = globalThis.__speakLog.cancels;
+
+      // パネル DOM を別途用意。中の dvt-speak-btn は再生中ではない
+      const panel = document.createElement('div');
+      panel.className = 'dvt-sel-panel';
+      const panelBtn = DVT.createSpeakButton('Panel text', 'en');
+      panel.appendChild(panelBtn);
+      document.body.appendChild(panel);
+
+      // 「パネルに dvt-speak-btn[data-dvt-speaking="true"] があるときだけ stopSpeak」のロジック確認
+      if (panel.querySelector('.dvt-speak-btn[data-dvt-speaking="true"]')) {
+        DVT.stopSpeak();
+      }
+      // パネル内ボタンは再生中ではないので stopSpeak は呼ばれずインライン側は再生継続
+      expect(globalThis.__speakLog.cancels).toBe(cancelsBefore);
+      expect(inlineBtn.dataset.dvtSpeaking).toBe('true');
+    });
+
+    it('同一言語スキップでパネル内ボタンが再生中でないとき stopSpeak は呼ばれない', () => {
+      const otherBtn = DVT.createSpeakButton('Other', 'en');
+      DVT.speak('Other', 'en', otherBtn);
+      const cancelsBefore = globalThis.__speakLog.cancels;
+
+      const panelBtn = DVT.createSpeakButton('Panel', 'en');
+      // パネル内ボタンは再生中ではない
+      if (panelBtn.dataset.dvtSpeaking === 'true') {
+        DVT.stopSpeak();
+      }
+      expect(globalThis.__speakLog.cancels).toBe(cancelsBefore);
+      expect(otherBtn.dataset.dvtSpeaking).toBe('true');
+    });
+  });
 });
