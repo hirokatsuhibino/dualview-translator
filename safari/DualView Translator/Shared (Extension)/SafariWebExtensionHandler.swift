@@ -364,23 +364,61 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     // Phase 1 では Xcode IDE 操作なしで完結させるため一旦 inline で実装している。
     private static let appGroupID = "group.jp.co.orangesoft.dualview-translator"
 
+    // background.js の MIRRORED_KEYS と完全一致させる allowlist。ここを変更したら
+    // background.js 側も同期して更新すること（Phase 2 で SharedSettings.swift に分離予定）。
+    private static let mirrorAllowedKeys: Set<String> = [
+        "targetLang", "uiLang", "dvtTheme",
+        "translateEngine", "deeplApiKey",
+        "llmEngine", "claudeApiKey", "geminiApiKey",
+    ]
+
+    // UserDefaults の plist 互換型のみ許可。Web Ext 側は通常 String / Bool / Number しか送らないが、
+    // 想定外型（例: メモリ上の関数オブジェクトなど）が来た場合に備えて防御的にチェックする。
+    private static func isValidUserDefaultsValue(_ value: Any) -> Bool {
+        switch value {
+        case is String, is NSNumber, is Bool,
+             is [Any], is [String: Any],
+             is Data, is Date:
+            return true
+        default:
+            return false
+        }
+    }
+
     private func handleMirrorSettings(payload: [String: Any]) -> [String: Any] {
         guard let entries = payload["entries"] as? [String: Any] else {
             return makeError("missing entries")
         }
-        let defaults = UserDefaults(suiteName: SafariWebExtensionHandler.appGroupID)
+        // App Group entitlements が外れていると UserDefaults(suiteName:) は nil を返すため、
+        // 黙って書き込みに失敗するのではなく明示的なエラーとして返して JS 側で気付けるようにする。
+        guard let defaults = UserDefaults(suiteName: SafariWebExtensionHandler.appGroupID) else {
+            return makeError("App Group UserDefaults unavailable; check entitlements")
+        }
         var applied = 0
+        var rejectedKeys: [String] = []
         for (key, value) in entries {
+            // allowlist チェック: 想定外キーはスキップ（Web Ext 側のバグや改ざんへの防御）
+            guard SafariWebExtensionHandler.mirrorAllowedKeys.contains(key) else {
+                rejectedKeys.append(key)
+                continue
+            }
             // null 値は「Web Ext 側でキー削除（chrome.storage.local.remove）された」シグナルとして扱う
             if value is NSNull {
-                defaults?.removeObject(forKey: key)
+                defaults.removeObject(forKey: key)
+                applied += 1
+            } else if SafariWebExtensionHandler.isValidUserDefaultsValue(value) {
+                defaults.set(value, forKey: key)
+                applied += 1
             } else {
-                defaults?.set(value, forKey: key)
+                rejectedKeys.append(key)
             }
-            applied += 1
         }
-        os_log(.debug, "mirrorSettings applied %{public}d key(s)", applied)
-        return ["ok": true, "applied": applied]
+        os_log(.debug, "mirrorSettings applied %{public}d key(s), rejected %{public}d", applied, rejectedKeys.count)
+        var response: [String: Any] = ["ok": true, "applied": applied]
+        if !rejectedKeys.isEmpty {
+            response["rejected"] = rejectedKeys
+        }
+        return response
     }
 
     // ─── translate: 実テキスト翻訳 ────────────────────────────────
