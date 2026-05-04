@@ -334,8 +334,17 @@
   opacity: 0 !important;
   border: none !important;
 }
-.dvt-trans:hover .dvt-speak-btn-inline {
+/* ホバー時に加え、キーボード Tab フォーカス時（:focus-within / :focus-visible）も
+   表示する。これがないとキーボードユーザーは読み上げボタンを発見できない（a11y） */
+.dvt-trans:hover .dvt-speak-btn-inline,
+.dvt-trans:focus-within .dvt-speak-btn-inline,
+.dvt-speak-btn-inline:focus-visible {
   opacity: 0.45 !important;
+}
+/* :focus-visible のときは枠を出して操作中であることを示す */
+.dvt-speak-btn-inline:focus-visible {
+  outline: 2px solid #f5a623 !important;
+  outline-offset: 1px !important;
 }
 .dvt-speak-btn-inline:hover {
   opacity: 1 !important;
@@ -347,6 +356,14 @@
   opacity: 1 !important;
   color: #f5a623 !important;
   background: rgba(245,166,35,0.12) !important;
+}
+/* hover を持たない端末（モバイル / iOS）では常時表示。
+   .dvt-trans の翻訳ブロックを片手操作する場面が多いため、
+   ノイズより発見可能性を優先する */
+@media (hover: none) {
+  .dvt-speak-btn-inline {
+    opacity: 0.6 !important;
+  }
 }
 
 /* 選択パネル用（.dvt-sel-actions 内、コピーボタンの隣・常時表示） */
@@ -711,6 +728,11 @@
     background: rgba(212,135,10,0.15) !important;
     color: #d4870a !important;
   }
+  /* ライトテーマでは focus-visible の outline をテーマカラーに合わせる
+     （ダーク用の #f5a623 は背景白で浮きすぎるため） */
+  .dvt-speak-btn-inline:focus-visible {
+    outline-color: #d4870a !important;
+  }
   .dvt-speak-btn-inline[data-dvt-speaking="true"] {
     color: #d4870a !important;
     background: rgba(212,135,10,0.12) !important;
@@ -861,6 +883,8 @@
 .dvt-light .dvt-copy-btn:hover { color: #d4870a !important; border-color: rgba(212,135,10,0.4) !important; }
 
 .dvt-light .dvt-speak-btn-inline:hover { background: rgba(212,135,10,0.15) !important; color: #d4870a !important; }
+/* ライトテーマでは focus-visible の outline をテーマカラーに合わせる */
+.dvt-light .dvt-speak-btn-inline:focus-visible { outline-color: #d4870a !important; }
 .dvt-light .dvt-speak-btn-inline[data-dvt-speaking="true"] { color: #d4870a !important; background: rgba(212,135,10,0.12) !important; }
 .dvt-light .dvt-speak-btn-panel { color: rgba(0,0,0,0.4) !important; border-color: rgba(0,0,0,0.12) !important; }
 .dvt-light .dvt-speak-btn-panel:hover { color: #d4870a !important; border-color: rgba(212,135,10,0.4) !important; }
