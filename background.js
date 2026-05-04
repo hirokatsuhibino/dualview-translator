@@ -32,7 +32,17 @@ const NATIVE_ACTIONS = Object.freeze({
   DETECT_LANGUAGE: 'detectLanguage',
   CHECK_LANGUAGE_AVAILABILITY: 'checkLanguageAvailability',
   LIST_SUPPORTED_LANGUAGES: 'listSupportedLanguages',
+  MIRROR_SETTINGS: 'mirrorSettings',
 });
+
+// App Group 経由で Share Extension など他ターゲットへ共有するキー一覧。
+// ここを増やしたら Swift 側の SharedSettings.Keys.all も同期して更新する。
+// 値が大きくなりがち / 拡張内部だけで使う dismissedDomains / autoRules / tc:* / sc:* は対象外。
+const MIRRORED_KEYS = Object.freeze([
+  'targetLang', 'uiLang', 'dvtTheme',
+  'translateEngine', 'deeplApiKey',
+  'llmEngine', 'claudeApiKey', 'geminiApiKey',
+]);
 
 // ─── LLM APIキーの有無を判定 ─────────────────────────────────────────
 function hasLLMApiKey(data) {
@@ -89,6 +99,69 @@ async function detectAppleAvailability() {
 // 拡張起動時に1度だけ実行（installed / startup の両方をカバー）
 chrome.runtime.onInstalled.addListener(() => { detectAppleAvailability(); });
 chrome.runtime.onStartup?.addListener(() => { detectAppleAvailability(); });
+
+// ─── 設定ミラー（App Group 経由で Share Extension 等に共有） ──────────
+// chrome.storage.local の MIRRORED_KEYS が変更されたら Native ハンドラへ送信し、
+// `UserDefaults(suiteName: group.jp.co.orangesoft.dualview-translator)` に反映させる。
+// 失敗してもアプリ機能は止めず warn だけ（共有はベストエフォート）。
+async function mirrorSettingsToNative(entries) {
+  if (!HAS_NATIVE_MESSAGING) return;
+  if (!entries || Object.keys(entries).length === 0) return;
+  try {
+    await chrome.runtime.sendNativeMessage(NATIVE_HOST_ID, {
+      action: NATIVE_ACTIONS.MIRROR_SETTINGS,
+      entries,
+    });
+  } catch (e) {
+    console.warn('[DVT] mirrorSettings failed:', e?.message || e);
+  }
+}
+
+// 起動時に既存値をまとめて 1 回ミラー（前回起動以降の差分を含めて確実に同期する）
+async function initSettingsMirror() {
+  if (!HAS_NATIVE_MESSAGING) return;
+  try {
+    const data = await new Promise(resolve =>
+      chrome.storage.local.get(MIRRORED_KEYS, resolve)
+    );
+    const entries = {};
+    for (const key of MIRRORED_KEYS) {
+      if (data[key] !== undefined) entries[key] = data[key];
+    }
+    if (Object.keys(entries).length > 0) {
+      await mirrorSettingsToNative(entries);
+    }
+  } catch (e) {
+    // 起動時失敗は非致命的（次回 set 時に onChanged 経由で同期される）
+    console.warn('[DVT] initSettingsMirror failed:', e?.message || e);
+  }
+}
+
+// chrome.storage.onChanged の changes から MIRRORED_KEYS 分だけ取り出して
+// Swift 側へ送る形に整える純粋関数。テストしやすくするため切り出している。
+// newValue が undefined（キー削除）の場合は null を入れて Swift 側で removeObject させる。
+function pickMirroredEntries(changes) {
+  const entries = {};
+  for (const key of MIRRORED_KEYS) {
+    if (changes[key]) {
+      entries[key] = changes[key].newValue !== undefined ? changes[key].newValue : null;
+    }
+  }
+  return entries;
+}
+
+// chrome.storage.onChanged で content / popup どちらの set でもキャッチできる。
+// （popup.js / content-*.js の各 set 呼び出しを書き換える必要がない）
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  const entries = pickMirroredEntries(changes);
+  if (Object.keys(entries).length > 0) {
+    mirrorSettingsToNative(entries);
+  }
+});
+
+chrome.runtime.onInstalled.addListener(() => { initSettingsMirror(); });
+chrome.runtime.onStartup?.addListener(() => { initSettingsMirror(); });
 
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 if (HAS_CONTEXT_MENUS) {

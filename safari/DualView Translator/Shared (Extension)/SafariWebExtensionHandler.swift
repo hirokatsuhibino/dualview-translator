@@ -93,6 +93,12 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 // iOS 12+ / macOS 10.14+ で同期 API なので Task 不要・即応答。
                 respond(context: context, body: handleDetectLanguage(payload: payload ?? [:]))
                 return
+            case "mirrorSettings":
+                // Web Extension の chrome.storage.local 変更を App Group UserDefaults に反映する。
+                // Share Extension 等の他ターゲットから設定値を読み出すための同期パス。
+                // 設定共有なので失敗してもアプリ機能は継続できる（Web Ext 側でログするだけ）。
+                respond(context: context, body: handleMirrorSettings(payload: payload ?? [:]))
+                return
             default:
                 // 未知の action は明示的にエラーを返す（黙って echo にフォールバックすると
                 // JS 側のバグに気付きにくくなるため）
@@ -345,6 +351,36 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "detectedLang": dominant.rawValue,
             "confidence": confidence,
         ]
+    }
+
+    // ─── mirrorSettings: Web Ext 設定を App Group へ反映 ────────────
+    // payload: { entries: { "uiLang": "ja", "targetLang": "en", ... } }
+    // Web Extension 側で chrome.storage.local が変化したとき呼ばれ、Share Extension
+    // など他ターゲットが参照するための共有領域に値を写す。
+    // 値そのものは APIキー等を含むためログに出さず件数だけ記録する。
+    //
+    // Note: 共有 App Group ID と Keys 定数は Phase 2（Issue #89-2）で SharedSettings.swift
+    // として独立ファイル化し、Share Extension からも参照できる構造に再編する予定。
+    // Phase 1 では Xcode IDE 操作なしで完結させるため一旦 inline で実装している。
+    private static let appGroupID = "group.jp.co.orangesoft.dualview-translator"
+
+    private func handleMirrorSettings(payload: [String: Any]) -> [String: Any] {
+        guard let entries = payload["entries"] as? [String: Any] else {
+            return makeError("missing entries")
+        }
+        let defaults = UserDefaults(suiteName: SafariWebExtensionHandler.appGroupID)
+        var applied = 0
+        for (key, value) in entries {
+            // null 値は「Web Ext 側でキー削除（chrome.storage.local.remove）された」シグナルとして扱う
+            if value is NSNull {
+                defaults?.removeObject(forKey: key)
+            } else {
+                defaults?.set(value, forKey: key)
+            }
+            applied += 1
+        }
+        os_log(.debug, "mirrorSettings applied %{public}d key(s)", applied)
+        return ["ok": true, "applied": applied]
     }
 
     // ─── translate: 実テキスト翻訳 ────────────────────────────────
