@@ -117,8 +117,11 @@ var DVT_SEL = (function () {
     // 「パネル閉じる → 0.3 秒後に古い選択範囲でアイコン再表示」のような副作用を防げる
     clearSelectionChangeTimer();
     if (DVT.state.selectionPanel) {
-      // パネル内の読み上げが進行中なら停止（DOM が消えても speechSynthesis は鳴り続けるため）
-      DVT.stopSpeak();
+      // パネル内で再生中の読み上げのみ停止する。インライン翻訳・要約側で再生中の読み上げは
+      // パネルを閉じても継続させたいので、明示的にパネル内のボタン状態を確認する。
+      if (DVT.state.selectionPanel.querySelector('.dvt-speak-btn[data-dvt-speaking="true"]')) {
+        DVT.stopSpeak();
+      }
       DVT.state.selectionPanel.remove();
       DVT.state.selectionPanel = null;
     }
@@ -412,7 +415,11 @@ var DVT_SEL = (function () {
     const existingSpeakBtn = actions.querySelector('.dvt-speak-btn');
     if (existingSpeakBtn) {
       existingSpeakBtn.style.display = isSameLang ? 'none' : '';
-      if (isSameLang) DVT.stopSpeak();
+      // 同一言語スキップでこのパネル内ボタンが再生中だった場合のみ停止
+      // （他ブロックの再生中の読み上げは止めない）
+      if (isSameLang && existingSpeakBtn.dataset.dvtSpeaking === 'true') {
+        DVT.stopSpeak();
+      }
     }
 
     panel.querySelector('.dvt-copy-btn').addEventListener('click', () => {
