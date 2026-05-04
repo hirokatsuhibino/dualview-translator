@@ -92,6 +92,170 @@ var DVT = (function () {
     if (msgEl) msgEl.textContent = message;
   }
 
+  // ─── 音声読み上げ ──────────────────────────────────────────────────
+  // Web Speech API (window.speechSynthesis) を用いた訳文の読み上げ。
+  // 各翻訳ブロックの読み上げボタンから speak() を呼ぶ。
+  // 同時再生は不可: 別ボタンを押した時点で前の再生を停止して新規再生に切り替える。
+
+  // 翻訳先言語コード → BCP47 タグへのマッピング
+  // SpeechSynthesisVoice.lang は通常 'ja-JP' 形式で公開されているので、
+  // popup の言語コード（'ja' 等）を BCP47 に正規化してから音声選択に使う。
+  const SPEAK_LANG_MAP = {
+    ja: 'ja-JP', en: 'en-US',
+    'zh-cn': 'zh-CN', 'zh-tw': 'zh-TW',
+    ko: 'ko-KR', fr: 'fr-FR', de: 'de-DE',
+    es: 'es-ES', pt: 'pt-PT', ru: 'ru-RU', ar: 'ar-SA',
+  };
+
+  function resolveSpeakLang(lang) {
+    if (!lang) return '';
+    return SPEAK_LANG_MAP[lang.toLowerCase()] || lang;
+  }
+
+  // 現在再生中のボタン / utterance（停止時の状態復元・重複再生検知に使う）
+  let speakingButton = null;
+  let speakingUtterance = null;
+
+  function isSpeechSupported() {
+    return typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance === 'function';
+  }
+
+  // 翻訳先言語の音声がインストールされているかを判定する。
+  // 注意: 一部環境（Chrome 起動直後など）では getVoices() が非同期ロードされ、
+  //       初回呼び出し時に空配列を返す。そのときは「未対応」と判定すると常に未対応扱い
+  //       になってしまうので、空配列なら楽観的に true を返して speak() の onerror で捕捉する。
+  function hasVoiceFor(bcp47) {
+    if (!isSpeechSupported()) return false;
+    let voices = [];
+    try { voices = window.speechSynthesis.getVoices() || []; } catch (e) { return true; }
+    if (voices.length === 0) return true;
+    const target = (bcp47 || '').toLowerCase();
+    const base = target.split('-')[0];
+    return voices.some(v => {
+      const vlang = (v.lang || '').toLowerCase();
+      return vlang === target || vlang.split('-')[0] === base;
+    });
+  }
+
+  // ボタン UI 状態の更新（再生中は ⏹ アイコン + aria-label / title を切替）
+  function setSpeakButtonState(btn, speaking) {
+    if (!btn) return;
+    const iconSpan = btn.querySelector('.dvt-speak-icon');
+    if (speaking) {
+      btn.dataset.dvtSpeaking = 'true';
+      const label = t('stopSpeakBtn');
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+      if (iconSpan) iconSpan.textContent = '⏹';
+    } else {
+      delete btn.dataset.dvtSpeaking;
+      const label = t('speakBtn');
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+      if (iconSpan) iconSpan.textContent = '🔊';
+    }
+  }
+
+  function stopSpeak() {
+    if (isSpeechSupported()) {
+      try { window.speechSynthesis.cancel(); } catch (e) { /* noop */ }
+    }
+    if (speakingButton) {
+      setSpeakButtonState(speakingButton, false);
+      speakingButton = null;
+    }
+    speakingUtterance = null;
+  }
+
+  function speak(text, lang, button) {
+    if (!text) return;
+    if (!isSpeechSupported()) {
+      showToast(t('speakUnsupported', { lang: getLangDisplayName(lang) }), false, 3500);
+      return;
+    }
+    // 同じボタンの再クリック → 停止のみ
+    if (button && button === speakingButton) {
+      stopSpeak();
+      return;
+    }
+    // 別ボタンで再生中 → 現状を停止して新規再生へ
+    if (speakingButton) stopSpeak();
+
+    const bcp47 = resolveSpeakLang(lang);
+    if (!hasVoiceFor(bcp47)) {
+      showToast(t('speakUnsupported', { lang: getLangDisplayName(lang) }), false, 3500);
+      return;
+    }
+
+    const u = new window.SpeechSynthesisUtterance(text);
+    if (bcp47) u.lang = bcp47;
+    const reset = () => {
+      if (speakingUtterance === u) {
+        speakingUtterance = null;
+        if (speakingButton === button) {
+          setSpeakButtonState(button, false);
+          speakingButton = null;
+        }
+      }
+    };
+    u.onend = reset;
+    u.onerror = reset;
+
+    speakingUtterance = u;
+    speakingButton = button || null;
+    if (button) setSpeakButtonState(button, true);
+
+    try {
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      stopSpeak();
+      showToast(t('speakUnsupported', { lang: getLangDisplayName(lang) }), false, 3500);
+    }
+  }
+
+  // 読み上げボタン生成ヘルパ。各 content-* から共通利用する。
+  // getText / getLang は値か関数を受け付ける（クリック時点で最新のテキストを取りたいケース対応）。
+  function createSpeakButton(getText, getLang, extraClass = '') {
+    const btn = document.createElement('button');
+    btn.className = ('dvt-speak-btn ' + extraClass).trim();
+    btn.setAttribute('data-dvt', 'true');
+    // form 内挿入時の暗黙 submit を防ぐ
+    btn.setAttribute('type', 'button');
+    const label = t('speakBtn');
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'dvt-speak-icon';
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = '🔊';
+    btn.appendChild(iconSpan);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const text = typeof getText === 'function' ? getText() : getText;
+      const lang = typeof getLang === 'function' ? getLang() : getLang;
+      speak(text, lang, btn);
+    });
+    return btn;
+  }
+
+  // ESC で停止 / ページ非表示・離脱時に停止（バックグラウンドで読み続けるのを防ぐ）
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && speakingButton) stopSpeak();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && speakingButton) stopSpeak();
+    });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+      if (speakingButton) stopSpeak();
+    });
+  }
+
   // ─── テーマ検出 ────────────────────────────────────────────────────
   (function detectTheme() {
     var mq = window.matchMedia('(prefers-color-scheme: light)');
@@ -213,5 +377,9 @@ var DVT = (function () {
     showToast,
     updateToast,
     getLangDisplayName,
+    speak,
+    stopSpeak,
+    createSpeakButton,
+    isSpeechSupported,
   };
 })();

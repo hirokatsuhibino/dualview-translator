@@ -109,6 +109,9 @@ var DVT_I18N = (function () {
       btnSelectElement: '要素を選択',
       undoElement: 'この翻訳を元に戻す',
       undoSummary: 'この要約を消す',
+      speakBtn: '読み上げ',
+      stopSpeakBtn: '読み上げを停止',
+      speakUnsupported: 'お使いの環境では {lang} の読み上げに対応していません',
     },
     en: {
       uiLangLabel: 'Display Language',
@@ -203,6 +206,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'Pick element',
       undoElement: 'Undo this translation',
       undoSummary: 'Remove this summary',
+      speakBtn: 'Speak',
+      stopSpeakBtn: 'Stop speaking',
+      speakUnsupported: 'Your environment does not support speaking {lang}',
     },
     'zh-CN': {
       uiLangLabel: '显示语言',
@@ -292,6 +298,9 @@ var DVT_I18N = (function () {
       btnSelectElement: '选择元素',
       undoElement: '撤销此翻译',
       undoSummary: '移除此摘要',
+      speakBtn: '朗读',
+      stopSpeakBtn: '停止朗读',
+      speakUnsupported: '您的环境不支持{lang}的朗读',
     },
     'zh-TW': {
       uiLangLabel: '顯示語言',
@@ -381,6 +390,9 @@ var DVT_I18N = (function () {
       btnSelectElement: '選擇元素',
       undoElement: '復原此翻譯',
       undoSummary: '移除此摘要',
+      speakBtn: '朗讀',
+      stopSpeakBtn: '停止朗讀',
+      speakUnsupported: '您的環境不支援{lang}的朗讀',
     },
     ko: {
       uiLangLabel: '표시 언어',
@@ -470,6 +482,9 @@ var DVT_I18N = (function () {
       btnSelectElement: '요소 선택',
       undoElement: '이 번역 되돌리기',
       undoSummary: '이 요약 제거',
+      speakBtn: '읽어주기',
+      stopSpeakBtn: '읽기 중지',
+      speakUnsupported: '이 환경에서는 {lang} 읽어주기를 지원하지 않습니다',
     },
     fr: {
       uiLangLabel: "Langue d'affichage",
@@ -559,6 +574,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'Choisir',
       undoElement: 'Annuler cette traduction',
       undoSummary: 'Supprimer ce résumé',
+      speakBtn: 'Lire',
+      stopSpeakBtn: 'Arrêter la lecture',
+      speakUnsupported: "Votre environnement ne prend pas en charge la lecture en {lang}",
     },
     de: {
       uiLangLabel: 'Anzeigesprache',
@@ -648,6 +666,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'Element wählen',
       undoElement: 'Diese Übersetzung rückgängig machen',
       undoSummary: 'Diese Zusammenfassung entfernen',
+      speakBtn: 'Vorlesen',
+      stopSpeakBtn: 'Vorlesen stoppen',
+      speakUnsupported: 'Ihre Umgebung unterstützt das Vorlesen in {lang} nicht',
     },
     es: {
       uiLangLabel: 'Idioma de la interfaz',
@@ -737,6 +758,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'Elegir',
       undoElement: 'Deshacer esta traducción',
       undoSummary: 'Quitar este resumen',
+      speakBtn: 'Leer',
+      stopSpeakBtn: 'Detener lectura',
+      speakUnsupported: 'Tu entorno no admite la lectura en {lang}',
     },
     pt: {
       uiLangLabel: 'Idioma da interface',
@@ -826,6 +850,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'Escolher',
       undoElement: 'Desfazer esta tradução',
       undoSummary: 'Remover este resumo',
+      speakBtn: 'Ler',
+      stopSpeakBtn: 'Parar leitura',
+      speakUnsupported: 'Seu ambiente não suporta a leitura em {lang}',
     },
     ru: {
       uiLangLabel: 'Язык интерфейса',
@@ -915,6 +942,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'Выбрать',
       undoElement: 'Отменить этот перевод',
       undoSummary: 'Удалить эту сводку',
+      speakBtn: 'Озвучить',
+      stopSpeakBtn: 'Остановить озвучку',
+      speakUnsupported: 'Ваше окружение не поддерживает озвучку {lang}',
     },
     ar: {
       uiLangLabel: 'لغة العرض',
@@ -1004,6 +1034,9 @@ var DVT_I18N = (function () {
       btnSelectElement: 'اختر عنصرًا',
       undoElement: 'التراجع عن هذه الترجمة',
       undoSummary: 'إزالة هذا الملخص',
+      speakBtn: 'قراءة',
+      stopSpeakBtn: 'إيقاف القراءة',
+      speakUnsupported: 'بيئتك لا تدعم قراءة {lang}',
     },
   };
 

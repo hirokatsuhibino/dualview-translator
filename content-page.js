@@ -91,6 +91,12 @@ var DVT_PAGE = (function () {
 
     if (transEl) {
       transEl.textContent = result;
+      // 読み上げボタン（× の左、ホバー時のみ表示）
+      // ここに到達する時点で同一言語スキップは早期 return 済みなので無条件で追加して問題ない
+      if (DVT.isSpeechSupported()) {
+        const speakBtn = DVT.createSpeakButton(result, tl, 'dvt-speak-btn-inline');
+        transEl.appendChild(speakBtn);
+      }
       // 個別リセットボタン（×）を翻訳テキストの末尾に追加
       const undoLabel = t('undoElement');
       const undoBtn = document.createElement('button');
@@ -105,6 +111,10 @@ var DVT_PAGE = (function () {
       undoBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
+        // この翻訳ブロック内で再生中の読み上げがあれば停止
+        if (el.querySelector('.dvt-speak-btn[data-dvt-speaking]')) {
+          DVT.stopSpeak();
+        }
         // 元の DOM 構造に戻して data-dvt-id を削除（手動 undo は再翻訳を許容する）
         restoreOriginalContent(el);
       });
@@ -252,6 +262,8 @@ var DVT_PAGE = (function () {
     DVT.state.pageTranslateActive = false;
     // 動的コンテンツ監視を停止
     stopPageObserver();
+    // 翻訳・要約 DOM が消える前に進行中の読み上げを停止
+    DVT.stopSpeak();
     // 要約ブロックを全削除（ページ全体翻訳の #dvt-page-summary だけでなく、
     // 領域選択翻訳・右クリック翻訳由来の .dvt-summary もまとめて撤去する）。
     // ホストページが偶然 .dvt-summary を使っていても消さないよう [data-dvt="true"] でスコープ
@@ -489,6 +501,10 @@ var DVT_PAGE = (function () {
     summaryUndoBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
+      // 要約内で再生中の読み上げがあれば停止（DOM が消えても speechSynthesis は鳴り続けるため）
+      if (summaryBlock.querySelector('.dvt-speak-btn[data-dvt-speaking]')) {
+        DVT.stopSpeak();
+      }
       summaryBlock.remove();
     });
     summaryBlock.appendChild(summaryUndoBtn);
@@ -531,6 +547,11 @@ var DVT_PAGE = (function () {
       });
 
       summaryBlock.querySelector('.dvt-summary-text').textContent = summary;
+      // 要約読み上げボタンをバッジの隣に追加（要約完了後・常時表示）
+      if (DVT.isSpeechSupported()) {
+        const speakBtn = DVT.createSpeakButton(summary, DVT.state.targetLang, 'dvt-speak-btn-summary');
+        badge.insertAdjacentElement('afterend', speakBtn);
+      }
       summaryBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) {
       const errText = summaryBlock.querySelector('.dvt-summary-text');

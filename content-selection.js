@@ -117,6 +117,11 @@ var DVT_SEL = (function () {
     // 「パネル閉じる → 0.3 秒後に古い選択範囲でアイコン再表示」のような副作用を防げる
     clearSelectionChangeTimer();
     if (DVT.state.selectionPanel) {
+      // パネル内で再生中の読み上げのみ停止する。インライン翻訳・要約側で再生中の読み上げは
+      // パネルを閉じても継続させたいので、明示的にパネル内のボタン状態を確認する。
+      if (DVT.state.selectionPanel.querySelector('.dvt-speak-btn[data-dvt-speaking="true"]')) {
+        DVT.stopSpeak();
+      }
       DVT.state.selectionPanel.remove();
       DVT.state.selectionPanel = null;
     }
@@ -383,7 +388,8 @@ var DVT_SEL = (function () {
 
     const { text: translated, detectedLang } = await DVT.translate(text, tl);
 
-    if (DVT.langMatches(detectedLang, tl)) {
+    const isSameLang = DVT.langMatches(detectedLang, tl);
+    if (isSameLang) {
       transText.textContent = '';
       transText.appendChild(h('span', { class: 'dvt-same-lang' }, t('sameLang', { lang: detectedLang })));
     } else {
@@ -394,6 +400,27 @@ var DVT_SEL = (function () {
     btn.textContent = '';
     btn.appendChild(parseSvg(SVG_TRANSLATE));
     btn.appendChild(document.createTextNode(' ' + t('retranslateBtn')));
+
+    // 読み上げボタンは初回翻訳時に追加（再翻訳ではそのまま使い回す）。
+    // 同一言語スキップ時は再生対象がないので非表示にし、進行中の再生は停止する。
+    const actions = panel.querySelector('.dvt-sel-actions');
+    if (DVT.isSpeechSupported() && !actions.querySelector('.dvt-speak-btn')) {
+      const speakBtn = DVT.createSpeakButton(
+        () => panel.querySelector('.dvt-sel-trans-text').textContent,
+        () => panel.querySelector('.dvt-sel-lang').value,
+        'dvt-speak-btn-panel'
+      );
+      actions.insertBefore(speakBtn, actions.firstChild);
+    }
+    const existingSpeakBtn = actions.querySelector('.dvt-speak-btn');
+    if (existingSpeakBtn) {
+      existingSpeakBtn.style.display = isSameLang ? 'none' : '';
+      // 同一言語スキップでこのパネル内ボタンが再生中だった場合のみ停止
+      // （他ブロックの再生中の読み上げは止めない）
+      if (isSameLang && existingSpeakBtn.dataset.dvtSpeaking === 'true') {
+        DVT.stopSpeak();
+      }
+    }
 
     panel.querySelector('.dvt-copy-btn').addEventListener('click', () => {
       navigator.clipboard.writeText(translated).then(() => {
