@@ -36,7 +36,8 @@ const NATIVE_ACTIONS = Object.freeze({
 });
 
 // App Group 経由で Share Extension など他ターゲットへ共有するキー一覧。
-// ここを増やしたら Swift 側の SharedSettings.Keys.all も同期して更新する。
+// ここを増やしたら Swift 側 SafariWebExtensionHandler.swift の mirrorAllowedKeys も
+// 同期して更新する（Phase 2 で SharedSettings.swift として独立ファイル化予定）。
 // 値が大きくなりがち / 拡張内部だけで使う dismissedDomains / autoRules / tc:* / sc:* は対象外。
 const MIRRORED_KEYS = Object.freeze([
   'targetLang', 'uiLang', 'dvtTheme',
