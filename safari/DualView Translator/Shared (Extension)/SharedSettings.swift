@@ -14,7 +14,6 @@
 //
 
 import Foundation
-import os.log
 
 enum SharedSettings {
 
@@ -71,8 +70,13 @@ enum SharedSettings {
     // - 値が NSNull の場合は当該キーを削除（Web Ext 側で undefined にした場合に備えて）
     // - plist 非互換の値も rejected として除外する
     // 戻り値: (適用件数, 拒否されたキー一覧)
-    static func applyMirroredEntries(_ entries: [String: Any]) -> (applied: Int, rejectedKeys: [String]) {
-        guard let defaults = shared else { return (0, Array(entries.keys)) }
+    //
+    // UserDefaults は呼び出し側で取得して渡す。これにより
+    // (1) `shared` 取得（= UserDefaults(suiteName:) 生成）が caller / callee で二重に走らない、
+    // (2) caller 側で nil を明示的なエラーレスポンスに変換できる、
+    // という 2 点を達成する。
+    @discardableResult
+    static func applyMirroredEntries(_ entries: [String: Any], to defaults: UserDefaults) -> (applied: Int, rejectedKeys: [String]) {
         var applied = 0
         var rejectedKeys: [String] = []
         for (key, value) in entries {

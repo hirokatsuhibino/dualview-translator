@@ -365,10 +365,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
         // entitlements 不整合等で UserDefaults(suiteName:) が nil になるケースを明示的なエラーにする。
         // 黙って書き込み失敗するのではなく JS 側で気付けるようにする。
-        guard SharedSettings.shared != nil else {
+        // 取得した defaults を applyMirroredEntries に渡すことで suiteName 生成は 1 回で済む。
+        guard let defaults = SharedSettings.shared else {
             return makeError("App Group UserDefaults unavailable; check entitlements")
         }
-        let result = SharedSettings.applyMirroredEntries(entries)
+        let result = SharedSettings.applyMirroredEntries(entries, to: defaults)
         // 値そのものは APIキー等を含み得るためログには件数のみ記録する
         os_log(.debug, "mirrorSettings applied %{public}d key(s), rejected %{public}d",
                result.applied, result.rejectedKeys.count)
