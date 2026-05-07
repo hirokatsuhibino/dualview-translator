@@ -22,7 +22,7 @@ class ShareViewController: SLComposeServiceViewController {
         let contentLength = (contentText ?? "").count
         let attachmentCount = (extensionContext?.inputItems.compactMap { $0 as? NSExtensionItem }
             .flatMap { $0.attachments ?? [] })?.count ?? 0
-        os_log(.info, "DualView Share Ext (iOS) opened — text length: %{public}d, attachments: %{public}d",
+        os_log(.debug, "DualView Share Ext (iOS) opened — text length: %{public}d, attachments: %{public}d",
                contentLength, attachmentCount)
     }
 

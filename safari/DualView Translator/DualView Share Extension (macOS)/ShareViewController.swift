@@ -24,7 +24,7 @@ class ShareViewController: NSViewController {
         // 実テキストはユーザーコンテンツなのでログに残さない（Phase 4 のレビューでも問題にならないように）。
         let attachmentCount = (extensionContext?.inputItems.compactMap { $0 as? NSExtensionItem }
             .flatMap { $0.attachments ?? [] })?.count ?? 0
-        os_log(.info, "DualView Share Ext (macOS) opened — attachments: %{public}d", attachmentCount)
+        os_log(.debug, "DualView Share Ext (macOS) opened — attachments: %{public}d", attachmentCount)
     }
 
     @IBAction func send(_ sender: AnyObject?) {

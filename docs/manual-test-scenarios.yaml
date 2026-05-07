@@ -1469,7 +1469,7 @@ suites:
           - "標準の SLComposeServiceViewController UI が出ることを確認"
           - キャンセル または Post をタップ
         expected:
-          - "Console.app に `DualView Share Ext (iOS) opened — text length: N, attachments: M` が出る"
+          - "Console.app の Action メニューで `Include Debug Messages` を有効化した上で、`DualView Share Ext (iOS) opened — text length: N, attachments: M` が出る（プライバシー配慮で `.debug` レベル）"
           - 受領テキスト本体はログに出ていない（ユーザーコンテンツ漏洩防止）
           - キャンセル / Post で extension が閉じる
           - クラッシュしない
@@ -1506,7 +1506,7 @@ suites:
           - "Console.app で関連ログを確認"
           - キャンセル または Post をタップ
         expected:
-          - "Console.app に `DualView Share Ext (macOS) opened — attachments: N` が出る"
+          - "Console.app の Action メニューで `Include Debug Messages` を有効化した上で、`DualView Share Ext (macOS) opened — attachments: N` が出る（プライバシー配慮で `.debug` レベル）"
           - 受領テキスト本体はログに出ていない
           - キャンセル / Post で extension が閉じる
 
