@@ -12,6 +12,19 @@ permalink: /RELEASE_NOTES.html
 
 ---
 
+## v1.6.1（2026-05-07）
+
+### 改善
+
+- **Container App 起動画面の多言語化**（#188 / PR #189）
+  - iOS / macOS の Container App を起動したときに表示される Safari 拡張の有効化案内が、これまで英語固定だったのを 11 言語（ja / en / zh-CN / zh-TW / ko / fr / de / es / pt / ru / ar）に対応
+  - 端末の言語設定に応じて自動切替（`navigator.language` 判定）
+  - 拡張のオン/オフ状態に応じた説明文も全言語で表示
+  - macOS Sequoia 以降の「Safari の設定 → 機能拡張」表記にも対応
+  - アラビア語のときは右→左レイアウトに自動切替
+
+---
+
 ## v1.6.0（2026-05-07）
 
 ### 新機能
