@@ -1644,3 +1644,58 @@ suites:
         expected:
           - "Base.lproj/MainInterface.storyboard / Base.lproj/ShareViewController.xib が存在しない"
           - 各フォルダに Swift ファイル 5 個（ShareViewController + ShareAppGroup + TranslationProviderGoogle + I18N + SharedTranslationView）が存在
+
+  # ━━━━━ N+6. Container App 起動画面の多言語化（Issue #188） ━━━━━
+  - id: container-app-i18n
+    title: iOS / macOS Container App 起動画面の多言語化
+    description: "PR #189 で `Shared (App)/Resources/Script.js` に 11 言語辞書を追加し、`navigator.language` に応じて Main.html のテキストを書き換えるようにした"
+    related_prs: [189]
+    scenarios:
+
+      - id: CAI-001
+        title: 端末の言語を日本語にすると Container App が日本語で表示される
+        priority: p1
+        environment: safari-ios-sim / safari-mac
+        steps:
+          - 端末（または Simulator）の言語設定を「日本語」に変更
+          - DualView Translator の Container App を起動
+        expected:
+          - "iOS: 「Safari の設定から DualView Translator 拡張を有効にしてください。」と表示"
+          - "macOS（拡張状態 unknown）: 「Safari の機能拡張設定から…」と表示"
+          - "macOS（macOS 13+）: 「Safari の設定 → 機能拡張から…」と表示"
+
+      - id: CAI-002
+        title: 11 言語のうち他の主要言語でも切替できる
+        priority: p2
+        environment: safari-ios-sim / safari-mac
+        steps:
+          - 端末言語を順に en / zh-CN / zh-TW / ko / fr / de / es / pt / ru / ar に変更
+          - 各言語で Container App を起動
+        expected:
+          - 各言語の翻訳テキストが表示される
+          - 'ar の場合は HTML の `dir="rtl"` で右→左レイアウト'
+          - "未対応言語（例: it = Italian）に切替えた場合は en にフォールバック"
+
+      - id: CAI-003
+        title: 拡張 ON/OFF 状態に応じて文言が切り替わる（macOS）
+        priority: p2
+        environment: safari-mac
+        steps:
+          - macOS Safari で拡張を有効化
+          - Container App を再起動
+          - Safari で拡張を無効化
+          - Container App を再起動
+        expected:
+          - 有効時 「DualView Translator 拡張は現在オンです。…」（または各言語版）
+          - 無効時 「DualView Translator 拡張は現在オフです。…」（または各言語版）
+          - 未判定時は unknown 用の文言
+
+      - id: CAI-004
+        title: macOS の Quit and Open ボタンも翻訳される
+        priority: p2
+        environment: safari-mac
+        steps:
+          - 言語を日本語に切替えて Container App を macOS で起動
+        expected:
+          - ボタン文言が「終了して Safari の機能拡張設定を開く…」に切り替わる
+          - macOS Sequoia 以降では「終了して Safari の設定を開く…」に切り替わる
