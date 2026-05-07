@@ -18,10 +18,12 @@
 				<integer>1</integer>
 			</dict>
 		</dict>
-		<key>NSExtensionMainStoryboard</key>
-		<string>MainInterface</string>
+		<!-- Phase 3b で SwiftUI Hosting に切り替えたため Storyboard ベースの起動から
+			 ShareViewController クラスを直接指定する形に変更。 -->
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.share-services</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>$(PRODUCT_MODULE_NAME).ShareViewController</string>
 	</dict>
 </dict>
 </plist>

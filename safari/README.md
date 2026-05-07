@@ -9,6 +9,9 @@ macOS / iOS 両プラットフォームで Safari Web Extension として DualVi
 
 - macOS + Xcode 15 以降（Swift 5.9+ / Safari 16.4+ 対応のため）
 - Safari 16.4 以降（macOS）/ Safari 15 以降（iOS）
+- **Share Extension は最低 OS が異なる**:
+  - iOS: 15.0 以降（既存 Safari Extension と同じ）
+  - macOS: **12.0 以降**（SwiftUI + async/await を使うため、既存 Web Extension の 10.14 より新しい）
 - 実機 iOS 配布には Apple Developer Program（$99/年）が必要。開発中のローカル検証のみなら無料 Apple ID で可
 
 ## ビルド
@@ -116,6 +119,17 @@ safari/
 | DualView Share Extension (iOS / macOS) | `jp.co.orangesoft.dualview-translator.ShareExtension` | 共有シート経由の翻訳（v1.6 で追加予定） |
 
 すべてのターゲットが App Group `group.jp.co.orangesoft.dualview-translator` に参加し、設定値は `UserDefaults(suiteName:)` で共有可能。
+
+### Share Extension のソース構成上の注意
+
+Xcode 15+ の `fileSystemSynchronizedGroups` 仕様により、Share Extension は自フォルダ（`DualView Share Extension (iOS)/` または `(macOS)/`）配下の Swift しかビルド対象にできない。そのため以下のファイルは iOS / macOS の両フォルダに **同一内容で重複配置** している（Phase 3b 時点）:
+
+- `ShareAppGroup.swift`（App Group 読み取りヘルパー）
+- `TranslationProviderGoogle.swift`（Google Translate REST 呼び出し）
+- `I18N.swift`（11 言語の最小 UI 文字列）
+- `SharedTranslationView.swift`（SwiftUI 並列翻訳ビュー）
+
+将来的に `Shared (Share Extension)/` フォルダを Xcode で正規追加して重複を解消する想定（後続 Issue 化）。当面は片方を編集したらもう片方にも同じ修正を入れること。
 
 ### バージョン管理上の注意
 
