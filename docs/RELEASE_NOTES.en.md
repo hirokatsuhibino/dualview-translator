@@ -12,6 +12,18 @@ permalink: /RELEASE_NOTES.en.html
 
 ---
 
+## v1.6.1 (2026-05-07)
+
+### Improvements
+
+- **Container app startup screen is now localized** (#188 / PR #189)
+  - The Safari-extension-enable prompt you see when you launch the iOS / macOS container app used to be English-only. Now it follows your device language across all 11 supported languages (ja / en / zh-CN / zh-TW / ko / fr / de / es / pt / ru / ar).
+  - The on/off state messages are localized too.
+  - macOS Sequoia's "Safari Settings → Extensions" wording is handled.
+  - Arabic gets automatic right-to-left layout.
+
+---
+
 ## v1.6.0 (2026-05-07)
 
 ### New features
