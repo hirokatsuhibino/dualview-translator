@@ -41,12 +41,24 @@ enum TranslationProviderGoogle {
         let detectedLang: String?
     }
 
+    /// Share Extension からの翻訳呼び出し用 URLSession。
+    /// ephemeral 設定 + URLCache 無効化により、ユーザーが共有したテキストを含む URL が
+    /// ディスクキャッシュ・URL ログ等に残らないようにする（GET の `q=` クエリにテキストが入るため）。
+    private static let ephemeralSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        return URLSession(configuration: config)
+    }()
+
     /// Google Translate を呼び出して翻訳結果を返す。
+    /// `session` を nil で呼ぶと共有テキストの漏れ対策として ephemeral session を使う。
+    /// テスト等で差し替えたければ任意の URLSession を渡せる。
     static func translate(
         text: String,
         sourceLang: String = "auto",
         targetLang: String,
-        session: URLSession = .shared
+        session: URLSession? = nil
     ) async throws -> Result {
         if text.isEmpty {
             return Result(translated: "", detectedLang: nil)
@@ -55,10 +67,11 @@ enum TranslationProviderGoogle {
             throw TranslationError.invalidResponse
         }
 
+        let resolvedSession = session ?? ephemeralSession
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(from: url)
+            (data, response) = try await resolvedSession.data(from: url)
         } catch {
             throw TranslationError.network(underlying: error)
         }
@@ -92,6 +105,13 @@ enum TranslationProviderGoogle {
         let translated = segments
             .compactMap { ($0 as? [Any])?.first as? String }
             .joined()
+
+        // Google のレスポンス構造が変化した場合、segments パースが空文字列になりがち。
+        // 入力が非空のときに翻訳結果が空なら、構造不一致として明示的にエラーにする。
+        // （呼び出し側では空入力時は parseResponse まで到達しない）
+        if translated.isEmpty {
+            throw TranslationError.invalidResponse
+        }
 
         let detectedLang: String? = json.count > 2 ? (json[2] as? String) : nil
 
