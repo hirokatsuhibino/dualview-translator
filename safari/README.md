@@ -97,13 +97,36 @@ xcrun safari-web-extension-converter . \
 safari/
 └── DualView Translator/
     ├── DualView Translator.xcodeproj
-    ├── Shared (App)/              # macOS/iOS 共通のコンテナアプリ
-    ├── Shared (Extension)/        # macOS/iOS 共通の拡張ハンドラ
-    ├── iOS (App)/                 # iOS コンテナアプリ
-    ├── iOS (Extension)/           # iOS 拡張ターゲット
-    ├── macOS (App)/               # macOS コンテナアプリ
-    └── macOS (Extension)/         # macOS 拡張ターゲット
+    ├── Shared (App)/                        # macOS/iOS 共通のコンテナアプリ
+    ├── Shared (Extension)/                  # macOS/iOS 共通の拡張ハンドラ（Web Ext + Share Ext で共有予定）
+    ├── iOS (App)/                           # iOS コンテナアプリ
+    ├── iOS (Extension)/                     # iOS Safari Web Extension ターゲット
+    ├── macOS (App)/                         # macOS コンテナアプリ
+    ├── macOS (Extension)/                   # macOS Safari Web Extension ターゲット
+    ├── DualView Share Extension (iOS)/      # iOS Share Extension（Issue #89）
+    └── DualView Share Extension (macOS)/    # macOS Share Extension（Issue #89）
 ```
+
+ターゲット数は計 **6 つ**:
+
+| ターゲット | Bundle ID | 用途 |
+|---|---|---|
+| DualView Translator (iOS / macOS) | `jp.co.orangesoft.dualview-translator` | コンテナアプリ |
+| DualView Translator Extension (iOS / macOS) | `jp.co.orangesoft.dualview-translator.Extension` | Safari Web Extension |
+| DualView Share Extension (iOS / macOS) | `jp.co.orangesoft.dualview-translator.ShareExtension` | 共有シート経由の翻訳（v1.6 で追加予定） |
+
+すべてのターゲットが App Group `group.jp.co.orangesoft.dualview-translator` に参加し、設定値は `UserDefaults(suiteName:)` で共有可能。
+
+### バージョン管理上の注意
+
+`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` はターゲット数 × Debug/Release で **計 12 箇所** に記述されている（過去 8 箇所から増加）。リリース時は全箇所同期が必須。
+
+```bash
+# 検証コマンド: 12 が期待値
+grep -c MARKETING_VERSION "DualView Translator.xcodeproj/project.pbxproj"
+```
+
+詳細は `.claude/skills/release.md` を参照。
 
 ---
 
