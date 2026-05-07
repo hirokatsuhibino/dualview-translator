@@ -15,6 +15,7 @@ The original text doesn't disappear when you translate, so you can always read w
 - **3 translation engines** — Google Translate (free) / DeepL (sharper) / Apple Translation (offline, macOS Safari only). When you're offline, we automatically fall back to Apple Translation
 - **AI summaries** — Claude or Gemini auto-summarizes the translated content
 - **Text-to-speech** — every translation block gets a 🔊 button. Reads out the translation using your browser's built-in voice (no extra API key needed)
+- **iOS / macOS Share Extension** — translate text from outside Safari too (Notes, Mail, News, etc.) via the share sheet (v1.6+ / iOS 15+ / macOS 12+)
 - **Translation & summary cache** — same text won't hit the API twice. Faster, cheaper. Hit rate shown in settings
 - **Tabbed popup** — translate stuff on one tab, configure on the other
 - **Keyboard shortcuts** — common actions in one keypress
@@ -104,6 +105,23 @@ Every translation block gets a 🔊 button on the right. Click it and the transl
 - `Esc`, switching tabs, or leaving the page also stops it
 - Uses your browser's built-in Web Speech API, so **no extra API key or permission is needed**
 - If the OS doesn't ship a voice for the target language (say, Arabic on a fresh Windows install), you'll see a toast and nothing plays
+
+## Share Extension (iOS / macOS)
+
+Starting in v1.6, you can translate text from outside Safari too — just hit the share sheet.
+
+| Action | What happens |
+|--------|--------------|
+| In Notes / Mail / News etc., select text → Share → **DualView Translator** | Side-by-side translation pops up as a sheet (iOS) or a floating window (macOS) |
+| **Copy** in the translation view | Copies the translation to clipboard (shows "✓ Copied" for 2 seconds) |
+| **Close** / `Esc` (macOS) | Dismisses the extension |
+
+- Supported OS: **iOS 15.0+ / macOS 12.0+** (the existing Safari Web Extension still works on macOS 10.14+)
+- Translation engine: **Google Translate** (v1). Summarization, DeepL, and Apple Translation are coming in v2.
+- Settings (target language, etc.) you set in the web extension are shared via App Group automatically — no need to set anything up again
+- The shared text rides on a GET URL, but we use `URLSession.ephemeral` + disabled `URLCache` so it doesn't end up in URL logs or disk caches
+
+Bundled with the App Store version (no separate setup needed — it just shows up in the share sheet's app list).
 
 ## Keyboard shortcuts
 

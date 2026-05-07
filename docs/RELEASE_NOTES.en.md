@@ -10,7 +10,18 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.6.0 (2026-05-07)
+
 ### New features
+
+- **iOS / macOS Share Extension** (Issue #89, PR #183 / #184 / #185 / #186)
+  - Pick "DualView Translator" from the share sheet and a side-by-side translation view pops up. Now you can translate text from outside Safari too — Notes, Mail, News, you name it.
+  - SwiftUI side-by-side view (original / translation) with Copy and Close buttons
+  - Translation engine is Google Translate for v1. Summarization, DeepL, and Apple Translation are coming in v2.
+  - Settings (target language, etc.) you set in the web extension are auto-shared via App Group, so you don't need to configure anything again
+  - Minimum OS: iOS 15.0 / macOS 12.0 (the existing Safari Web Extension still supports macOS 10.14+)
 
 - **Text-to-speech for translations** (#181)
   - Every translation block now has a 🔊 button — click it and the translation gets read out in your target language
@@ -18,6 +29,16 @@ permalink: /RELEASE_NOTES.en.html
   - Icon flips to ⏹ while speaking — click again, press another speak button, hit `Esc`, switch tabs, or leave the page to stop it
   - Uses your browser's built-in Web Speech API, so no extra API key or permission is required
   - If the OS doesn't have a voice for the target language, a toast tells you "Your environment does not support speaking {lang}"
+
+### Improvements
+
+- Web extension now mirrors the major settings (`uiLang` / `targetLang` / `dvtTheme` / `translateEngine` / `deeplApiKey` / `llmEngine` / `claudeApiKey` / `geminiApiKey`) into the App Group `UserDefaults` via the native handler. The new Share Extension and any future targets can read your settings without you having to configure anything again (PR #183).
+- Inline speak button on the macOS Share Extension UI got better keyboard focus visibility, always-on display on touch environments, and `@media (hover: none)` support.
+
+### Bug fixes
+
+- Closing the selection panel was stopping the speak playback in inline / summary blocks even when the speak button inside the panel wasn't the active one — fixed (PR #182).
+- Same-language skip in the panel was also stopping playback in other blocks — fixed (same PR).
 
 ---
 
