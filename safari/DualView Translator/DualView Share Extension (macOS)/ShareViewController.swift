@@ -78,10 +78,18 @@ class ShareViewController: NSViewController {
 
 /// `NSItemProvider.loadItem(forTypeIdentifier:options:)` の Continuation ラッパー。
 /// 同名 extension が重複定義されないよう fileprivate にしてある。
+/// 失敗時は呼び出し側の運用が単純になるよう nil を返すが、原因追跡のために error は os_log に落とす。
 fileprivate func loadProviderText(_ provider: NSItemProvider, type identifier: String) async -> String? {
     guard provider.hasItemConformingToTypeIdentifier(identifier) else { return nil }
     return await withCheckedContinuation { continuation in
-        provider.loadItem(forTypeIdentifier: identifier, options: nil) { item, _ in
+        provider.loadItem(forTypeIdentifier: identifier, options: nil) { item, error in
+            if let error = error {
+                // error オブジェクト自体はユーザーコンテンツを含まないので %{public}@ で出してよい。
+                os_log(.error, "loadItem failed for %{public}@: %{public}@",
+                       identifier, String(describing: error))
+                continuation.resume(returning: nil)
+                return
+            }
             if let str = item as? String, !str.isEmpty {
                 continuation.resume(returning: str)
             } else if let url = item as? URL {

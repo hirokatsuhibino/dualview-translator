@@ -29,13 +29,15 @@ enum I18N {
             "close": "Close", "error": "[Error]",
             "shareEmpty": "No translatable text found", "shareCancel": "Cancel",
         ],
-        "zh-CN": [
+        // 辞書キーは BCP-47 を全 lowercase に統一（"zh-cn" / "zh-tw"）。
+        // currentLang() 側で正規化したロケール（lowercase + "_" → "-"）と直接ヒットさせるため。
+        "zh-cn": [
             "dualviewTitle": "DualView 翻译", "original": "原文", "translated": "翻译",
             "translating": "翻译中…", "copyBtn": "复制", "copied": "✓ 已复制",
             "close": "关闭", "error": "[错误]",
             "shareEmpty": "未找到可翻译的文本", "shareCancel": "取消",
         ],
-        "zh-TW": [
+        "zh-tw": [
             "dualviewTitle": "DualView 翻譯", "original": "原文", "translated": "翻譯",
             "translating": "翻譯中…", "copyBtn": "複製", "copied": "✓ 已複製",
             "close": "關閉", "error": "[錯誤]",
@@ -86,6 +88,7 @@ enum I18N {
     ]
 
     /// Web Ext がミラーした uiLang → 端末ロケール → "en" の順でフォールバックして翻訳を返す。
+    /// `currentLang()` が常に正規化済み lang を返すため、ここで再正規化はしない。
     static func t(_ key: String) -> String {
         let lang = currentLang()
         if let value = messages[lang]?[key] { return value }
@@ -96,21 +99,28 @@ enum I18N {
         return messages["en"]?[key] ?? key
     }
 
-    /// 利用する言語コードを解決する。
+    /// 利用する言語コードを解決する。App Group / 端末ロケール双方を `normalize` に通すため、
+    /// "zh-CN" / "ZH_CN" / "zh-Hans-JP" 等の表記ゆれでも messages 辞書のキー（"zh-cn" 等）に揃う。
     static func currentLang() -> String {
-        if let ui = ShareAppGroup.defaults?.string(forKey: ShareAppGroup.Keys.uiLang),
-           !ui.isEmpty {
-            return ui
+        if let raw = ShareAppGroup.defaults?.string(forKey: ShareAppGroup.Keys.uiLang),
+           !raw.isEmpty {
+            return normalize(raw)
         }
         let preferred = Locale.preferredLanguages.first ?? "en"
-        let lower = preferred.lowercased()
+        return normalize(preferred)
+    }
+
+    /// "zh-CN" / "zh_CN" / "ZH-CN" / "zh-Hans" / "zh-Hans-JP" 等の表記ゆれを
+    /// messages 辞書のキー（全 lowercase："ja" / "en" / "zh-cn" / "zh-tw" / ...）に正規化する。
+    private static func normalize(_ raw: String) -> String {
+        let lower = raw.lowercased().replacingOccurrences(of: "_", with: "-")
         if messages[lower] != nil { return lower }
         if let base = lower.split(separator: "-").first.map(String.init), messages[base] != nil {
             return base
         }
         // zh 系の特殊処理（macOS は "zh-Hans-JP" など Hans/Hant suffix が付く）
         if lower.hasPrefix("zh") {
-            return lower.contains("hant") || lower.contains("tw") ? "zh-TW" : "zh-CN"
+            return lower.contains("hant") || lower.contains("tw") ? "zh-tw" : "zh-cn"
         }
         return "en"
     }
