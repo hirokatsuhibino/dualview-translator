@@ -55,6 +55,8 @@
 		7D1D48652F95AD9600B65F5F /* popup-init.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48352F95AD9500B65F5F /* popup-init.js */; };
 		7DA0CA1F2F95AD9500B65F5F /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 7DA0CA1E2F95AD9500B65F5F /* _locales */; };
 		7DA0CA202F95AD9500B65F5F /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 7DA0CA1E2F95AD9500B65F5F /* _locales */; };
+		7DAFD36B2FAC1B230017615B /* DualView Share Extension (iOS).appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7DAFD3802FAC1B7C0017615B /* DualView Share Extension (macOS).appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +74,20 @@
 			remoteGlobalIDString = 7D1D47F92F95AD9500B65F5F;
 			remoteInfo = "DualView Translator Extension (macOS)";
 		};
+		7DAFD3692FAC1B230017615B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7D1D47BF2F95AD9300B65F5F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7DAFD3602FAC1B230017615B;
+			remoteInfo = "DualView Share Extension (iOS)";
+		};
+		7DAFD37E2FAC1B7C0017615B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7D1D47BF2F95AD9300B65F5F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7DAFD3732FAC1B7C0017615B;
+			remoteInfo = "DualView Share Extension (macOS)";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -82,6 +98,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				7D1D47F12F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */,
+				7DAFD36B2FAC1B230017615B /* DualView Share Extension (iOS).appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -93,6 +110,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				7D1D47FB2F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */,
+				7DAFD3802FAC1B7C0017615B /* DualView Share Extension (macOS).appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -138,7 +156,45 @@
 		7D1D48342F95AD9500B65F5F /* i18n.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = i18n.js; path = ../../../i18n.js; sourceTree = "<group>"; };
 		7D1D48352F95AD9500B65F5F /* popup-init.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "popup-init.js"; path = "../../../popup-init.js"; sourceTree = "<group>"; };
 		7DA0CA1E2F95AD9500B65F5F /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../../_locales; sourceTree = "<group>"; };
+		7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Share Extension (iOS).appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Share Extension (macOS).appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7DAFD36E2FAC1B230017615B /* Exceptions for "DualView Share Extension (iOS)" folder in "DualView Share Extension (iOS)" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7DAFD3602FAC1B230017615B /* DualView Share Extension (iOS) */;
+		};
+		7DAFD3812FAC1B7C0017615B /* Exceptions for "DualView Share Extension (macOS)" folder in "DualView Share Extension (macOS)" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7DAFD3732FAC1B7C0017615B /* DualView Share Extension (macOS) */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		7DAFD3622FAC1B230017615B /* DualView Share Extension (iOS) */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7DAFD36E2FAC1B230017615B /* Exceptions for "DualView Share Extension (iOS)" folder in "DualView Share Extension (iOS)" target */,
+			);
+			path = "DualView Share Extension (iOS)";
+			sourceTree = "<group>";
+		};
+		7DAFD3752FAC1B7C0017615B /* DualView Share Extension (macOS) */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7DAFD3812FAC1B7C0017615B /* Exceptions for "DualView Share Extension (macOS)" folder in "DualView Share Extension (macOS)" target */,
+			);
+			path = "DualView Share Extension (macOS)";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		7D1D47CF2F95AD9500B65F5F /* Frameworks */ = {
@@ -169,6 +225,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7DAFD35E2FAC1B230017615B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7DAFD3712FAC1B7C0017615B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -185,6 +255,8 @@
 				7D1D47E52F95AD9500B65F5F /* macOS (App) */,
 				7D1D47F42F95AD9500B65F5F /* iOS (Extension) */,
 				7D1D47FE2F95AD9500B65F5F /* macOS (Extension) */,
+				7DAFD3622FAC1B230017615B /* DualView Share Extension (iOS) */,
+				7DAFD3752FAC1B7C0017615B /* DualView Share Extension (macOS) */,
 				7D1D47D32F95AD9500B65F5F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -226,6 +298,8 @@
 				7D1D47E42F95AD9500B65F5F /* DualView Translator.app */,
 				7D1D47F02F95AD9500B65F5F /* DualView Translator Extension.appex */,
 				7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */,
+				7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */,
+				7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -305,6 +379,7 @@
 			);
 			dependencies = (
 				7D1D47F32F95AD9500B65F5F /* PBXTargetDependency */,
+				7DAFD36A2FAC1B230017615B /* PBXTargetDependency */,
 			);
 			name = "DualView Translator (iOS)";
 			packageProductDependencies = (
@@ -326,6 +401,7 @@
 			);
 			dependencies = (
 				7D1D47FD2F95AD9500B65F5F /* PBXTargetDependency */,
+				7DAFD37F2FAC1B7C0017615B /* PBXTargetDependency */,
 			);
 			name = "DualView Translator (macOS)";
 			packageProductDependencies = (
@@ -372,6 +448,50 @@
 			productReference = 7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		7DAFD3602FAC1B230017615B /* DualView Share Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7DAFD36F2FAC1B230017615B /* Build configuration list for PBXNativeTarget "DualView Share Extension (iOS)" */;
+			buildPhases = (
+				7DAFD35D2FAC1B230017615B /* Sources */,
+				7DAFD35E2FAC1B230017615B /* Frameworks */,
+				7DAFD35F2FAC1B230017615B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7DAFD3622FAC1B230017615B /* DualView Share Extension (iOS) */,
+			);
+			name = "DualView Share Extension (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "DualView Share Extension (iOS)";
+			productReference = 7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		7DAFD3732FAC1B7C0017615B /* DualView Share Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7DAFD3822FAC1B7C0017615B /* Build configuration list for PBXNativeTarget "DualView Share Extension (macOS)" */;
+			buildPhases = (
+				7DAFD3702FAC1B7C0017615B /* Sources */,
+				7DAFD3712FAC1B7C0017615B /* Frameworks */,
+				7DAFD3722FAC1B7C0017615B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7DAFD3752FAC1B7C0017615B /* DualView Share Extension (macOS) */,
+			);
+			name = "DualView Share Extension (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "DualView Share Extension (macOS)";
+			productReference = 7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -394,6 +514,12 @@
 					7D1D47F92F95AD9500B65F5F = {
 						CreatedOnToolsVersion = 26.4.1;
 					};
+					7DAFD3602FAC1B230017615B = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					7DAFD3732FAC1B7C0017615B = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
 				};
 			};
 			buildConfigurationList = 7D1D47C22F95AD9300B65F5F /* Build configuration list for PBXProject "DualView Translator" */;
@@ -414,6 +540,8 @@
 				7D1D47E32F95AD9500B65F5F /* DualView Translator (macOS) */,
 				7D1D47EF2F95AD9500B65F5F /* DualView Translator Extension (iOS) */,
 				7D1D47F92F95AD9500B65F5F /* DualView Translator Extension (macOS) */,
+				7DAFD3602FAC1B230017615B /* DualView Share Extension (iOS) */,
+				7DAFD3732FAC1B7C0017615B /* DualView Share Extension (macOS) */,
 			);
 		};
 /* End PBXProject section */
@@ -486,6 +614,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7DAFD35F2FAC1B230017615B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7DAFD3722FAC1B7C0017615B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -524,6 +666,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7DAFD35D2FAC1B230017615B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7DAFD3702FAC1B7C0017615B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -536,6 +692,16 @@
 			isa = PBXTargetDependency;
 			target = 7D1D47F92F95AD9500B65F5F /* DualView Translator Extension (macOS) */;
 			targetProxy = 7D1D47FC2F95AD9500B65F5F /* PBXContainerItemProxy */;
+		};
+		7DAFD36A2FAC1B230017615B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7DAFD3602FAC1B230017615B /* DualView Share Extension (iOS) */;
+			targetProxy = 7DAFD3692FAC1B230017615B /* PBXContainerItemProxy */;
+		};
+		7DAFD37F2FAC1B7C0017615B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7DAFD3732FAC1B7C0017615B /* DualView Share Extension (macOS) */;
+			targetProxy = 7DAFD37E2FAC1B7C0017615B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1033,6 +1199,137 @@
 			};
 			name = Release;
 		};
+		7DAFD36C2FAC1B230017615B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Share Extension (iOS)/DualView Share Extension (iOS).entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 44L2GC4R8F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "DualView Share Extension (iOS)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (iOS)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7DAFD36D2FAC1B230017615B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Share Extension (iOS)/DualView Share Extension (iOS).entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 44L2GC4R8F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "DualView Share Extension (iOS)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (iOS)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7DAFD3832FAC1B7C0017615B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Share Extension (macOS)/DualView Share Extension (macOS).entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 44L2GC4R8F;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "DualView Share Extension (macOS)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (macOS)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7DAFD3842FAC1B7C0017615B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "DualView Share Extension (macOS)/DualView Share Extension (macOS).entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 44L2GC4R8F;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "DualView Share Extension (macOS)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (macOS)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.co.orangesoft.dualview-translator.ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1077,6 +1374,24 @@
 			buildConfigurations = (
 				7D1D481C2F95AD9500B65F5F /* Debug */,
 				7D1D481D2F95AD9500B65F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7DAFD36F2FAC1B230017615B /* Build configuration list for PBXNativeTarget "DualView Share Extension (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7DAFD36C2FAC1B230017615B /* Debug */,
+				7DAFD36D2FAC1B230017615B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7DAFD3822FAC1B7C0017615B /* Build configuration list for PBXNativeTarget "DualView Share Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7DAFD3832FAC1B7C0017615B /* Debug */,
+				7DAFD3842FAC1B7C0017615B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

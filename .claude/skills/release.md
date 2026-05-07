@@ -42,16 +42,23 @@ git checkout -b release/v<VERSION>
 - `manifest.json` の `version`
 - `package.json` の `version`
 - `safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj` の以下 2 種類（iOS App Store / Mac App Store 提出に必要）:
-  - `MARKETING_VERSION` を新バージョン（例: `1.5.0`）に更新（全 8 箇所、iOS/macOS × App/Extension × Debug/Release）
-  - `CURRENT_PROJECT_VERSION` を +1 インクリメント（全 8 箇所、ビルド番号）
+  - `MARKETING_VERSION` を新バージョン（例: `1.6.0`）に更新（全 12 箇所、iOS/macOS × App/Extension/ShareExtension × Debug/Release）
+  - `CURRENT_PROJECT_VERSION` を +1 インクリメント（全 12 箇所、ビルド番号）
 
 ```bash
-# 全 8 箇所一括更新の例
+# 全 12 箇所一括更新の例
 sed -i '' 's/MARKETING_VERSION = <旧>;/MARKETING_VERSION = <新>;/g' \
   "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
 sed -i '' 's/CURRENT_PROJECT_VERSION = <旧>;/CURRENT_PROJECT_VERSION = <新>;/g' \
   "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
+
+# 期待値検証: 12 を返すこと
+grep -c "MARKETING_VERSION" "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
+grep -c "CURRENT_PROJECT_VERSION" "safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj"
 ```
+
+**注**: ターゲット数が増減したらこの「12 箇所」も連動して変える。Issue #89 で Share Extension 2 ターゲット追加により 8 → 12 になった。
+
 
 Xcode 側を更新し忘れると iOS App Store / Mac App Store のアップロードが
 `Invalid Pre-Release Train` / `CFBundleShortVersionString must be higher` で失敗する（過去事例: Issue #163）。

@@ -1436,3 +1436,106 @@ suites:
         expected:
           - '`{ ok: false, error: "App Group UserDefaults unavailable; check entitlements" }` が返る'
           - クラッシュしない
+
+  # ━━━━━ N+5. Share Extension スケルトン（Issue #89 Phase 2） ━━━━━
+  - id: share-extension
+    title: iOS / macOS Share Extension の最小スケルトン動作確認
+    description: "PR #184 で Xcode に Share Extension ターゲット 2 個を追加し、Bundle ID / Info.plist / entitlements を整備した。Phase 3 で SwiftUI による翻訳 UI に置き換える前段の smoke 確認。"
+    related_prs: [184]
+    scenarios:
+
+      - id: SE-001
+        title: iOS Share Extension が共有シートに「DualView」として表示される
+        priority: p1
+        environment: safari-ios-sim / safari-ios-real
+        preconditions:
+          - DualView Translator (iOS) を端末/シミュレータにインストール済み
+          - 一度起動してアプリを許可済み
+        steps:
+          - 標準アプリ「メモ」または Mail を開く
+          - 任意の英文を選択 → 共有ボタン
+          - "共有シートに「DualView Translator」が表示されることを確認（テキスト共有として）"
+        expected:
+          - 共有シート下段の App リストに DualView Translator が表示される
+          - "アイコン / 名称が崩れていない"
+
+      - id: SE-002
+        title: iOS Share Extension がテキストを受け取って閉じる
+        priority: p1
+        environment: safari-ios-sim
+        steps:
+          - SE-001 と同様にテキスト共有
+          - DualView Translator をタップ
+          - "標準の SLComposeServiceViewController UI が出ることを確認"
+          - キャンセル または Post をタップ
+        expected:
+          - "Console.app に `DualView Share Ext (iOS) opened — text length: N, attachments: M` が出る"
+          - 受領テキスト本体はログに出ていない（ユーザーコンテンツ漏洩防止）
+          - キャンセル / Post で extension が閉じる
+          - クラッシュしない
+
+      - id: SE-003
+        title: iOS Share Extension が画像専用の共有では出ない（NSExtensionActivationRule）
+        priority: p1
+        environment: safari-ios-sim
+        steps:
+          - 写真アプリを開く
+          - 画像のみを選択して共有シートを開く
+        expected:
+          - 共有シートの App リストに DualView Translator が**表示されない**
+          - "テキスト/URL/Web ページ共有では表示される（SE-001 で確認済み）"
+
+      - id: SE-004
+        title: macOS Share Extension が共有メニューに表示される
+        priority: p1
+        environment: safari-mac
+        steps:
+          - macOS Mail / News / Notes / Safari を開く
+          - 任意のテキストを選択して右クリック → 共有
+          - サブメニューに DualView Translator が出ることを確認
+        expected:
+          - 共有メニューに DualView Translator が表示される
+          - 選択するとシートが開きキャンセルで閉じる
+
+      - id: SE-005
+        title: macOS Share Extension がテキストを受け取って閉じる
+        priority: p1
+        environment: safari-mac
+        steps:
+          - SE-004 と同様にテキスト共有 → DualView Translator を選択
+          - "Console.app で関連ログを確認"
+          - キャンセル または Post をタップ
+        expected:
+          - "Console.app に `DualView Share Ext (macOS) opened — attachments: N` が出る"
+          - 受領テキスト本体はログに出ていない
+          - キャンセル / Post で extension が閉じる
+
+      - id: SE-006
+        title: Share Extension の Bundle ID が `.ShareExtension` で固定されている
+        priority: p2
+        description: 自動生成のスラッシュ・ハイフン混じり ID（例 `.DualView-Share-Extension--iOS-`）にならない回帰防止
+        steps:
+          - "`grep -c 'jp.co.orangesoft.dualview-translator.ShareExtension' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\"` を実行"
+        expected:
+          - 4 が返る（iOS Debug/Release + macOS Debug/Release）
+
+      - id: SE-007
+        title: MARKETING_VERSION が project.pbxproj で 12 箇所同期されている
+        priority: p1
+        description: Issue #89 Phase 2 でターゲット 2 個追加により 8 → 12 になった。リリース時の更新箇所が増えたことの確認
+        steps:
+          - "`grep -c 'MARKETING_VERSION' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\"` を実行"
+        expected:
+          - 12 が返る
+          - 全てが同じバージョン値（v1.5.0 等）になっていること
+
+      - id: SE-008
+        title: Share Extension に App Group entitlement が両ターゲット付与されている
+        priority: p1
+        description: Phase 1 でミラーした設定を Phase 3 以降で読むためには App Group が必須
+        steps:
+          - "iOS Share Extension の entitlements に `group.jp.co.orangesoft.dualview-translator` が含まれていることを確認"
+          - macOS Share Extension も同様に確認
+        expected:
+          - 両 entitlements に App Group ID が含まれている
+          - 既存 4 ターゲットと同じ ID（新規作成ではなく共通 ID の参加）
