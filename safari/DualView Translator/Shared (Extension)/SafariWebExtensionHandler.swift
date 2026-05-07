@@ -93,6 +93,12 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 // iOS 12+ / macOS 10.14+ で同期 API なので Task 不要・即応答。
                 respond(context: context, body: handleDetectLanguage(payload: payload ?? [:]))
                 return
+            case "mirrorSettings":
+                // Web Extension の chrome.storage.local 変更を App Group UserDefaults に反映する。
+                // Share Extension 等の他ターゲットから設定値を読み出すための同期パス。
+                // 設定共有なので失敗してもアプリ機能は継続できる（Web Ext 側でログするだけ）。
+                respond(context: context, body: handleMirrorSettings(payload: payload ?? [:]))
+                return
             default:
                 // 未知の action は明示的にエラーを返す（黙って echo にフォールバックすると
                 // JS 側のバグに気付きにくくなるため）
@@ -345,6 +351,74 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "detectedLang": dominant.rawValue,
             "confidence": confidence,
         ]
+    }
+
+    // ─── mirrorSettings: Web Ext 設定を App Group へ反映 ────────────
+    // payload: { entries: { "uiLang": "ja", "targetLang": "en", ... } }
+    // Web Extension 側で chrome.storage.local が変化したとき呼ばれ、Share Extension
+    // など他ターゲットが参照するための共有領域に値を写す。
+    // 値そのものは APIキー等を含むためログに出さず件数だけ記録する。
+    //
+    // Note: 共有 App Group ID と Keys 定数は Phase 2（Issue #89-2）で SharedSettings.swift
+    // として独立ファイル化し、Share Extension からも参照できる構造に再編する予定。
+    // Phase 1 では Xcode IDE 操作なしで完結させるため一旦 inline で実装している。
+    private static let appGroupID = "group.jp.co.orangesoft.dualview-translator"
+
+    // background.js の MIRRORED_KEYS と完全一致させる allowlist。ここを変更したら
+    // background.js 側も同期して更新すること（Phase 2 で SharedSettings.swift に分離予定）。
+    private static let mirrorAllowedKeys: Set<String> = [
+        "targetLang", "uiLang", "dvtTheme",
+        "translateEngine", "deeplApiKey",
+        "llmEngine", "claudeApiKey", "geminiApiKey",
+    ]
+
+    // UserDefaults の plist 互換型のみ許可。Web Ext 側は通常 String / Bool / Number しか送らないが、
+    // 想定外型（例: メモリ上の関数オブジェクトなど）が来た場合に備えて防御的にチェックする。
+    private static func isValidUserDefaultsValue(_ value: Any) -> Bool {
+        switch value {
+        case is String, is NSNumber, is Bool,
+             is [Any], is [String: Any],
+             is Data, is Date:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func handleMirrorSettings(payload: [String: Any]) -> [String: Any] {
+        guard let entries = payload["entries"] as? [String: Any] else {
+            return makeError("missing entries")
+        }
+        // App Group entitlements が外れていると UserDefaults(suiteName:) は nil を返すため、
+        // 黙って書き込みに失敗するのではなく明示的なエラーとして返して JS 側で気付けるようにする。
+        guard let defaults = UserDefaults(suiteName: SafariWebExtensionHandler.appGroupID) else {
+            return makeError("App Group UserDefaults unavailable; check entitlements")
+        }
+        var applied = 0
+        var rejectedKeys: [String] = []
+        for (key, value) in entries {
+            // allowlist チェック: 想定外キーはスキップ（Web Ext 側のバグや改ざんへの防御）
+            guard SafariWebExtensionHandler.mirrorAllowedKeys.contains(key) else {
+                rejectedKeys.append(key)
+                continue
+            }
+            // null 値は「Web Ext 側でキー削除（chrome.storage.local.remove）された」シグナルとして扱う
+            if value is NSNull {
+                defaults.removeObject(forKey: key)
+                applied += 1
+            } else if SafariWebExtensionHandler.isValidUserDefaultsValue(value) {
+                defaults.set(value, forKey: key)
+                applied += 1
+            } else {
+                rejectedKeys.append(key)
+            }
+        }
+        os_log(.debug, "mirrorSettings applied %{public}d key(s), rejected %{public}d", applied, rejectedKeys.count)
+        var response: [String: Any] = ["ok": true, "applied": applied]
+        if !rejectedKeys.isEmpty {
+            response["rejected"] = rejectedKeys
+        }
+        return response
     }
 
     // ─── translate: 実テキスト翻訳 ────────────────────────────────

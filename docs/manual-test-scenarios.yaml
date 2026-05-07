@@ -1367,3 +1367,72 @@ suites:
         expected:
           - インライン翻訳ブロックの 🔊 ボタンが opacity 0.6 程度で常時表示されている
           - タップで読み上げが始まる
+
+  # ━━━━━ N+4. Web Ext → App Group 設定ミラー（Issue #89 Phase 1 / PR #183） ━━━━━
+  - id: share-ext-mirror
+    title: Web Ext 設定の App Group ミラー機構（Issue #89 Phase 1）
+    description: "PR #183 で追加。chrome.storage.local の主要キー変更を Native 経由で App Group UserDefaults に反映する仕組み"
+    related_prs: [183]
+    scenarios:
+
+      - id: SEM-001
+        title: uiLang 変更が App Group UserDefaults に反映される
+        priority: p0
+        environment: safari-mac
+        preconditions:
+          - 拡張インストール済み
+          - macOS Safari で拡張が有効
+        steps:
+          - macOS Safari で拡張ポップアップを開き UI 言語を「English」に変更
+          - ターミナルで `defaults read group.jp.co.orangesoft.dualview-translator uiLang` を実行
+        expected:
+          - 値が "en" として読める
+
+      - id: SEM-002
+        title: APIキー変更も App Group に反映（値の漏洩なくログには件数のみ）
+        priority: p1
+        environment: safari-mac
+        steps:
+          - 設定タブで Claude APIキーを入力
+          - "Console.app で `mirrorSettings applied N` ログのみが出力され、APIキー本体がログに漏れない"
+          - "`defaults read group.jp.co.orangesoft.dualview-translator claudeApiKey` で値が確認できる"
+        expected:
+          - APIキー文字列がログに含まれない
+          - App Group に保存されている
+
+      - id: SEM-003
+        title: 起動時に既存値が一括ミラーされる
+        priority: p1
+        environment: safari-mac
+        steps:
+          - 拡張がすでに設定済みの状態で macOS を再起動 / Safari 再起動
+          - "Console.app で `mirrorSettings applied N` ログを確認"
+        expected:
+          - 起動直後にまとまって 1 回送信されている
+          - App Group の各キーが空でない
+
+      - id: SEM-004
+        title: 想定外キーは App Group に書き込まれない（allowlist）
+        priority: p1
+        description: "PR #183 Copilot レビュー対応。Swift 側の mirrorAllowedKeys で防御している"
+        steps:
+          - "開発者コンソールから `chrome.runtime.sendNativeMessage('jp.co.orangesoft.dualview-translator', { action: 'mirrorSettings', entries: { foo: 'bar', uiLang: 'fr' } }, console.log)` を実行"
+        expected:
+          - 'レスポンスに `rejected: ["foo"]` または該当する形で foo が拒否されている'
+          - "`defaults read group.jp.co.orangesoft.dualview-translator foo` がエラー（キー不在）"
+          - '`defaults read group.jp.co.orangesoft.dualview-translator uiLang` は "fr" を返す'
+
+      - id: SEM-005
+        title: App Group entitlement 不整合時にエラーが返る
+        priority: p2
+        description: "PR #183 Copilot レビュー対応。誤デプロイで entitlements が外れた場合の検知"
+        environment: safari-mac
+        preconditions:
+          - 通常は再現困難。entitlements を一時的に削除してビルドし直すか、Bundle ID が一致しないシミュレーションで確認
+        steps:
+          - "App Group entitlement を削除してビルド・実行"
+          - "uiLang を変更して mirrorSettings を発火させる"
+          - "Console.app のレスポンスを確認"
+        expected:
+          - '`{ ok: false, error: "App Group UserDefaults unavailable; check entitlements" }` が返る'
+          - クラッシュしない
