@@ -29,6 +29,8 @@
 		7D1D480B2F95AD9500B65F5F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D47CB2F95AD9500B65F5F /* Assets.xcassets */; };
 		7D1D480C2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */; };
 		7D1D480D2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */; };
+		7D1D49012F95AD9500B65F5F /* SharedSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D49002F95AD9500B65F5F /* SharedSettings.swift */; };
+		7D1D49022F95AD9500B65F5F /* SharedSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D49002F95AD9500B65F5F /* SharedSettings.swift */; };
 		7D1D48372F95AD9500B65F5F /* content-page.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D481F2F95AD9500B65F5F /* content-page.js */; };
 		7D1D48382F95AD9500B65F5F /* content-core.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48202F95AD9500B65F5F /* content-core.js */; };
 		7D1D48392F95AD9500B65F5F /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 7D1D48212F95AD9500B65F5F /* popup.js */; };
@@ -129,6 +131,7 @@
 		7D1D47CA2F95AD9300B65F5F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		7D1D47CB2F95AD9500B65F5F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		7D1D49002F95AD9500B65F5F /* SharedSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSettings.swift; sourceTree = "<group>"; };
 		7D1D47D22F95AD9500B65F5F /* DualView Translator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DualView Translator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7D1D47D52F95AD9500B65F5F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7D1D47D72F95AD9500B65F5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -287,6 +290,7 @@
 			children = (
 				7D1D481E2F95AD9500B65F5F /* Resources */,
 				7D1D47CD2F95AD9500B65F5F /* SafariWebExtensionHandler.swift */,
+				7D1D49002F95AD9500B65F5F /* SharedSettings.swift */,
 			);
 			path = "Shared (Extension)";
 			sourceTree = "<group>";
@@ -655,6 +659,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7D1D480C2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */,
+				7D1D49012F95AD9500B65F5F /* SharedSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -663,6 +668,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7D1D480D2F95AD9500B65F5F /* SafariWebExtensionHandler.swift in Sources */,
+				7D1D49022F95AD9500B65F5F /* SharedSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
