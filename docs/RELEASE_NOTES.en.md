@@ -12,6 +12,17 @@ permalink: /RELEASE_NOTES.en.html
 
 ---
 
+## v1.6.2 (2026-05-07)
+
+### Bug fixes
+
+- **Fixed an App Store / TestFlight upload validation error** (PR #192 / #193)
+  - The Share Extension's `PRODUCT_NAME` carried platform suffixes (`(iOS)` / `(macOS)`), which leaked parentheses into `CFBundleExecutable` — Apple rejected uploads with error 90121.
+  - Hardcoded `PRODUCT_NAME` to `"DualView Share Extension"` (no parentheses) to resolve.
+  - No user-visible feature changes.
+
+---
+
 ## v1.6.1 (2026-05-07)
 
 ### Improvements

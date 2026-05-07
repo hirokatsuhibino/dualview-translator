@@ -12,6 +12,17 @@ permalink: /RELEASE_NOTES.html
 
 ---
 
+## v1.6.2（2026-05-07）
+
+### バグ修正
+
+- **App Store / TestFlight アップロード時の Validation エラーを修正**（PR #192 / #193）
+  - Share Extension の `PRODUCT_NAME` がプラットフォーム suffix（`(iOS)` / `(macOS)`）を含んでおり、`CFBundleExecutable` のカッコ `( )` を Apple が拒否していた（error 90121）
+  - `PRODUCT_NAME` を `"DualView Share Extension"`（カッコなし）にハードコードして解消
+  - ユーザー可視の機能変更なし
+
+---
+
 ## v1.6.1（2026-05-07）
 
 ### 改善
