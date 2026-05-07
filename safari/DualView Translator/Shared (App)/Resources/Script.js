@@ -14,7 +14,7 @@ const I18N_MESSAGES = {
         macOff:                  "DualView Translator 拡張は現在オフです。Safari の機能拡張設定からオンにできます。",
         macOffSettings:          "DualView Translator 拡張は現在オフです。Safari の設定 → 機能拡張からオンにできます。",
         openPreferencesBtn:      "終了して Safari の機能拡張設定を開く…",
-        openSettingsBtn:         "終了して Safari の設定を開く…",
+        openPreferencesBtnSettings: "終了して Safari の設定を開く…",
     },
     "en": {
         iosEnable:               "You can turn on DualView Translator’s Safari extension in Settings.",
@@ -25,7 +25,7 @@ const I18N_MESSAGES = {
         macOff:                  "DualView Translator’s extension is currently off. You can turn it on in Safari Extensions preferences.",
         macOffSettings:          "DualView Translator’s extension is currently off. You can turn it on in the Extensions section of Safari Settings.",
         openPreferencesBtn:      "Quit and Open Safari Extensions Preferences…",
-        openSettingsBtn:         "Quit and Open Safari Settings…",
+        openPreferencesBtnSettings: "Quit and Open Safari Settings…",
     },
     "zh-CN": {
         iosEnable:               "请在 Safari 设置中启用 DualView Translator 扩展。",
@@ -36,7 +36,7 @@ const I18N_MESSAGES = {
         macOff:                  "DualView Translator 扩展当前已关闭。可在 Safari 扩展设置中启用。",
         macOffSettings:          "DualView Translator 扩展当前已关闭。可在 Safari 设置 → 扩展中启用。",
         openPreferencesBtn:      "退出并打开 Safari 扩展设置…",
-        openSettingsBtn:         "退出并打开 Safari 设置…",
+        openPreferencesBtnSettings: "退出并打开 Safari 设置…",
     },
     "zh-TW": {
         iosEnable:               "請在 Safari 設定中啟用 DualView Translator 擴充功能。",
@@ -47,7 +47,7 @@ const I18N_MESSAGES = {
         macOff:                  "DualView Translator 擴充功能目前已關閉。可在 Safari 擴充功能設定中啟用。",
         macOffSettings:          "DualView Translator 擴充功能目前已關閉。可在 Safari 設定 → 擴充功能中啟用。",
         openPreferencesBtn:      "結束並開啟 Safari 擴充功能設定…",
-        openSettingsBtn:         "結束並開啟 Safari 設定…",
+        openPreferencesBtnSettings: "結束並開啟 Safari 設定…",
     },
     "ko": {
         iosEnable:               "Safari 설정에서 DualView Translator 확장 프로그램을 켤 수 있습니다.",
@@ -58,7 +58,7 @@ const I18N_MESSAGES = {
         macOff:                  "DualView Translator 확장 프로그램이 현재 꺼져 있습니다. Safari 확장 프로그램 환경설정에서 켤 수 있습니다.",
         macOffSettings:          "DualView Translator 확장 프로그램이 현재 꺼져 있습니다. Safari 설정의 확장 프로그램 섹션에서 켤 수 있습니다.",
         openPreferencesBtn:      "종료하고 Safari 확장 프로그램 환경설정 열기…",
-        openSettingsBtn:         "종료하고 Safari 설정 열기…",
+        openPreferencesBtnSettings: "종료하고 Safari 설정 열기…",
     },
     "fr": {
         iosEnable:               "Vous pouvez activer l’extension Safari DualView Translator dans Réglages.",
@@ -69,7 +69,7 @@ const I18N_MESSAGES = {
         macOff:                  "L’extension DualView Translator est actuellement désactivée. Vous pouvez l’activer dans les préférences des extensions Safari.",
         macOffSettings:          "L’extension DualView Translator est actuellement désactivée. Vous pouvez l’activer dans la section Extensions des Réglages de Safari.",
         openPreferencesBtn:      "Quitter et ouvrir les préférences des extensions Safari…",
-        openSettingsBtn:         "Quitter et ouvrir les Réglages de Safari…",
+        openPreferencesBtnSettings: "Quitter et ouvrir les Réglages de Safari…",
     },
     "de": {
         iosEnable:               "Sie können die Safari-Erweiterung von DualView Translator in den Einstellungen aktivieren.",
@@ -80,7 +80,7 @@ const I18N_MESSAGES = {
         macOff:                  "Die DualView Translator-Erweiterung ist derzeit deaktiviert. Sie können sie in den Safari-Erweiterungseinstellungen aktivieren.",
         macOffSettings:          "Die DualView Translator-Erweiterung ist derzeit deaktiviert. Sie können sie im Bereich „Erweiterungen“ der Safari-Einstellungen aktivieren.",
         openPreferencesBtn:      "Beenden und Safari-Erweiterungseinstellungen öffnen…",
-        openSettingsBtn:         "Beenden und Safari-Einstellungen öffnen…",
+        openPreferencesBtnSettings: "Beenden und Safari-Einstellungen öffnen…",
     },
     "es": {
         iosEnable:               "Puedes activar la extensión de Safari DualView Translator en Ajustes.",
@@ -91,7 +91,7 @@ const I18N_MESSAGES = {
         macOff:                  "La extensión DualView Translator está desactivada. Puedes activarla en las preferencias de extensiones de Safari.",
         macOffSettings:          "La extensión DualView Translator está desactivada. Puedes activarla en la sección Extensiones de los Ajustes de Safari.",
         openPreferencesBtn:      "Salir y abrir las preferencias de extensiones de Safari…",
-        openSettingsBtn:         "Salir y abrir los Ajustes de Safari…",
+        openPreferencesBtnSettings: "Salir y abrir los Ajustes de Safari…",
     },
     "pt": {
         iosEnable:               "Você pode ativar a extensão Safari do DualView Translator em Ajustes.",
@@ -102,7 +102,7 @@ const I18N_MESSAGES = {
         macOff:                  "A extensão do DualView Translator está desativada. Você pode ativá-la nas preferências de extensões do Safari.",
         macOffSettings:          "A extensão do DualView Translator está desativada. Você pode ativá-la na seção Extensões dos Ajustes do Safari.",
         openPreferencesBtn:      "Encerrar e abrir as preferências de extensões do Safari…",
-        openSettingsBtn:         "Encerrar e abrir os Ajustes do Safari…",
+        openPreferencesBtnSettings: "Encerrar e abrir os Ajustes do Safari…",
     },
     "ru": {
         iosEnable:               "Вы можете включить расширение Safari DualView Translator в Настройках.",
@@ -113,7 +113,7 @@ const I18N_MESSAGES = {
         macOff:                  "Расширение DualView Translator сейчас выключено. Его можно включить в настройках расширений Safari.",
         macOffSettings:          "Расширение DualView Translator сейчас выключено. Его можно включить в разделе «Расширения» Настроек Safari.",
         openPreferencesBtn:      "Выйти и открыть настройки расширений Safari…",
-        openSettingsBtn:         "Выйти и открыть Настройки Safari…",
+        openPreferencesBtnSettings: "Выйти и открыть Настройки Safari…",
     },
     "ar": {
         iosEnable:               "يمكنك تفعيل امتداد Safari الخاص بـ DualView Translator من الإعدادات.",
@@ -124,7 +124,7 @@ const I18N_MESSAGES = {
         macOff:                  "امتداد DualView Translator متوقف حاليًا. يمكنك تفعيله من تفضيلات امتدادات Safari.",
         macOffSettings:          "امتداد DualView Translator متوقف حاليًا. يمكنك تفعيله من قسم الامتدادات في إعدادات Safari.",
         openPreferencesBtn:      "إنهاء وفتح تفضيلات امتدادات Safari…",
-        openSettingsBtn:         "إنهاء وفتح إعدادات Safari…",
+        openPreferencesBtnSettings: "إنهاء وفتح إعدادات Safari…",
     },
 };
 
