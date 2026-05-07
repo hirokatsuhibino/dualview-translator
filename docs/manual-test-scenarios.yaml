@@ -1524,7 +1524,7 @@ suites:
         priority: p0
         description: Issue #89 Phase 2 でターゲット 2 個追加により 8 → 12 になった。リリース時の更新漏れ検出
         steps:
-          - "`grep -c 'MARKETING_VERSION' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\"` を実行"
+          - "`grep -c 'MARKETING_VERSION = ' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\"` を実行"
           - "`grep 'MARKETING_VERSION = ' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\" | sort -u` を実行"
         expected:
           - 1 件目が 12 を返す
