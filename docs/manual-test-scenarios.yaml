@@ -1446,7 +1446,7 @@ suites:
 
       - id: SE-001
         title: iOS Share Extension が共有シートに「DualView」として表示される
-        priority: p1
+        priority: p0
         environment: safari-ios-sim / safari-ios-real
         preconditions:
           - DualView Translator (iOS) を端末/シミュレータにインストール済み
@@ -1487,7 +1487,7 @@ suites:
 
       - id: SE-004
         title: macOS Share Extension が共有メニューに表示される
-        priority: p1
+        priority: p0
         environment: safari-mac
         steps:
           - macOS Mail / News / Notes / Safari を開く
@@ -1521,13 +1521,15 @@ suites:
 
       - id: SE-007
         title: MARKETING_VERSION が project.pbxproj で 12 箇所同期されている
-        priority: p1
-        description: Issue #89 Phase 2 でターゲット 2 個追加により 8 → 12 になった。リリース時の更新箇所が増えたことの確認
+        priority: p0
+        description: Issue #89 Phase 2 でターゲット 2 個追加により 8 → 12 になった。リリース時の更新漏れ検出
         steps:
-          - "`grep -c 'MARKETING_VERSION' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\"` を実行"
+          - "`grep -c 'MARKETING_VERSION = ' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\"` を実行"
+          - "`grep 'MARKETING_VERSION = ' \"safari/DualView Translator/DualView Translator.xcodeproj/project.pbxproj\" | sort -u` を実行"
         expected:
-          - 12 が返る
-          - 全てが同じバージョン値（v1.5.0 等）になっていること
+          - 1 件目が 12 を返す
+          - 2 件目が 1 行だけ返る（=全箇所が同じバージョン値で同期されている）
+          - 値が manifest.json / package.json と一致している
 
       - id: SE-008
         title: Share Extension に App Group entitlement が両ターゲット付与されている
@@ -1571,7 +1573,7 @@ suites:
 
       - id: SE-011
         title: 翻訳先言語を Web Ext で変更すると Share Ext の翻訳先も追従
-        priority: p1
+        priority: p0
         description: PR #183 の Phase 1 ミラー機構が機能していることの確認（App Group 経由で targetLang を読む）
         related_prs: [186]
         steps:
@@ -1583,7 +1585,7 @@ suites:
 
       - id: SE-012
         title: コピーボタンで訳文がクリップボードに入る
-        priority: p1
+        priority: p0
         related_prs: [186]
         steps:
           - SE-009 / SE-010 で訳文が表示された状態

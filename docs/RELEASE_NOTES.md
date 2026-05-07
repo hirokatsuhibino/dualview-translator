@@ -10,7 +10,18 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+---
+
+## v1.6.0（2026-05-07）
+
 ### 新機能
+
+- **iOS / macOS Share Extension**（Issue #89, PR #183 / #184 / #185 / #186）
+  - 共有シートから DualView Translator を選ぶと並列翻訳ビューが開き、Safari 以外のアプリ（メモ・Mail・News など）のテキストも翻訳できる
+  - SwiftUI ベースの並列ビュー（原文 / 訳文）+ コピー / 閉じるボタン
+  - 翻訳エンジンは Google Translate（v1）。要約・DeepL・Apple 翻訳は v2 以降で順次追加予定
+  - 翻訳先言語などの設定は Web 拡張で変更したものが App Group 経由で自動共有される（再設定不要）
+  - 最低 OS: iOS 15.0 / macOS 12.0（既存 Safari Web Extension は引き続き macOS 10.14+）
 
 - **訳文の音声読み上げ**（#181）
   - 翻訳結果ブロックに 🔊 ボタンを追加し、クリックで翻訳先言語の音声で読み上げる
@@ -18,6 +29,16 @@ permalink: /RELEASE_NOTES.html
   - 再生中はアイコンが ⏹ に切り替わり、再クリック・別ボタン・`Esc`・タブ切替・ページ離脱で停止
   - ブラウザ内蔵の Web Speech API を使うため追加 API キー・権限不要
   - 対応音声がインストールされていない言語では「お使いの環境では {言語} の読み上げに対応していません」をトースト表示
+
+### 改善
+
+- Web 拡張の `chrome.storage.local` の主要キー（`uiLang` / `targetLang` / `dvtTheme` / `translateEngine` / `deeplApiKey` / `llmEngine` / `claudeApiKey` / `geminiApiKey`）を Native 経由で App Group の `UserDefaults` にミラー保存。Share Extension などの他ターゲットから設定を共有できるようにした（PR #183）
+- macOS Share Extension のインライン翻訳ボタン UI を改善（キーボードフォーカス時の表示、タッチ環境での常時表示、`@media (hover: none)` 対応など）
+
+### バグ修正
+
+- 選択翻訳パネルを閉じた際にインライン翻訳・要約ブロックの読み上げが誤停止する不具合を修正（PR #182）
+- 同一言語スキップ時に他ブロックの読み上げまで止まる不具合を修正（同上）
 
 ---
 
