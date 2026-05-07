@@ -27,8 +27,12 @@ class ShareViewController: SLComposeServiceViewController {
     }
 
     override func isContentValid() -> Bool {
-        // テキストが 1 文字以上あれば翻訳可能とみなす（細かい validation は Phase 3 で）
-        return !(contentText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        // Phase 2 スケルトンでは常に Post を許可する。
+        // Info.plist の NSExtensionActivationRule で URL / Web ページも受け付けるが、
+        // contentText だけ見ると URL 共有時に空判定で Post が無効化されてしまうため、
+        // attachment 経由のテキスト/URL を含めた validation は Phase 3 の SwiftUI 化と
+        // 一緒に実装する。
+        return true
     }
 
     override func didSelectPost() {
