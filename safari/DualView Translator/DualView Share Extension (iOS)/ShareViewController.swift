@@ -4,46 +4,92 @@
 //
 //  Copyright (c) Orangesoft Inc.
 //
-//  Phase 2 では SLComposeServiceViewController テンプレートを最小限に保ち、
-//  共有シートに DualView Translator が表示されること・受領テキストが取得できることだけ
-//  確認できる状態にしている。
-//  Phase 3 で UIHostingController + SwiftUI 並列翻訳ビューに置き換える予定。
+//  共有シートから受け取ったテキスト/URL を SwiftUI 並列翻訳ビュー (SharedTranslationView) に
+//  渡して表示する。Phase 2 のテンプレ (SLComposeServiceViewController) を Phase 3b で
+//  UIViewController + UIHostingController ベースに置き換えた。
 //
 
 import UIKit
-import Social
+import SwiftUI
 import os.log
+import UniformTypeIdentifiers
 
-class ShareViewController: SLComposeServiceViewController {
+@available(iOS 15.0, *)
+class ShareViewController: UIViewController {
 
-    override func presentationAnimationDidFinish() {
-        super.presentationAnimationDidFinish()
-        // 受領テキストの存在のみログ出力（実テキストはユーザーコンテンツなのでログに残さない）
-        let contentLength = (contentText ?? "").count
-        let attachmentCount = (extensionContext?.inputItems.compactMap { $0 as? NSExtensionItem }
-            .flatMap { $0.attachments ?? [] })?.count ?? 0
-        os_log(.debug, "DualView Share Ext (iOS) opened — text length: %{public}d, attachments: %{public}d",
-               contentLength, attachmentCount)
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .systemBackground
+
+        // テキスト/URL 取得は async（NSItemProvider の callback API を Continuation で包む）。
+        // 取得完了までは空ビューのまま、完了したら SwiftUI を mount する。
+        Task { [weak self] in
+            guard let self else { return }
+            let originalText = await self.extractSharedText()
+            await MainActor.run { self.mountSwiftUI(originalText: originalText) }
+        }
     }
 
-    override func isContentValid() -> Bool {
-        // Phase 2 スケルトンでは常に Post を許可する。
-        // Info.plist の NSExtensionActivationRule で URL / Web ページも受け付けるが、
-        // contentText だけ見ると URL 共有時に空判定で Post が無効化されてしまうため、
-        // attachment 経由のテキスト/URL を含めた validation は Phase 3 の SwiftUI 化と
-        // 一緒に実装する。
-        return true
+    // 取得した共有テキストで SwiftUI ビューを mount する。
+    private func mountSwiftUI(originalText: String) {
+        os_log(.debug, "DualView Share Ext (iOS) opened — text length: %{public}d", originalText.count)
+
+        let host = UIHostingController(rootView: SharedTranslationView(
+            originalText: originalText,
+            onClose: { [weak self] in
+                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            }
+        ))
+
+        addChild(host)
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(host.view)
+        NSLayoutConstraint.activate([
+            host.view.topAnchor.constraint(equalTo: view.topAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
+        host.didMove(toParent: self)
     }
 
-    override func didSelectPost() {
-        // Phase 2 ではボタンが押されたタイミングを記録するだけで、実翻訳は行わない。
-        // Phase 3 で SwiftUI ビューに置き換え、ここでは completeRequest を呼ぶ役割になる。
-        os_log(.debug, "DualView Share Ext (iOS) post action invoked")
-        extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    // 共有シートから渡された inputItems からテキスト/URL を最初に見つかった順で抽出する。
+    // 優先度: attributedContentText > public.plain-text > public.url
+    private func extractSharedText() async -> String {
+        guard let inputItems = extensionContext?.inputItems as? [NSExtensionItem] else { return "" }
+        for item in inputItems {
+            if let attr = item.attributedContentText?.string,
+               !attr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return attr
+            }
+            for provider in item.attachments ?? [] {
+                if let s = await loadProviderText(provider, type: UTType.plainText.identifier) {
+                    return s
+                }
+                if let s = await loadProviderText(provider, type: UTType.url.identifier) {
+                    return s
+                }
+            }
+        }
+        return ""
     }
+}
 
-    override func configurationItems() -> [Any]! {
-        // Phase 3 で言語選択・エンジン選択の UI を返す予定。
-        return []
+/// `NSItemProvider.loadItem(forTypeIdentifier:options:)` の Continuation ラッパー。
+/// 同名 extension が重複定義されないよう fileprivate にしてある。
+fileprivate func loadProviderText(_ provider: NSItemProvider, type identifier: String) async -> String? {
+    guard provider.hasItemConformingToTypeIdentifier(identifier) else { return nil }
+    return await withCheckedContinuation { continuation in
+        provider.loadItem(forTypeIdentifier: identifier, options: nil) { item, _ in
+            if let str = item as? String, !str.isEmpty {
+                continuation.resume(returning: str)
+            } else if let url = item as? URL {
+                continuation.resume(returning: url.absoluteString)
+            } else if let data = item as? Data, let str = String(data: data, encoding: .utf8) {
+                continuation.resume(returning: str)
+            } else {
+                continuation.resume(returning: nil)
+            }
+        }
     }
 }

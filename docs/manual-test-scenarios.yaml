@@ -1539,3 +1539,106 @@ suites:
         expected:
           - 両 entitlements に App Group ID が含まれている
           - 既存 4 ターゲットと同じ ID（新規作成ではなく共通 ID の参加）
+
+      # ─── Phase 3b で SwiftUI 翻訳 UI に置き換わった後の追加シナリオ（PR #186）───
+      - id: SE-009
+        title: iOS で英文を共有すると並列翻訳ビューに訳文が出る
+        priority: p0
+        description: Phase 3b の本体機能。Google Translate REST を Swift から呼んで実翻訳
+        environment: safari-ios-sim / safari-ios-real
+        related_prs: [186]
+        preconditions:
+          - 端末がオンライン
+          - Web Ext で翻訳先言語を ja に設定済み（uiLang は何でも可）
+        steps:
+          - メモ / Mail 等で英文を選択 → 共有 → DualView Translator
+          - SwiftUI 並列翻訳ビューが開くまで待つ
+        expected:
+          - 上段に原文（英語）、下段に訳文（日本語）が表示される
+          - "翻訳中はスピナー + 「翻訳中…」が出る"
+          - "閉じる ボタンで Extension が完全に閉じる"
+
+      - id: SE-010
+        title: macOS で英文を共有すると並列翻訳ビューに訳文が出る
+        priority: p0
+        environment: safari-mac
+        related_prs: [186]
+        steps:
+          - SE-009 と同様に macOS Mail / News / Notes / Safari から英文共有
+        expected:
+          - SE-009 と同様。NSHostingController 経由で SwiftUI ビュー表示
+          - macOS Share Extension は最低 macOS 12.0 が必要なので、それ以前の OS では出ない
+
+      - id: SE-011
+        title: 翻訳先言語を Web Ext で変更すると Share Ext の翻訳先も追従
+        priority: p1
+        description: PR #183 の Phase 1 ミラー機構が機能していることの確認（App Group 経由で targetLang を読む）
+        related_prs: [186]
+        steps:
+          - Web Ext のポップアップで翻訳先言語を en → ja → fr など切替
+          - 別タブで Share Extension を起動し直して翻訳実行
+        expected:
+          - 切り替えた言語で訳文が出る（Web Ext 起動状態であれば即座に反映、再起動後の Share Ext から確実に追従）
+          - Share Ext 側に独立した言語選択 UI は無い（v1 のスコープ）
+
+      - id: SE-012
+        title: コピーボタンで訳文がクリップボードに入る
+        priority: p1
+        related_prs: [186]
+        steps:
+          - SE-009 / SE-010 で訳文が表示された状態
+          - 訳文ブロック右下のコピーボタンをタップ／クリック
+          - 別アプリで Cmd+V / 長押しペースト
+        expected:
+          - "ボタンラベルが一時的に「✓ コピー済」に切り替わる（2 秒後に元に戻る）"
+          - クリップボードに訳文文字列が入っている
+
+      - id: SE-013
+        title: ネットワーク切断時にエラー表示が出る（クラッシュしない）
+        priority: p1
+        environment: safari-ios-sim
+        related_prs: [186]
+        preconditions:
+          - 機内モード等で完全にオフライン
+        steps:
+          - SE-009 と同様にテキスト共有で Share Ext を起動
+        expected:
+          - '訳文ブロックに "[エラー] (network error の説明文)" が赤字で表示される'
+          - クラッシュせず 閉じる ボタンで終了できる
+
+      - id: SE-014
+        title: 11 言語の UI ラベル切替（uiLang）
+        priority: p2
+        description: I18N.swift の言語フォールバックロジックの確認
+        related_prs: [186]
+        steps:
+          - Web Ext で UI 言語を順に変更（ja / en / zh-CN / zh-TW / ko / fr / de / es / pt / ru / ar）
+          - 各言語で Share Ext を再起動
+        expected:
+          - "「DualView 翻訳 / DualView Translate / DualView 翻译 ...」のように UI 文字列が当該言語に切り替わる"
+          - "「コピー」「閉じる」「翻訳中…」も当該言語"
+          - 未対応 uiLang のときは英語にフォールバック
+
+      - id: SE-015
+        title: ESC キーで閉じる（macOS）
+        priority: p2
+        environment: safari-mac
+        related_prs: [186]
+        steps:
+          - SE-010 と同様に Share Ext を開く
+          - ESC キーを押す
+        expected:
+          - SwiftUI の keyboardShortcut(.escape) により 閉じる が発火
+          - Extension が即座に終了
+
+      - id: SE-016
+        title: 旧自動生成の Storyboard / xib が残っていない
+        priority: p2
+        description: Phase 3b で SwiftUI 化したため、旧 UI 定義は撤去されているべき
+        related_prs: [186]
+        steps:
+          - "`ls 'safari/DualView Translator/DualView Share Extension (iOS)/'` を実行"
+          - "`ls 'safari/DualView Translator/DualView Share Extension (macOS)/'` を実行"
+        expected:
+          - "Base.lproj/MainInterface.storyboard / Base.lproj/ShareViewController.xib が存在しない"
+          - 各フォルダに Swift ファイル 5 個（ShareViewController + ShareAppGroup + TranslationProviderGoogle + I18N + SharedTranslationView）が存在
