@@ -1208,7 +1208,7 @@
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "DualView Share Extension (iOS)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (iOS)";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1239,7 +1239,7 @@
 				DEVELOPMENT_TEAM = 44L2GC4R8F;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "DualView Share Extension (iOS)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (iOS)";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1274,7 +1274,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "DualView Share Extension (macOS)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (macOS)";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1308,7 +1308,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "DualView Share Extension (macOS)/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "DualView Share Extension (macOS)";
+				INFOPLIST_KEY_CFBundleDisplayName = "DualView Translator";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
