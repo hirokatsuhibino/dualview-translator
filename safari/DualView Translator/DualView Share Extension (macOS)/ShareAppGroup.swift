@@ -1,6 +1,6 @@
 //
 //  ShareAppGroup.swift
-//  DualView Share Extension (iOS)
+//  DualView Share Extension (macOS)
 //
 //  Copyright (c) Orangesoft Inc.
 //
