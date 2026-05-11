@@ -26,9 +26,19 @@ var DVT = (function () {
     th: 'ไทย', id: 'Bahasa Indonesia', hi: 'हिन्दी', pl: 'Polski', sv: 'Svenska',
   };
 
+  // 言語コードとして意味を成さない値（'<html lang="null">' のようなゴミ HTML 対策）
+  const INVALID_LANG_CODES = new Set(['null', 'undefined', 'und', 'unknown', 'x-unknown']);
+
+  // 言語コードとして信頼できる値かを判定（ゴミ HTML の <html lang="null"> 対策）
+  function isValidLangCode(code) {
+    if (!code) return false;
+    const lower = String(code).trim().toLowerCase();
+    return !!lower && !INVALID_LANG_CODES.has(lower);
+  }
+
   function getLangDisplayName(code) {
-    if (!code) return 'Unknown';
-    const lower = code.toLowerCase();
+    if (!isValidLangCode(code)) return 'Unknown';
+    const lower = String(code).trim().toLowerCase();
     return LANG_NAMES[lower] || LANG_NAMES[lower.split('-')[0]] || code;
   }
 
@@ -377,6 +387,7 @@ var DVT = (function () {
     showToast,
     updateToast,
     getLangDisplayName,
+    isValidLangCode,
     speak,
     stopSpeak,
     createSpeakButton,

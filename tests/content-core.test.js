@@ -94,6 +94,66 @@ describe('DVT (content-core)', () => {
     it('null は Unknown を返す', () => {
       expect(DVT.getLangDisplayName(null)).toBe('Unknown');
     });
+
+    // 回帰防止: issue #195 — <html lang="null"> のサイトで翻訳バーに "null" と表示された
+    it('文字列 "null" は Unknown を返す', () => {
+      expect(DVT.getLangDisplayName('null')).toBe('Unknown');
+    });
+
+    it('文字列 "undefined" は Unknown を返す', () => {
+      expect(DVT.getLangDisplayName('undefined')).toBe('Unknown');
+    });
+
+    it('BCP 47 の "und"（未定義）は Unknown を返す', () => {
+      expect(DVT.getLangDisplayName('und')).toBe('Unknown');
+    });
+
+    it('"unknown" / "x-unknown" は Unknown を返す', () => {
+      expect(DVT.getLangDisplayName('unknown')).toBe('Unknown');
+      expect(DVT.getLangDisplayName('x-unknown')).toBe('Unknown');
+    });
+
+    it('空文字や空白のみは Unknown を返す', () => {
+      expect(DVT.getLangDisplayName('')).toBe('Unknown');
+      expect(DVT.getLangDisplayName('   ')).toBe('Unknown');
+    });
+
+    it('大文字混じりの不正コード（"NULL"）も Unknown を返す', () => {
+      expect(DVT.getLangDisplayName('NULL')).toBe('Unknown');
+    });
+  });
+
+  describe('isValidLangCode()', () => {
+    it('通常の言語コードは true', () => {
+      expect(DVT.isValidLangCode('ja')).toBe(true);
+      expect(DVT.isValidLangCode('en-US')).toBe(true);
+      expect(DVT.isValidLangCode('zh-CN')).toBe(true);
+    });
+
+    it('未知の言語コードも形式的には true', () => {
+      // 未知のコードは Unknown 表示には落とさないが、langMatches などには通す
+      expect(DVT.isValidLangCode('xx')).toBe(true);
+    });
+
+    it('null / undefined / 空文字は false', () => {
+      expect(DVT.isValidLangCode(null)).toBe(false);
+      expect(DVT.isValidLangCode(undefined)).toBe(false);
+      expect(DVT.isValidLangCode('')).toBe(false);
+      expect(DVT.isValidLangCode('   ')).toBe(false);
+    });
+
+    it('"null" / "undefined" / "und" / "unknown" / "x-unknown" は false', () => {
+      expect(DVT.isValidLangCode('null')).toBe(false);
+      expect(DVT.isValidLangCode('undefined')).toBe(false);
+      expect(DVT.isValidLangCode('und')).toBe(false);
+      expect(DVT.isValidLangCode('unknown')).toBe(false);
+      expect(DVT.isValidLangCode('x-unknown')).toBe(false);
+    });
+
+    it('大文字小文字を区別しない', () => {
+      expect(DVT.isValidLangCode('NULL')).toBe(false);
+      expect(DVT.isValidLangCode('Und')).toBe(false);
+    });
   });
 
   describe('translate() — オフラインフォールバック通知', () => {

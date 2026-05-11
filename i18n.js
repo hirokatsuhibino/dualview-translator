@@ -43,6 +43,7 @@ var DVT_I18N = (function () {
       close: '閉じる',
       // content — 翻訳バー
       translateBarMsg: 'このページは <strong>{lang}</strong> で書かれています。翻訳しますか？',
+      translateBarMsgUnknown: 'このページの言語が不明です。翻訳しますか？',
       translateBarAccept: '翻訳する',
       translateBarSummarize: '翻訳＆要約',
       // content — トースト
@@ -145,6 +146,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'Network unavailable — switched to Apple Translation',
       close: 'Close',
       translateBarMsg: 'This page is written in <strong>{lang}</strong>. Translate it?',
+      translateBarMsgUnknown: "Not sure what language this page uses. Want to translate it?",
       translateBarAccept: 'Translate',
       translateBarSummarize: 'Translate & Summarize',
       toastTranslating: '{done} / {total} translating…',
@@ -242,6 +244,7 @@ var DVT_I18N = (function () {
       fallbackToApple: '网络不可用，已切换到 Apple 翻译',
       close: '关闭',
       translateBarMsg: '此页面使用 <strong>{lang}</strong> 编写。是否翻译？',
+      translateBarMsgUnknown: '无法识别此页面的语言。是否翻译？',
       translateBarAccept: '翻译',
       translateBarSummarize: '翻译并摘要',
       toastTranslating: '{done} / {total} 翻译中…',
@@ -334,6 +337,7 @@ var DVT_I18N = (function () {
       fallbackToApple: '網路無法連線，已切換至 Apple 翻譯',
       close: '關閉',
       translateBarMsg: '此頁面使用 <strong>{lang}</strong> 撰寫。是否翻譯？',
+      translateBarMsgUnknown: '無法識別此頁面的語言。是否翻譯？',
       translateBarAccept: '翻譯',
       translateBarSummarize: '翻譯並摘要',
       toastTranslating: '{done} / {total} 翻譯中…',
@@ -426,6 +430,7 @@ var DVT_I18N = (function () {
       fallbackToApple: '네트워크에 연결할 수 없어 Apple 번역으로 전환했습니다',
       close: '닫기',
       translateBarMsg: '이 페이지는 <strong>{lang}</strong>로 작성되었습니다. 번역하시겠습니까?',
+      translateBarMsgUnknown: '이 페이지의 언어를 알 수 없습니다. 번역하시겠습니까?',
       translateBarAccept: '번역',
       translateBarSummarize: '번역 및 요약',
       toastTranslating: '{done} / {total} 번역 중…',
@@ -518,6 +523,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'Réseau indisponible — basculé sur la traduction Apple',
       close: 'Fermer',
       translateBarMsg: 'Cette page est en <strong>{lang}</strong>. La traduire ?',
+      translateBarMsgUnknown: 'Langue de cette page inconnue. La traduire ?',
       translateBarAccept: 'Traduire',
       translateBarSummarize: 'Traduire et résumer',
       toastTranslating: '{done} / {total} en cours…',
@@ -610,6 +616,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'Netzwerk nicht verfügbar — zur Apple-Übersetzung gewechselt',
       close: 'Schließen',
       translateBarMsg: 'Diese Seite ist auf <strong>{lang}</strong>. Übersetzen?',
+      translateBarMsgUnknown: 'Sprache dieser Seite unbekannt. Übersetzen?',
       translateBarAccept: 'Übersetzen',
       translateBarSummarize: 'Übersetzen & zusammenfassen',
       toastTranslating: '{done} / {total} übersetze…',
@@ -702,6 +709,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'Red no disponible — cambiado a traductor Apple',
       close: 'Cerrar',
       translateBarMsg: 'Esta página está en <strong>{lang}</strong>. ¿Traducirla?',
+      translateBarMsgUnknown: 'Idioma de esta página desconocido. ¿Traducirla?',
       translateBarAccept: 'Traducir',
       translateBarSummarize: 'Traducir y resumir',
       toastTranslating: '{done} / {total} traduciendo…',
@@ -794,6 +802,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'Rede indisponível — alternado para tradutor Apple',
       close: 'Fechar',
       translateBarMsg: 'Esta página está em <strong>{lang}</strong>. Traduzir?',
+      translateBarMsgUnknown: 'Idioma desta página desconhecido. Traduzir?',
       translateBarAccept: 'Traduzir',
       translateBarSummarize: 'Traduzir e resumir',
       toastTranslating: '{done} / {total} traduzindo…',
@@ -886,6 +895,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'Сеть недоступна — переключено на Apple Переводчик',
       close: 'Закрыть',
       translateBarMsg: 'Эта страница на <strong>{lang}</strong>. Перевести?',
+      translateBarMsgUnknown: 'Язык этой страницы не определён. Перевести?',
       translateBarAccept: 'Перевести',
       translateBarSummarize: 'Перевести и обобщить',
       toastTranslating: '{done} / {total} перевод…',
@@ -978,6 +988,7 @@ var DVT_I18N = (function () {
       fallbackToApple: 'الشبكة غير متاحة — تم التبديل إلى ترجمة Apple',
       close: 'إغلاق',
       translateBarMsg: 'هذه الصفحة مكتوبة بـ <strong>{lang}</strong>. هل تريد ترجمتها؟',
+      translateBarMsgUnknown: 'لغة هذه الصفحة غير معروفة. هل تريد ترجمتها؟',
       translateBarAccept: 'ترجمة',
       translateBarSummarize: 'ترجمة وتلخيص',
       toastTranslating: '{done} / {total} جارٍ الترجمة…',
@@ -1061,13 +1072,27 @@ var DVT_I18N = (function () {
 
   // ─── 公開API ────────────────────────────────────────────────────────────
 
+  // 正規表現の特殊文字をエスケープする（プレースホルダキー名・置換値の両方に使用）
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // メッセージ取得（プレースホルダ対応）
   function t(key, params) {
     const msgs = MESSAGES[currentLang] || MESSAGES['en'] || MESSAGES['ja'];
     let text = msgs[key] || MESSAGES['en'][key] || MESSAGES['ja'][key] || key;
     if (params) {
       Object.keys(params).forEach(k => {
-        text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), params[k]);
+        // null / undefined はそのまま String 化すると "null" / "undefined" になり
+        // UI に露出する（issue #195）。空文字に正規化する。
+        // また、置換値に $& / $$ / $1 等の特殊文字が含まれると String.prototype.replace
+        // が特殊展開してしまうため、replacement を関数にしてリテラル置換する（PR #196 review）。
+        const v = params[k];
+        const replacement = v == null ? '' : String(v);
+        text = text.replace(
+          new RegExp('\\{' + escapeRegex(k) + '\\}', 'g'),
+          () => replacement
+        );
       });
     }
     return text;

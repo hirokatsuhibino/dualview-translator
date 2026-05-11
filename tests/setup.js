@@ -32,6 +32,21 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function () {};
 }
 
+// jsdom の HTMLElement.innerText は visible-only の計算をしないため、空文字を返すケースがある。
+// content-bar.js の detectPageLanguage が `body.innerText` を使うので、テストでは textContent
+// にフォールバックして実機相当の挙動を得られるようにする。
+if (typeof HTMLElement !== 'undefined') {
+  const proto = HTMLElement.prototype;
+  const desc = Object.getOwnPropertyDescriptor(proto, 'innerText');
+  if (!desc || typeof desc.get !== 'function' || !desc.get.toString().includes('textContent')) {
+    Object.defineProperty(proto, 'innerText', {
+      configurable: true,
+      get() { return this.textContent; },
+      set(v) { this.textContent = v; },
+    });
+  }
+}
+
 // content-selection.js は selectionchange リスナーをタッチデバイスのみで登録するため、
 // jsdom 環境を「タッチデバイス」と判定させて selectionchange 経路もテストできるようにする。
 // (`'ontouchstart' in document.documentElement` の判定で true を返させる)

@@ -1699,3 +1699,70 @@ suites:
         expected:
           - ボタン文言が「終了して Safari の機能拡張設定を開く…」に切り替わる
           - macOS Sequoia 以降では「終了して Safari の設定を開く…」に切り替わる
+
+  # ━━━━━ 翻訳バーの言語名表示（issue #195 回帰防止） ━━━━━
+  - id: translate-bar-lang-name
+    title: 翻訳バーの言語名表示
+    description: "issue #195 — 不正な <html lang> 値（'null' / 'und' / 'unknown' 等）で翻訳バーに 'null' と表示されたバグの回帰防止"
+    related_prs: []
+    scenarios:
+
+      - id: TB-001
+        title: '<html lang="null"> のサイトで「言語不明」バーが表示される'
+        priority: p1
+        description: "v1.6.2 以前は <html lang='null'> のサイトでバーに「このページは null で書かれています」と表示されていた"
+        preconditions:
+          - "ターゲット言語: 日本語"
+          - "翻訳バーが有効（dismissedDomains に該当ドメインが入っていない）"
+        steps:
+          - 任意のページを開く
+          - "DevTools で `document.documentElement.lang = 'null'` を実行"
+          - ページをリロード
+        expected:
+          - "翻訳バーに「このページの言語が不明です。翻訳しますか？」と表示される（API 検出で言語が拾えればその言語名）"
+          - "「このページは null で書かれています」のような表記は絶対に出ない"
+
+      - id: TB-002
+        title: '<html lang="und"> / <html lang="unknown"> でも「言語不明」バーが表示される'
+        priority: p2
+        description: "BCP 47 の und（未定義）や慣用的な 'unknown' が lang 属性に入っているケース"
+        steps:
+          - "DevTools で `document.documentElement.lang = 'und'` などを設定してリロード"
+        expected:
+          - 翻訳バーに "und" / "unknown" / "undefined" がそのまま表示されない
+          - "「このページの言語が不明です。翻訳しますか？」または API 検出由来の言語名が出る"
+
+      - id: TB-003
+        title: 正常な lang 属性のサイトで言語名が正しく表示される（回帰検知）
+        priority: p0
+        preconditions:
+          - "ターゲット言語: 日本語"
+        steps:
+          - 任意の英語ページ（<html lang="en"> のサイト）を開く
+        expected:
+          - 翻訳バーに「このページは **English** で書かれています。翻訳しますか？」と表示される
+          - 「null」「undefined」のような文字列が混入していない
+
+      - id: TB-004
+        title: '<html lang> が完全に空の場合はバーが過剰干渉しない'
+        priority: p2
+        description: "<html lang> が書かれていないサイトで API 検出も失敗 / 未対応の場合、バーを出さないこと（過剰干渉防止）"
+        preconditions:
+          - "ターゲット言語: 日本語"
+        steps:
+          - "<html> に lang 属性が無いサイトを開く（または DevTools で `document.documentElement.removeAttribute('lang')` してリロード）"
+          - 本文が極端に短いページ（例: 空に近い landing ページ）を選ぶ
+        expected:
+          - 翻訳バーが表示されない
+          - "（lang 属性自体を書いていないサイト作者の意図を尊重する）"
+
+      - id: TB-005
+        title: 11 言語すべてで「言語不明」バーの文言が表示できる
+        priority: p2
+        description: "UI 表示言語を切り替えても translateBarMsgUnknown が各言語で機能する"
+        steps:
+          - "ポップアップ > 設定タブで UI 表示言語を順に変更（ja / en / zh-CN / zh-TW / ko / fr / de / es / pt / ru / ar）"
+          - "<html lang='null'> のサイトをそれぞれリロードして翻訳バーを確認"
+        expected:
+          - 各言語で言語不明用の文言が表示される
+          - "どの言語でも「null」「undefined」「und」「unknown」「{lang}」のような未置換文字列が混入しない"

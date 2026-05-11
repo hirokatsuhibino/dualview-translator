@@ -12,16 +12,28 @@ var DVT_BAR = (function () {
 
   // ─── ページ言語検出 ────────────────────────────────────────────────
   async function detectPageLanguage() {
+    // <html lang> がゴミ値（"null" / "und" / "unknown" 等）の場合は「無い」扱いにして
+    // API 検出にフォールバックする（issue #195）。
     const htmlLang = document.documentElement.lang;
-    if (htmlLang && !DVT.langMatches(htmlLang, DVT.state.targetLang)) {
+    const htmlLangValid = DVT.isValidLangCode(htmlLang);
+    if (htmlLangValid && !DVT.langMatches(htmlLang, DVT.state.targetLang)) {
       showTranslateBar(htmlLang);
       return;
     }
-    if (htmlLang && DVT.langMatches(htmlLang, DVT.state.targetLang)) return;
+    if (htmlLangValid && DVT.langMatches(htmlLang, DVT.state.targetLang)) return;
 
-    // lang属性がない場合はAPIで検出
+    // <html lang> に何か値が書かれていたが不正だった場合は「言語不明」バーを出す候補。
+    // 値が完全に空のサイトは作者が意図的に書いていないケースもあり、勝手にバーを出すと
+    // 過剰干渉になりかねないので、API 検出に頼ってバー表示するかを決める。
+    const hadBogusHtmlLang = !!htmlLang && !htmlLangValid;
+
+    // lang属性がない or 不正値ならAPIで検出
     const bodyText = document.body?.innerText?.trim();
-    if (!bodyText || bodyText.length < 20) return;
+    if (!bodyText || bodyText.length < 20) {
+      // body が短すぎて API 検出も使えない。<html lang> が不正値だった場合だけ「言語不明」バーを出す。
+      if (hadBogusHtmlLang) showTranslateBar(null);
+      return;
+    }
     const sample = bodyText.slice(0, 200);
 
     try {
@@ -31,18 +43,28 @@ var DVT_BAR = (function () {
           resolve(res?.ok ? res.detectedLang : null);
         });
       });
-      if (result && !DVT.langMatches(result, DVT.state.targetLang)) {
+      const resultValid = DVT.isValidLangCode(result);
+      if (resultValid && !DVT.langMatches(result, DVT.state.targetLang)) {
         showTranslateBar(result);
+      } else if (!resultValid && hadBogusHtmlLang) {
+        // API 検出も失敗 / 無効値で、元々の <html lang> も不正だった
+        // → 言語不明バーを出して翻訳判断はユーザーに委ねる
+        showTranslateBar(null);
       }
     } catch (e) {
-      // 検出失敗は無視
+      // API 例外も hadBogusHtmlLang のときは言語不明バーで救済
+      if (hadBogusHtmlLang) showTranslateBar(null);
     }
   }
 
   // ─── 翻訳バー表示 ──────────────────────────────────────────────────
+  // detectedLang が null / 不正値の場合は「言語不明」用メッセージを使う（issue #195）。
   function showTranslateBar(detectedLang) {
     if (DVT.state.translateBar) return;
-    const langName = DVT.getLangDisplayName(detectedLang);
+    const isUnknown = !DVT.isValidLangCode(detectedLang);
+    const message = isUnknown
+      ? t('translateBarMsgUnknown')
+      : t('translateBarMsg', { lang: DVT.getLangDisplayName(detectedLang) });
 
     const bar = document.createElement('div');
     bar.className = 'dvt-translate-bar';
@@ -50,7 +72,7 @@ var DVT_BAR = (function () {
     const barText = document.createElement('span');
     barText.className = 'dvt-translate-bar-text';
     // <strong>タグを含むメッセージをDOM要素に変換
-    const msgParts = t('translateBarMsg', { lang: langName }).split(/(<strong>.*?<\/strong>)/);
+    const msgParts = message.split(/(<strong>.*?<\/strong>)/);
     msgParts.forEach(part => {
       const m = part.match(/^<strong>(.*)<\/strong>$/);
       if (m) {
