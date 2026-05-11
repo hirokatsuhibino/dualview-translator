@@ -115,6 +115,7 @@ describe('DVT_I18N', () => {
       'translateSelection',
       'undoElement', 'undoSummary',
       'engineApple', 'fallbackToApple',
+      'translateBarMsg', 'translateBarMsgUnknown',
     ];
 
     for (const lang of langs) {

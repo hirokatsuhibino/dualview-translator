@@ -217,7 +217,7 @@ describe('DVT_BAR.startAutoRuleObserver', () => {
 });
 
 // 回帰防止: issue #195 — <html lang="null"> のサイトで翻訳バーに "null" と表示された
-describe('DVT_BAR.detectPageLanguage — 不正な <html lang> 値の除外', () => {
+describe('DVT_BAR.detectPageLanguage — 不正な <html lang> 値の扱い', () => {
   beforeEach(() => {
     // 本物の DVT / i18n をロード（モック DVT では isValidLangCode が無いため）
     loadScript('i18n.js', 'content-core.js');
@@ -245,26 +245,45 @@ describe('DVT_BAR.detectPageLanguage — 不正な <html lang> 値の除外', ()
     DVT.state.translateBar = null;
   });
 
-  it('<html lang="null"> ではバーが表示されない', async () => {
+  // body 短すぎ ＋ API 検出失敗の組み合わせ: 不正な lang のときは「言語不明」バーを出す
+  it('<html lang="null"> + body 短文では「言語不明」バーが表示される', async () => {
     document.documentElement.lang = 'null';
     await DVT_BAR.detectPageLanguage();
-    expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    // 表示テキストに 'null' / 'undefined' が含まれていないこと
+    expect(bar.textContent).not.toContain('null');
+    expect(bar.textContent).not.toContain('undefined');
+    // 翻訳バーの「翻訳する」ボタンが含まれること
+    expect(bar.querySelector('.dvt-translate-bar-accept')).not.toBeNull();
   });
 
-  it('<html lang="und"> ではバーが表示されない', async () => {
+  it('<html lang="und"> + body 短文でも「言語不明」バーが表示される', async () => {
     document.documentElement.lang = 'und';
     await DVT_BAR.detectPageLanguage();
-    expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).not.toContain('und');
   });
 
-  it('<html lang="unknown"> ではバーが表示されない', async () => {
+  it('<html lang="unknown"> + body 短文でも「言語不明」バーが表示される', async () => {
     document.documentElement.lang = 'unknown';
     await DVT_BAR.detectPageLanguage();
-    expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).not.toContain('unknown');
   });
 
-  it('<html lang="undefined"> ではバーが表示されない', async () => {
+  it('<html lang="undefined"> + body 短文でも「言語不明」バーが表示される', async () => {
     document.documentElement.lang = 'undefined';
+    await DVT_BAR.detectPageLanguage();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).not.toContain('undefined');
+  });
+
+  it('<html lang> が空（属性無し）+ body 短文ではバーが出ない（過剰干渉防止）', async () => {
+    document.documentElement.lang = '';
     await DVT_BAR.detectPageLanguage();
     expect(document.querySelector('.dvt-translate-bar')).toBeNull();
   });
@@ -274,21 +293,41 @@ describe('DVT_BAR.detectPageLanguage — 不正な <html lang> 値の除外', ()
     await DVT_BAR.detectPageLanguage();
     const bar = document.querySelector('.dvt-translate-bar');
     expect(bar).not.toBeNull();
-    // 表示テキストに 'null' / 'undefined' が含まれていないこと
     const text = bar.textContent;
     expect(text).not.toContain('null');
     expect(text).not.toContain('undefined');
-    // 言語名（"English"）が埋め込まれていること
     expect(text).toContain('English');
   });
 
-  it('API 検出結果が "null" 文字列でもバーが表示されない', async () => {
-    // <html lang> 無し → API 検出に進む。長文を用意して API 経路を発火させる
+  it('API 検出結果が "null" 文字列のとき、元の <html lang> が不正なら「言語不明」バーが出る', async () => {
+    // <html lang="null"> + body 長文 → API 検出経路で result が "null" 文字列
+    document.documentElement.lang = 'null';
+    document.body.innerHTML = '<p>' + 'a'.repeat(200) + '</p>';
+    chrome.runtime.sendMessage.mockImplementation((_msg, cb) => cb({ ok: true, detectedLang: 'null' }));
+    await DVT_BAR.detectPageLanguage();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).not.toContain('null');
+  });
+
+  it('<html lang> 空 + API 検出結果が "null" のときはバーが出ない', async () => {
+    // 過剰干渉を避ける: <html lang> 自体が無いケースでは API 検出失敗時もバーを出さない
     document.documentElement.lang = '';
     document.body.innerHTML = '<p>' + 'a'.repeat(200) + '</p>';
     chrome.runtime.sendMessage.mockImplementation((_msg, cb) => cb({ ok: true, detectedLang: 'null' }));
     await DVT_BAR.detectPageLanguage();
     expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+  });
+
+  it('<html lang="null"> + API 検出が成功して有効な言語を返したら、その言語名で表示される', async () => {
+    document.documentElement.lang = 'null';
+    document.body.innerHTML = '<p>' + 'a'.repeat(200) + '</p>';
+    chrome.runtime.sendMessage.mockImplementation((_msg, cb) => cb({ ok: true, detectedLang: 'en' }));
+    await DVT_BAR.detectPageLanguage();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).toContain('English');
+    expect(bar.textContent).not.toContain('null');
   });
 });
 
