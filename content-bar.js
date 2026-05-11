@@ -14,7 +14,10 @@ var DVT_BAR = (function () {
   async function detectPageLanguage() {
     // <html lang> がゴミ値（"null" / "und" / "unknown" 等）の場合は「無い」扱いにして
     // API 検出にフォールバックする（issue #195）。
-    const htmlLang = document.documentElement.lang;
+    // 前後空白付きや空白のみのケース（issue #197）にも対応するため、生値ではなく
+    // trim 正規化した値を valid 判定・langMatches・表示で一貫して使う。
+    const rawHtmlLang = document.documentElement.lang;
+    const htmlLang = rawHtmlLang ? String(rawHtmlLang).trim() : '';
     const htmlLangValid = DVT.isValidLangCode(htmlLang);
     if (htmlLangValid && !DVT.langMatches(htmlLang, DVT.state.targetLang)) {
       showTranslateBar(htmlLang);
@@ -23,8 +26,8 @@ var DVT_BAR = (function () {
     if (htmlLangValid && DVT.langMatches(htmlLang, DVT.state.targetLang)) return;
 
     // <html lang> に何か値が書かれていたが不正だった場合は「言語不明」バーを出す候補。
-    // 値が完全に空のサイトは作者が意図的に書いていないケースもあり、勝手にバーを出すと
-    // 過剰干渉になりかねないので、API 検出に頼ってバー表示するかを決める。
+    // 値が完全に空 or 空白のみのサイトは作者が意図的に書いていない or 単なる属性ミスの
+    // ケースもあり、勝手にバーを出すと過剰干渉になりかねないので、bogus 扱いから外す。
     const hadBogusHtmlLang = !!htmlLang && !htmlLangValid;
 
     // lang属性がない or 不正値ならAPIで検出
@@ -37,12 +40,14 @@ var DVT_BAR = (function () {
     const sample = bodyText.slice(0, 200);
 
     try {
-      const result = await new Promise((resolve) => {
+      const rawResult = await new Promise((resolve) => {
         chrome.runtime.sendMessage({ action: 'detectLang', text: sample }, (res) => {
           if (chrome.runtime.lastError) { resolve(null); return; }
           resolve(res?.ok ? res.detectedLang : null);
         });
       });
+      // API 検出結果も前後空白の混入を考慮して trim 正規化する
+      const result = rawResult ? String(rawResult).trim() : null;
       const resultValid = DVT.isValidLangCode(result);
       if (resultValid && !DVT.langMatches(result, DVT.state.targetLang)) {
         showTranslateBar(result);
