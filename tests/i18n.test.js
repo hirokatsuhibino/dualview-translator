@@ -78,6 +78,37 @@ describe('DVT_I18N', () => {
         const rEmpty = DVT_I18N.t('toastTranslating', { done: '', total: 10 });
         expect(rEmpty).toBe(' / 10 翻訳中…');
       });
+
+      // PR #196 レビュー指摘: String.prototype.replace の特殊置換パターンが展開されないこと
+      it('値に $& が含まれてもリテラル置換される', () => {
+        DVT_I18N.setLang('ja');
+        const result = DVT_I18N.t('translateBarMsg', { lang: '$&abc' });
+        expect(result).toContain('$&abc');
+        // 元のマッチ {lang} に展開されていないこと
+        expect(result).not.toContain('{lang}abc');
+      });
+
+      it('値に $$ が含まれてもリテラル $$ として扱われる', () => {
+        DVT_I18N.setLang('ja');
+        const result = DVT_I18N.t('translateBarMsg', { lang: '$$' });
+        expect(result).toContain('$$');
+      });
+
+      it('値に $1 / $` / $\' などの後方参照風文字が含まれてもそのまま埋め込まれる', () => {
+        DVT_I18N.setLang('ja');
+        const r1 = DVT_I18N.t('translateBarMsg', { lang: '$1' });
+        expect(r1).toContain('$1');
+        const rBack = DVT_I18N.t('translateBarMsg', { lang: "$`" });
+        expect(rBack).toContain("$`");
+        const rApos = DVT_I18N.t('translateBarMsg', { lang: "$'" });
+        expect(rApos).toContain("$'");
+      });
+
+      it('値が数値や真偽値でも文字列化されて埋め込まれる（型混入耐性）', () => {
+        DVT_I18N.setLang('ja');
+        const r = DVT_I18N.t('translateBarMsg', { lang: 42 });
+        expect(r).toContain('42');
+      });
     });
   });
 

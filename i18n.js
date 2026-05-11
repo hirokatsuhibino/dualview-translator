@@ -1072,6 +1072,11 @@ var DVT_I18N = (function () {
 
   // ─── 公開API ────────────────────────────────────────────────────────────
 
+  // 正規表現の特殊文字をエスケープする（プレースホルダキー名・置換値の両方に使用）
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // メッセージ取得（プレースホルダ対応）
   function t(key, params) {
     const msgs = MESSAGES[currentLang] || MESSAGES['en'] || MESSAGES['ja'];
@@ -1080,8 +1085,14 @@ var DVT_I18N = (function () {
       Object.keys(params).forEach(k => {
         // null / undefined はそのまま String 化すると "null" / "undefined" になり
         // UI に露出する（issue #195）。空文字に正規化する。
+        // また、置換値に $& / $$ / $1 等の特殊文字が含まれると String.prototype.replace
+        // が特殊展開してしまうため、replacement を関数にしてリテラル置換する（PR #196 review）。
         const v = params[k];
-        text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), v == null ? '' : v);
+        const replacement = v == null ? '' : String(v);
+        text = text.replace(
+          new RegExp('\\{' + escapeRegex(k) + '\\}', 'g'),
+          () => replacement
+        );
       });
     }
     return text;
