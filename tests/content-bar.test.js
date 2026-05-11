@@ -329,6 +329,47 @@ describe('DVT_BAR.detectPageLanguage — 不正な <html lang> 値の扱い', ()
     expect(bar.textContent).toContain('English');
     expect(bar.textContent).not.toContain('null');
   });
+
+  // 回帰防止: issue #197 — 言語コード正規化漏れ
+  it('<html lang="en "> （前後空白付き）+ ターゲット ja でバーが正しく表示される', async () => {
+    document.documentElement.lang = 'en ';
+    await DVT_BAR.detectPageLanguage();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).toContain('English');
+  });
+
+  it('<html lang=" ja "> （前後空白付き）+ ターゲット ja は同言語と判定してバーが出ない', async () => {
+    // issue #197 修正前は trim せずに "ja " と "ja" が不一致になりバーが出ていた
+    document.documentElement.lang = ' ja ';
+    await DVT_BAR.detectPageLanguage();
+    expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+  });
+
+  it('<html lang="   "> （空白のみ）+ body 短文ではバーが出ない（過剰干渉防止）', async () => {
+    // issue #197 修正前は hadBogusHtmlLang が true になり「言語不明」バーが出ていた
+    document.documentElement.lang = '   ';
+    await DVT_BAR.detectPageLanguage();
+    expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+  });
+
+  it('API 検出結果が "en " （前後空白付き）でも正しく "English" で表示される', async () => {
+    document.documentElement.lang = '';
+    document.body.innerHTML = '<p>' + 'a'.repeat(200) + '</p>';
+    chrome.runtime.sendMessage.mockImplementation((_msg, cb) => cb({ ok: true, detectedLang: 'en ' }));
+    await DVT_BAR.detectPageLanguage();
+    const bar = document.querySelector('.dvt-translate-bar');
+    expect(bar).not.toBeNull();
+    expect(bar.textContent).toContain('English');
+  });
+
+  it('API 検出結果が " ja "（前後空白付き）+ ターゲット ja のときはバーが出ない（同言語扱い）', async () => {
+    document.documentElement.lang = '';
+    document.body.innerHTML = '<p>' + 'a'.repeat(200) + '</p>';
+    chrome.runtime.sendMessage.mockImplementation((_msg, cb) => cb({ ok: true, detectedLang: ' ja ' }));
+    await DVT_BAR.detectPageLanguage();
+    expect(document.querySelector('.dvt-translate-bar')).toBeNull();
+  });
 });
 
 describe('翻訳バー — APIキー未設定時のボタン非表示', () => {
