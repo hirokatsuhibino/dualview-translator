@@ -1699,3 +1699,46 @@ suites:
         expected:
           - ボタン文言が「終了して Safari の機能拡張設定を開く…」に切り替わる
           - macOS Sequoia 以降では「終了して Safari の設定を開く…」に切り替わる
+
+  # ━━━━━ 翻訳バーの言語名表示（issue #195 回帰防止） ━━━━━
+  - id: translate-bar-lang-name
+    title: 翻訳バーの言語名表示
+    description: "issue #195 — 不正な <html lang> 値（'null' / 'und' / 'unknown' 等）で翻訳バーに 'null' と表示されたバグの回帰防止"
+    related_prs: []
+    scenarios:
+
+      - id: TB-001
+        title: '<html lang="null"> のサイトで翻訳バーに「null」と表示されない'
+        priority: p1
+        description: "v1.6.2 以前は <html lang='null'> のサイトでバーに「このページは null で書かれています」と表示されていた"
+        preconditions:
+          - "ターゲット言語: 日本語"
+          - "翻訳バーが有効（dismissedDomains に該当ドメインが入っていない）"
+        steps:
+          - 任意のページを開く
+          - "DevTools で `document.documentElement.lang = 'null'` を実行"
+          - ページをリロード
+        expected:
+          - 翻訳バーが表示されないか、表示されても言語名が「Unknown」など人間可読な文字列になっている
+          - 「このページは null で書かれています」のような表記は出ない
+
+      - id: TB-002
+        title: '<html lang="und"> / <html lang="unknown"> でも同様に "null" 表示されない'
+        priority: p2
+        description: "BCP 47 の und（未定義）や慣用的な 'unknown' が lang 属性に入っているケース"
+        steps:
+          - "DevTools で `document.documentElement.lang = 'und'` などを設定してリロード"
+        expected:
+          - 翻訳バーに "und" / "unknown" がそのまま表示されない
+          - 「Unknown」表示か API 検出由来の言語名が出る
+
+      - id: TB-003
+        title: 正常な lang 属性のサイトで言語名が正しく表示される（回帰検知）
+        priority: p0
+        preconditions:
+          - "ターゲット言語: 日本語"
+        steps:
+          - 任意の英語ページ（<html lang="en"> のサイト）を開く
+        expected:
+          - 翻訳バーに「このページは **English** で書かれています。翻訳しますか？」と表示される
+          - 「null」「undefined」のような文字列が混入していない

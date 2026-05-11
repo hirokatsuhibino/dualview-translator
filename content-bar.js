@@ -12,12 +12,15 @@ var DVT_BAR = (function () {
 
   // ─── ページ言語検出 ────────────────────────────────────────────────
   async function detectPageLanguage() {
+    // <html lang> がゴミ値（"null" / "und" / "unknown" 等）の場合は「無い」扱いにして
+    // API 検出にフォールバックする（issue #195）。
     const htmlLang = document.documentElement.lang;
-    if (htmlLang && !DVT.langMatches(htmlLang, DVT.state.targetLang)) {
+    const htmlLangValid = DVT.isValidLangCode(htmlLang);
+    if (htmlLangValid && !DVT.langMatches(htmlLang, DVT.state.targetLang)) {
       showTranslateBar(htmlLang);
       return;
     }
-    if (htmlLang && DVT.langMatches(htmlLang, DVT.state.targetLang)) return;
+    if (htmlLangValid && DVT.langMatches(htmlLang, DVT.state.targetLang)) return;
 
     // lang属性がない場合はAPIで検出
     const bodyText = document.body?.innerText?.trim();
@@ -31,7 +34,7 @@ var DVT_BAR = (function () {
           resolve(res?.ok ? res.detectedLang : null);
         });
       });
-      if (result && !DVT.langMatches(result, DVT.state.targetLang)) {
+      if (DVT.isValidLangCode(result) && !DVT.langMatches(result, DVT.state.targetLang)) {
         showTranslateBar(result);
       }
     } catch (e) {

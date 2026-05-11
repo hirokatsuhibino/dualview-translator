@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Bug fixes
+
+- **Fixed the translate bar showing "This page is written in null"** (#195)
+  - Sites with bogus `<html lang>` values like `"null"`, `"und"`, or `"unknown"` were dumping the raw string `null` straight into the bar where the language name should be.
+  - We now treat those bogus values as if `lang` was missing and fall back to API-based detection.
+  - As a side fix, the i18n placeholder substitution is now `null` / `undefined` safe so the same class of bug can't reappear elsewhere.
+
 ---
 
 ## v1.6.2 (2026-05-07)

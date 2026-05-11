@@ -1067,7 +1067,10 @@ var DVT_I18N = (function () {
     let text = msgs[key] || MESSAGES['en'][key] || MESSAGES['ja'][key] || key;
     if (params) {
       Object.keys(params).forEach(k => {
-        text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), params[k]);
+        // null / undefined はそのまま String 化すると "null" / "undefined" になり
+        // UI に露出する（issue #195）。空文字に正規化する。
+        const v = params[k];
+        text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), v == null ? '' : v);
       });
     }
     return text;

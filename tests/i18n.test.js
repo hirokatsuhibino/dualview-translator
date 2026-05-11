@@ -38,6 +38,47 @@ describe('DVT_I18N', () => {
     it('存在しないキーはキー名をそのまま返す', () => {
       expect(DVT_I18N.t('nonExistentKey')).toBe('nonExistentKey');
     });
+
+    // 回帰防止: issue #195 — プレースホルダ値が null のとき "null" 文字列が露出していた
+    describe('プレースホルダ値の null 安全性', () => {
+      it('lang が null のとき "null" 文字列が含まれない', () => {
+        DVT_I18N.setLang('ja');
+        const result = DVT_I18N.t('translateBarMsg', { lang: null });
+        expect(result).not.toContain('null');
+        expect(result).toContain('このページは');
+        expect(result).toContain('翻訳しますか？');
+      });
+
+      it('lang が undefined のとき "undefined" 文字列が含まれない', () => {
+        DVT_I18N.setLang('ja');
+        const result = DVT_I18N.t('translateBarMsg', { lang: undefined });
+        expect(result).not.toContain('undefined');
+      });
+
+      it('英語ロケールでも null が "null" にならない', () => {
+        DVT_I18N.setLang('en');
+        const result = DVT_I18N.t('translateBarMsg', { lang: null });
+        expect(result).not.toContain('null');
+        expect(result).toContain('This page');
+      });
+
+      it('正常な値は従来通り展開される（回帰検知）', () => {
+        DVT_I18N.setLang('ja');
+        const result = DVT_I18N.t('translateBarMsg', { lang: '英語' });
+        expect(result).toContain('英語');
+        expect(result).toContain('このページは');
+      });
+
+      it('値が 0 や空文字でも文字列化される（値ありとして扱う）', () => {
+        DVT_I18N.setLang('ja');
+        // 0 は falsy だが意図的に値があるケース。null/undefined だけを除外する
+        const r0 = DVT_I18N.t('toastTranslating', { done: 0, total: 10 });
+        expect(r0).toBe('0 / 10 翻訳中…');
+        // 空文字は空のまま埋め込み（"null" にはならない）
+        const rEmpty = DVT_I18N.t('toastTranslating', { done: '', total: 10 });
+        expect(rEmpty).toBe(' / 10 翻訳中…');
+      });
+    });
   });
 
   describe('setLang() / getLang()', () => {
