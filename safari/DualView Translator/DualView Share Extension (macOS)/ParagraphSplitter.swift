@@ -40,13 +40,13 @@ enum ParagraphSplitter {
             .filter { !$0.isEmpty }
     }
 
-    /// `\n` が 3 つ以上連続する箇所を `\n\n` に畳む。
+    /// `\n` が 3 つ以上連続する箇所を `\n\n` に正規表現で 1-pass 置換する。
     private static func collapseBlankLines(_ text: String) -> String {
-        // NSRegularExpression を使うのは過剰なので、シンプルなループで処理
-        var out = text
-        while out.contains("\n\n\n") {
-            out = out.replacingOccurrences(of: "\n\n\n", with: "\n\n")
-        }
-        return out
+        // `\n{3,}` を `\n\n` に 1-pass で置換（ループより効率的）
+        return text.replacingOccurrences(
+            of: "\\n{3,}",
+            with: "\n\n",
+            options: .regularExpression
+        )
     }
 }

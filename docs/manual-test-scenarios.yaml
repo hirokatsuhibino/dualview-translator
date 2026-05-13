@@ -1872,3 +1872,19 @@ suites:
           - 外部ブラウザは開かない（navigationDelegate がリンク遷移をブロック）
           - URL が選択可能なテキストとして表示されていれば OK
 
+      - id: SD-009
+        title: 入力に古い固定マーカー文字列が含まれていても段落表示が崩れない
+        priority: p1
+        environment: safari-ios-sim
+        description: 'PR #200 レビュー対応で固定マーカー `@@DVTPARA@@` から per-request UUID マーカーへ切り替えた回帰防止。共有テキスト本文にマーカーらしき文字列が含まれていても、段落の対応が崩れずに正しく dual view 表示されること。'
+        related_prs: [200]
+        steps:
+          - 'メモで以下の 3 段落を作成し、共有 → DualView Translator'
+          - '段落 1: 任意の文'
+          - '段落 2: 文中に `@@DVTPARA@@` という文字列を含める（例: `デバッグログ: @@DVTPARA@@ が出力される`）'
+          - '段落 3: 任意の文'
+        expected:
+          - 3 段落とも dual view で正しく原文／翻訳がペアリングされて表示される
+          - 段落 2 の翻訳に `@@DVTPARA@@` の文字列がそのまま残っている（マーカーと混同されない）
+          - フォールバック表示（全文 1 ブロック）にならない
+
