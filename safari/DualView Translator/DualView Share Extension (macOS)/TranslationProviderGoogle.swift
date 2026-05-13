@@ -41,6 +41,20 @@ enum TranslationProviderGoogle {
         let detectedLang: String?
     }
 
+    /// 段落単位の原文と翻訳のペア。Web 版の `.dvt-orig` / `.dvt-trans` 並び表示と対応。
+    struct ParagraphPair: Equatable {
+        let original: String
+        let translated: String
+    }
+
+    /// 複数段落翻訳の結果。`usedFallback = true` の場合はマーカー分割が失敗し、
+    /// 全文を 1 ペアにまとめて返している。
+    struct MultiResult {
+        let pairs: [ParagraphPair]
+        let detectedLang: String?
+        let usedFallback: Bool
+    }
+
     /// Share Extension からの翻訳呼び出し用 URLSession。
     /// ephemeral 設定 + URLCache 無効化により、ユーザーが共有したテキストを含む URL が
     /// ディスクキャッシュ・URL ログ等に残らないようにする（GET の `q=` クエリにテキストが入るため）。
@@ -81,6 +95,101 @@ enum TranslationProviderGoogle {
         }
 
         return try parseResponse(data: data)
+    }
+
+    /// 複数段落を 1 リクエストで翻訳する。
+    /// 段落間に per-request の UUID ベース・マーカーを挟んで送信し、レスポンスを同じマーカーで分割する。
+    /// マーカー分割で個数が一致しなかった場合は、全文を 1 ペアにまとめた `MultiResult`
+    /// を `usedFallback = true` で返す（呼び出し側で安全に表示できる）。
+    static func translateParagraphs(
+        paragraphs: [String],
+        sourceLang: String = "auto",
+        targetLang: String,
+        session: URLSession? = nil
+    ) async throws -> MultiResult {
+        // 空入力は空結果
+        if paragraphs.isEmpty {
+            return MultiResult(pairs: [], detectedLang: nil, usedFallback: false)
+        }
+
+        // 1 段落のみの場合は通常翻訳に委譲（マーカーを混入させない）
+        if paragraphs.count == 1 {
+            let r = try await translate(
+                text: paragraphs[0],
+                sourceLang: sourceLang,
+                targetLang: targetLang,
+                session: session
+            )
+            return MultiResult(
+                pairs: [ParagraphPair(original: paragraphs[0], translated: r.translated)],
+                detectedLang: r.detectedLang,
+                usedFallback: false
+            )
+        }
+
+        // 入力段落と衝突しない per-request マーカーを生成
+        let marker = Self.generateMarker(for: paragraphs)
+
+        // 段落間にマーカーを挟んで 1 リクエストで送信
+        let separator = "\n\n\(marker)\n\n"
+        let joinedInput = paragraphs.joined(separator: separator)
+        let r = try await translate(
+            text: joinedInput,
+            sourceLang: sourceLang,
+            targetLang: targetLang,
+            session: session
+        )
+
+        // レスポンスをマーカーで分割
+        let splitTranslated = splitByMarker(r.translated, marker: marker)
+        if splitTranslated.count == paragraphs.count {
+            let pairs = zip(paragraphs, splitTranslated).map {
+                ParagraphPair(original: $0, translated: $1)
+            }
+            return MultiResult(
+                pairs: pairs,
+                detectedLang: r.detectedLang,
+                usedFallback: false
+            )
+        }
+
+        // フォールバック: マーカーが消失/増殖した場合は全文を 1 ペアとして扱う。
+        // 翻訳結果に残ったマーカー文字列だけは念のため除去しておく。
+        let combinedOriginal = paragraphs.joined(separator: "\n\n")
+        let cleaned = r.translated
+            .replacingOccurrences(of: marker, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return MultiResult(
+            pairs: [ParagraphPair(original: combinedOriginal, translated: cleaned)],
+            detectedLang: r.detectedLang,
+            usedFallback: true
+        )
+    }
+
+    /// 段落間に挟む per-request のユニーク・マーカーを生成する。
+    /// - UUID ベース（`@@DVTPARA_<hex 16>@@`）で、ASCII 英数字 + `@` + `_` のみで構成
+    /// - Google が翻訳しないことを期待しつつ、共有テキスト本文と衝突しないことを保証する
+    /// - 万一入力段落にマーカーが含まれていたら最大 5 回まで再生成し、最後の保険として
+    ///   タイムスタンプ + 完全な UUID 付きの文字列を返す（実用上ありえないが安全側に倒す）
+    private static func generateMarker(for paragraphs: [String]) -> String {
+        for _ in 0..<5 {
+            let uuid = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            let candidate = "@@DVTPARA_\(uuid.prefix(16))@@"
+            if !paragraphs.contains(where: { $0.contains(candidate) }) {
+                return candidate
+            }
+        }
+        // 最後の保険: タイムスタンプ + 完全な UUID
+        let fullUuid = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        return "@@DVTPARA_\(fullUuid)_\(ts)@@"
+    }
+
+    /// マーカー区切りで分割し、各要素を trim する。
+    static func splitByMarker(_ text: String, marker: String) -> [String] {
+        return text
+            .components(separatedBy: marker)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
     static func makeURL(text: String, sourceLang: String, targetLang: String) -> URL? {

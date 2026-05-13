@@ -4,11 +4,15 @@
 //
 //  Copyright (c) Orangesoft Inc.
 //
-//  Share Extension の SwiftUI 並列翻訳ビュー（iOS / macOS で同一実装）。
-//  原文を上、訳文を下に表示し、コピー / 閉じるボタンを提供する。
-//  v1 は Google Translate のみ・要約なし・targetLang は App Group から取得。
+//  Share Extension の SwiftUI ビュー。
+//  Web 版（ブラウザ拡張本体）と同じ「段落単位の dual view」UX を提供する:
+//    - 入力テキストを段落分割
+//    - 1 リクエストで翻訳
+//    - 原文／翻訳のペアを WKWebView 上に並べて表示
+//    - 翻訳側に左縦線（border-left）を付けて視覚的に区別
+//  ローディング・エラー・ヘッダー・コピーボタンは SwiftUI のまま保持。
 //
-//  Web Ext / macOS Share Ext と同一実装（folder reference 制約で重複）。
+//  Web Ext / macOS Share Ext と同一実装（folder reference 制約でファイル重複あり）。
 //
 
 import SwiftUI
@@ -25,7 +29,7 @@ struct SharedTranslationView: View {
     let originalText: String
     let onClose: () -> Void
 
-    @State private var translatedText: String = ""
+    @State private var pairs: [TranslationProviderGoogle.ParagraphPair] = []
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
     @State private var copiedTimestamp: Date?
@@ -43,9 +47,13 @@ struct SharedTranslationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            originalBlock
-            translatedBlock
-            Spacer(minLength: 0)
+            dualViewBlock
+            if !isLoading && errorMessage == nil && !pairs.isEmpty {
+                HStack {
+                    Spacer()
+                    copyButton
+                }
+            }
         }
         .padding(16)
         .frame(minWidth: 320, minHeight: 320)
@@ -68,55 +76,27 @@ struct SharedTranslationView: View {
         }
     }
 
-    // ─── 原文ブロック ──────────────────────────────────────────────
-    private var originalBlock: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(I18N.t("original"))
-                .font(.caption)
-                .foregroundColor(.secondary)
-            ScrollView {
-                Text(originalText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-            }
-            .frame(maxHeight: 120)
-            .padding(8)
-            .background(secondaryBackground)
-            .cornerRadius(6)
-        }
-    }
-
-    // ─── 訳文ブロック ──────────────────────────────────────────────
-    private var translatedBlock: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(I18N.t("translated"))
-                .font(.caption)
-                .foregroundColor(accentOrange)
+    // ─── dual view ブロック ────────────────────────────────────────
+    private var dualViewBlock: some View {
+        Group {
             if isLoading {
                 HStack(spacing: 8) {
                     ProgressView()
                     Text(I18N.t("translating"))
                         .foregroundColor(.secondary)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding(8)
             } else if let error = errorMessage {
                 Text(error)
                     .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(8)
             } else {
-                ScrollView {
-                    Text(translatedText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-                .frame(maxHeight: 200)
-                .padding(8)
-                .background(accentOrange.opacity(0.08))
-                .cornerRadius(6)
-                HStack {
-                    Spacer()
-                    copyButton
-                }
+                DualViewRenderer(pairs: pairs)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(secondaryBackground)
+                    .cornerRadius(6)
             }
         }
     }
@@ -127,7 +107,7 @@ struct SharedTranslationView: View {
             Text(copyButtonLabel)
         }
         .buttonStyle(.bordered)
-        .disabled(translatedText.isEmpty)
+        .disabled(joinedTranslated.isEmpty)
     }
 
     private var copyButtonLabel: String {
@@ -138,6 +118,11 @@ struct SharedTranslationView: View {
         return I18N.t("copyBtn")
     }
 
+    /// 全段落の翻訳結果を `\n\n` 区切りで連結したもの。コピー機能で使う。
+    private var joinedTranslated: String {
+        pairs.map { $0.translated }.joined(separator: "\n\n")
+    }
+
     // ─── 翻訳実行 ──────────────────────────────────────────────────
     private func runTranslation() async {
         if originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -145,15 +130,26 @@ struct SharedTranslationView: View {
             errorMessage = I18N.t("shareEmpty")
             return
         }
+        let paragraphs = ParagraphSplitter.split(originalText)
+        // 万一全てが空白なら現状維持で空エラーを返す
+        if paragraphs.isEmpty {
+            isLoading = false
+            errorMessage = I18N.t("shareEmpty")
+            return
+        }
         do {
-            let result = try await TranslationProviderGoogle.translate(
-                text: originalText,
+            let result = try await TranslationProviderGoogle.translateParagraphs(
+                paragraphs: paragraphs,
                 sourceLang: "auto",
                 targetLang: targetLang
             )
+            if result.usedFallback {
+                // マーカー分割が崩れた場合は呼び出し側でログ出力（UI は 1 ブロック表示にフォールバック）
+                os_log(.info, "Share translate: paragraph marker fallback applied")
+            }
             await MainActor.run {
-                translatedText = result.translated
-                isLoading = false
+                self.pairs = result.pairs
+                self.isLoading = false
             }
         } catch {
             os_log(.error, "Share translate failed: %{public}@", String(describing: error))
@@ -166,12 +162,13 @@ struct SharedTranslationView: View {
 
     // ─── コピー処理 ────────────────────────────────────────────────
     private func copyTranslation() {
-        guard !translatedText.isEmpty else { return }
+        let combined = joinedTranslated
+        guard !combined.isEmpty else { return }
         #if os(iOS)
-        UIPasteboard.general.string = translatedText
+        UIPasteboard.general.string = combined
         #elseif os(macOS)
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(translatedText, forType: .string)
+        NSPasteboard.general.setString(combined, forType: .string)
         #endif
         copiedTimestamp = Date()
         Task {
@@ -185,10 +182,6 @@ struct SharedTranslationView: View {
     }
 
     // ─── プラットフォーム差吸収 ────────────────────────────────────
-    private var accentOrange: Color {
-        Color(red: 0.96, green: 0.65, blue: 0.14)
-    }
-
     private var secondaryBackground: Color {
         #if os(iOS)
         return Color(uiColor: .secondarySystemBackground)
