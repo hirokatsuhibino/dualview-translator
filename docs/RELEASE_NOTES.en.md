@@ -10,6 +10,16 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **iOS / macOS Share Extension now shows results as a paragraph-by-paragraph dual view** (#199)
+  - The share sheet used to dump the entire translation as a single block. Now it lines up each paragraph with its translation right below — same vibe as the browser extension.
+  - The translation side gets the same orange left bar (`border-left: 3px solid #f5a623`) you already know from the web UI.
+  - Everything still ships in **one API call** — we slip a unique marker between paragraphs and split the response on the way back, so rate limits and translation context stay intact.
+  - Rendering switched to `WKWebView`, which follows your system light/dark theme automatically.
+  - Shared text is HTML-escaped before rendering, and a CSP blocks any external resource loading — no surprises from untrusted input.
+  - If the marker split ever goes sideways, we fall back to the old single-block view, so the worst case is the previous behavior.
+
 ### Bug fixes
 
 - **Fixed the translate bar showing "This page is written in null"** (#195 / #197)

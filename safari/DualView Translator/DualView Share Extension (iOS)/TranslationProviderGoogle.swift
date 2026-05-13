@@ -41,6 +41,26 @@ enum TranslationProviderGoogle {
         let detectedLang: String?
     }
 
+    /// 段落単位の原文と翻訳のペア。Web 版の `.dvt-orig` / `.dvt-trans` 並び表示と対応。
+    struct ParagraphPair: Equatable {
+        let original: String
+        let translated: String
+    }
+
+    /// 複数段落翻訳の結果。`usedFallback = true` の場合はマーカー分割が失敗し、
+    /// 全文を 1 ペアにまとめて返している。
+    struct MultiResult {
+        let pairs: [ParagraphPair]
+        let detectedLang: String?
+        let usedFallback: Bool
+    }
+
+    /// 段落間に挟むユニーク・マーカー。
+    /// - ASCII 英数字 + `@` のみで構成し、Google が翻訳しないことを期待する
+    /// - 前後 `\n\n` を含めて送信し、Google 内部のセグメント境界に乗せる
+    /// - レスポンス側で同じトークンを探して分割する
+    static let paragraphMarker = "@@DVTPARA@@"
+
     /// Share Extension からの翻訳呼び出し用 URLSession。
     /// ephemeral 設定 + URLCache 無効化により、ユーザーが共有したテキストを含む URL が
     /// ディスクキャッシュ・URL ログ等に残らないようにする（GET の `q=` クエリにテキストが入るため）。
@@ -81,6 +101,79 @@ enum TranslationProviderGoogle {
         }
 
         return try parseResponse(data: data)
+    }
+
+    /// 複数段落を 1 リクエストで翻訳する。
+    /// 段落間に `paragraphMarker` を挟んで送信し、レスポンスを同じマーカーで分割する。
+    /// マーカー分割で個数が一致しなかった場合は、全文を 1 ペアにまとめた `MultiResult`
+    /// を `usedFallback = true` で返す（呼び出し側で安全に表示できる）。
+    static func translateParagraphs(
+        paragraphs: [String],
+        sourceLang: String = "auto",
+        targetLang: String,
+        session: URLSession? = nil
+    ) async throws -> MultiResult {
+        // 空入力は空結果
+        if paragraphs.isEmpty {
+            return MultiResult(pairs: [], detectedLang: nil, usedFallback: false)
+        }
+
+        // 1 段落のみの場合は通常翻訳に委譲（マーカーを混入させない）
+        if paragraphs.count == 1 {
+            let r = try await translate(
+                text: paragraphs[0],
+                sourceLang: sourceLang,
+                targetLang: targetLang,
+                session: session
+            )
+            return MultiResult(
+                pairs: [ParagraphPair(original: paragraphs[0], translated: r.translated)],
+                detectedLang: r.detectedLang,
+                usedFallback: false
+            )
+        }
+
+        // 段落間にマーカーを挟んで 1 リクエストで送信
+        let separator = "\n\n\(paragraphMarker)\n\n"
+        let joinedInput = paragraphs.joined(separator: separator)
+        let r = try await translate(
+            text: joinedInput,
+            sourceLang: sourceLang,
+            targetLang: targetLang,
+            session: session
+        )
+
+        // レスポンスをマーカーで分割
+        let splitTranslated = splitByMarker(r.translated)
+        if splitTranslated.count == paragraphs.count {
+            let pairs = zip(paragraphs, splitTranslated).map {
+                ParagraphPair(original: $0, translated: $1)
+            }
+            return MultiResult(
+                pairs: pairs,
+                detectedLang: r.detectedLang,
+                usedFallback: false
+            )
+        }
+
+        // フォールバック: マーカーが消失/増殖した場合は全文を 1 ペアとして扱う。
+        // 翻訳結果に残ったマーカー文字列だけは念のため除去しておく。
+        let combinedOriginal = paragraphs.joined(separator: "\n\n")
+        let cleaned = r.translated
+            .replacingOccurrences(of: paragraphMarker, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return MultiResult(
+            pairs: [ParagraphPair(original: combinedOriginal, translated: cleaned)],
+            detectedLang: r.detectedLang,
+            usedFallback: true
+        )
+    }
+
+    /// マーカー区切りで分割し、各要素を trim する。
+    static func splitByMarker(_ text: String) -> [String] {
+        return text
+            .components(separatedBy: paragraphMarker)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
     static func makeURL(text: String, sourceLang: String, targetLang: String) -> URL? {

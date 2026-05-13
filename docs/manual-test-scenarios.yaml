@@ -1766,3 +1766,109 @@ suites:
         expected:
           - 各言語で言語不明用の文言が表示される
           - "どの言語でも「null」「undefined」「und」「unknown」「{lang}」のような未置換文字列が混入しない"
+
+  # ━━━━━ N+9. Share Extension の段落 dual view 表示（Issue #199） ━━━━━
+  - id: share-ext-dual-view
+    title: Share Extension で「段落単位の dual view」表示
+    description: "Issue #199 で Share Extension を WKWebView ベースの dual view UI に刷新。原文と翻訳を段落ごとに縦並べし、翻訳側に左縦線を引く。Web 版（content-page.js + content.css の .dvt-orig / .dvt-trans）と見た目を揃えるのが目的。"
+    related_prs: [199]
+    scenarios:
+
+      - id: SD-001
+        title: 3 段落以上の英文を共有すると段落単位で dual view 表示される
+        priority: p0
+        environment: safari-ios-sim / safari-ios-real / safari-mac
+        preconditions:
+          - DualView Translator をインストール済み
+          - "ポップアップ > 設定タブで「翻訳先言語: 日本語」"
+        steps:
+          - メモアプリで以下のような 3 段落のテキストを作成（段落間は空行 1 行）
+          - "段落 1 と段落 2 の間に空行、段落 2 と段落 3 の間にも空行"
+          - 全文を選択 → 共有 → DualView Translator
+        expected:
+          - 翻訳完了後、共有シート上に段落 1（原文）→ 翻訳 1（左縦線オレンジ）→ 段落 2 → 翻訳 2 → 段落 3 → 翻訳 3 の順で縦に並ぶ
+          - "翻訳ブロックの左端に Web 版と同じオレンジの縦線（#f5a623）が表示される"
+          - 段落同士の対応が崩れていない（原文 1 の真下に翻訳 1 がある）
+
+      - id: SD-002
+        title: 1 段落のみの短文を共有しても表示が崩れない
+        priority: p1
+        environment: safari-ios-sim
+        steps:
+          - '改行を含まない短い英文（例: `Hello world. This is a test.`）を共有'
+        expected:
+          - 原文 1 ブロック + 翻訳 1 ブロックで縦並びに表示される
+          - 余計な空段落や区切りが入らない
+          - "コピーボタンで翻訳がクリップボードに入る"
+
+      - id: SD-003
+        title: 段落間の空行が複数連続しているテキストでも空段落が出ない
+        priority: p1
+        environment: safari-ios-sim
+        description: "段落セパレータ（\\n\\n\\n+）を 1 つに正規化するロジックの回帰防止"
+        steps:
+          - "段落 A の後ろに空行 3 〜 4 行 → 段落 B → 空行 2 行 → 段落 C のテキストを共有"
+        expected:
+          - 表示される段落数は 3（空段落のペアが現れない）
+          - 各段落の間に過剰な余白が出ない
+
+      - id: SD-004
+        title: HTML 特殊文字を含む共有テキストがエスケープされる
+        priority: p0
+        environment: safari-ios-sim
+        description: 'WKWebView 上で `<` `>` `&` などがそのまま解釈されると XSS のリスク。共有テキストは untrusted 入力なのでエスケープ必須。'
+        steps:
+          - 'メモに `<script>alert(1)</script>` や `<b>bold</b>` や `A & B` を含む段落を作成'
+          - 全文を共有 → DualView Translator
+        expected:
+          - '`<script>` などのタグが文字列としてそのまま表示される（実行されない）'
+          - '`<b>` でテキストが太字にならない（HTML として解釈されない）'
+          - '`&amp;` のようなエスケープ表記がユーザーの目に見えるのは NG（表示上は `&` のまま）'
+
+      - id: SD-005
+        title: システムテーマ切替（Light / Dark）に WebView が追従する
+        priority: p1
+        environment: safari-ios-sim / safari-mac
+        steps:
+          - 共有 Extension を開いて翻訳完了状態にする
+          - iOS は「設定 > 開発者 > Dark Appearance」、macOS は「システム設定 > 外観」でテーマ切替
+        expected:
+          - 背景・文字色がテーマに合わせて切り替わる
+          - 翻訳側の左縦線（オレンジ）はどちらのテーマでも視認できる
+
+      - id: SD-006
+        title: コピーボタンで全段落の翻訳が空行区切りでクリップボードに入る
+        priority: p1
+        environment: safari-ios-sim
+        steps:
+          - SD-001 の状態でコピーボタンを押す
+          - メモアプリ等にペースト
+        expected:
+          - 翻訳 1 / 翻訳 2 / 翻訳 3 が空行で区切られた形で貼り付けられる
+          - 原文や `@@DVTPARA@@` のような内部マーカー文字列が混入していない
+
+      - id: SD-007
+        title: マーカー分割が崩れた異常系で fallback が動く
+        priority: p2
+        environment: safari-ios-sim
+        description: 'Google が `@@DVTPARA@@` を勝手に翻訳・改変した場合の安全網。pairs 数不一致時に全文 1 ペアで返す挙動の確認。'
+        steps:
+          - '通常運用では再現しないため、暫定的に `TranslationProviderGoogle.paragraphMarker` を一時的に翻訳されやすい単語に書き換え→共有→挙動確認（テスト目的）'
+          - 終わったらマーカーを元に戻す
+        expected:
+          - 翻訳結果が空にならず、全文 1 ブロックとして表示される
+          - エラー画面ではなく、現状（v1.6.x）以前と同等の表示まで退化するだけで済む
+          - '`os_log` に `paragraph marker fallback applied` が出る'
+
+      - id: SD-008
+        title: 共有 Extension の WebView 内リンクが外部ブラウザを開かない
+        priority: p2
+        environment: safari-ios-sim
+        description: 共有テキスト中に URL が含まれていても、Share Extension 起動中に Safari への遷移が発生しないこと
+        steps:
+          - 'メモで `https://example.com を確認してください` を共有'
+          - 翻訳完了後、URL のテキストをタップ
+        expected:
+          - 外部ブラウザは開かない（navigationDelegate がリンク遷移をブロック）
+          - URL が選択可能なテキストとして表示されていれば OK
+
