@@ -162,6 +162,18 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         } else {
             info["languageAvailabilityAPIAvailable"] = false
         }
+        // translate アクション（実テキスト翻訳）は macOS 15+ のみ実装済み。
+        // iOS は Extension プロセスが UIWindowScene を持たないため SwiftUI ホスト戦略が使えず未実装。
+        // background.js 側でこのフラグを見て iOS では appleAvailable を false にする。
+        #if os(macOS)
+        if #available(macOS 15.0, *) {
+            info["translateActionSupported"] = true
+        } else {
+            info["translateActionSupported"] = false
+        }
+        #else
+        info["translateActionSupported"] = false
+        #endif
         return info
     }
 
@@ -416,11 +428,14 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                     "targetMaximalIdentifier": targetLang.maximalIdentifier,
                 ]
             } catch {
+                os_log(.error, "[DVT] Apple Translation failed: %{public}@", error.localizedDescription)
                 return makeError("translation failed: \(error.localizedDescription)")
             }
             #else
             // iOS の Safari Web Extension ハンドラは UIWindowScene を持たないため、
-            // SwiftUI ホスト戦略は使えない。別途 App Group 経由などの戦略が必要（次段階）。
+            // SwiftUI ホスト戦略は使えない。ping の translateActionSupported: false で
+            // background.js 側が appleAvailable を false にするため、ここには到達しないはず。
+            os_log(.error, "[DVT] translate action called on iOS but not implemented (UIWindowScene unavailable in extension process)")
             return makeError("iOS translation not yet implemented (requires App Group bridge to container app)")
             #endif
         }

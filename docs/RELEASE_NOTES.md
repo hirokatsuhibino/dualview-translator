@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### バグ修正
+
+- **Apple翻訳失敗時のエラー詳細を UI に表示するよう改善**（#202 / PR #203）
+  - これまで失敗すると `[翻訳失敗]` だけが表示されていたが、ネイティブハンドラからのエラー文字列も付記されるようになり調査しやすくなった
+  - iOS Safari 拡張では Apple Translation が未実装（Extension プロセスが UIWindowScene を持たないため）なのに `appleAvailable = true` になっていた問題を修正。`ping` レスポンスに `translateActionSupported` フラグを追加し、iOS では `false` を返すことで Apple Translation が選択肢に表示されなくなった
+
 ---
 
 ## v1.7.0（2026-05-13）

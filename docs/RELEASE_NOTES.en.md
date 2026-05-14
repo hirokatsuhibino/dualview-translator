@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Bug Fixes
+
+- **Apple Translation errors now show detail in the UI** (#202 / PR #203)
+  - Previously a failed translation just said `[Translation failed]` with no hint of why. Now the error message from the native handler is appended, so you can actually see what went wrong.
+  - Fixed a bug where `appleAvailable` was set to `true` on iOS Safari even though the `translate` action isn't implemented there (Extension processes don't have a UIWindowScene). The `ping` response now includes a `translateActionSupported` flag (`false` on iOS), so Apple Translation no longer appears as an option on iPhone.
+
 ---
 
 ## v1.7.0 (2026-05-13)
