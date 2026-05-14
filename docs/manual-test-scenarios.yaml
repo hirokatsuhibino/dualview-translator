@@ -1888,3 +1888,49 @@ suites:
           - 段落 2 の翻訳に `@@DVTPARA@@` の文字列がそのまま残っている（マーカーと混同されない）
           - フォールバック表示（全文 1 ブロック）にならない
 
+
+  - id: apple-translation-error
+    title: Apple翻訳エラー詳細表示
+    description: "PR #203 の修正で、Apple翻訳が失敗したときに汎用メッセージだけでなくエラー詳細も表示されるようになった回帰防止。iOSでは appleAvailable が false になり Apple翻訳が選択肢に出ないことも確認する。"
+    related_prs: [203]
+    scenarios:
+      - id: ATE-001
+        title: macOS Safari でApple翻訳が失敗した場合にエラー詳細が表示される
+        priority: p1
+        environment: safari-mac
+        preconditions:
+          - macOS 15 未満、または Translation framework が利用不可の環境
+          - 翻訳エンジンを Apple に設定済み
+        steps:
+          - Safari で任意のページを開き、テキストを選択して選択翻訳を実行
+        expected:
+          - "[翻訳失敗] — <エラー詳細メッセージ> の形式でエラーが表示される（汎用メッセージだけではない）"
+
+      - id: ATE-002
+        title: iPhone で設定タブに Apple 翻訳が選択肢として表示されない
+        priority: p0
+        environment: safari-ios-sim
+        preconditions:
+          - iOS 18 以上の iPhone / Simulator
+          - DualView Translator Safari 拡張が有効
+        steps:
+          - Safari で DualView Translator のポップアップを開く
+          - 設定タブを開く
+          - 翻訳エンジン選択肢を確認
+        expected:
+          - 翻訳エンジンの選択肢に Apple Translation が表示されない
+          - Google / DeepL のみが表示される
+
+      - id: ATE-003
+        title: macOS Safari で Apple 翻訳が選択肢として表示される
+        priority: p1
+        environment: safari-mac
+        preconditions:
+          - macOS 15 以上の Mac
+          - DualView Translator Safari 拡張が有効
+        steps:
+          - Safari で DualView Translator のポップアップを開く
+          - 設定タブを開く
+          - 翻訳エンジン選択肢を確認
+        expected:
+          - 翻訳エンジンの選択肢に Apple Translation が表示される

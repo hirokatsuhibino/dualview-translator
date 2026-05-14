@@ -55,7 +55,9 @@ var DVT = (function () {
           }
           resolve(res.result);
         } else {
-          resolve({ text: t('translateFailed'), detectedLang: null });
+          // res.error にネイティブハンドラや background.js からのエラー詳細が含まれる場合は表示する
+          const detail = res?.error ? ` — ${res.error}` : '';
+          resolve({ text: t('translateFailed') + detail, detectedLang: null });
         }
       });
     });

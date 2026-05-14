@@ -83,11 +83,14 @@ async function detectAppleAvailability() {
       nativePromise,
       new Promise((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 3000)),
     ]);
-    // ping が ok:true でかつ Translation framework と LanguageAvailability API
-    // 両方が利用可能な OS でだけ apple を有効にする
+    // ping が ok:true でかつ Translation framework、LanguageAvailability API、
+    // そして translate アクション自体が実装済み（translateActionSupported）の場合のみ有効にする。
+    // translateActionSupported は macOS 15+ のみ true。iOS は Extension プロセスが
+    // UIWindowScene を持たないため translate アクション未実装（常に false）。
     const available = !!(response && response.ok &&
       response.translationFrameworkAvailable &&
-      response.languageAvailabilityAPIAvailable);
+      response.languageAvailabilityAPIAvailable &&
+      response.translateActionSupported);
     await chrome.storage.local.set({ appleAvailable: available });
     return available;
   } catch (_err) {
