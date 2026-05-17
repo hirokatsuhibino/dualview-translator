@@ -66,6 +66,20 @@ prefix 規約（`.github/pr-guidelines.md` と揃える）:
 | `[ask]` | 逆質問 |
 | `[fyi]` | 参考情報を追記 |
 
+### 概要レビュー（overview review）への返信も必須
+
+Copilot 等が投稿する **PR 全体に対する overview レビュー**（特定の行に紐付かない、PR 要約レビュー）にも必ず返信する。インライン指摘がなくても overview 自体への acknowledge が必要。
+
+- 取得: `gh pr view <番号> --json reviews` の `reviews[].body` 側に出る（インラインAPIには出てこない）
+- 返信: `gh pr comment <番号> --body "@<reviewer> [fyi] レビューありがとうございます。..."` で PR トップレベルコメントとして投稿
+- 内容: 認識が合っている旨 + インライン指摘の対応状況（コミットhash）を 1〜2行で
+
+**チェックリスト（返信完了の判定）**:
+
+1. インラインコメント全件に `in_reply_to` で返信したか（`gh api .../comments` の全件確認）
+2. **`gh pr view --json reviews` の各 review に対応する返信が存在するか**（overview レビュー含む）
+3. PR 全体サマリコメントを 1 件投稿したか
+
 ### PR全体サマリコメント
 
 インライン返信に加え、PRに**サマリを1件**投稿:
