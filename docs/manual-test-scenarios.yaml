@@ -1760,14 +1760,15 @@ suites:
         title: 'アンダースコア区切りの lang 属性（ja_JP / zh_CN）で同言語判定が機能する'
         priority: p1
         description: "issue #204 — <html lang='ja_JP'> のとき翻訳先=日本語でも『このページは ja_JP で書かれています』と誤表示されていた回帰防止"
-        related_prs: [205]
+        related_prs: [207]
         preconditions:
           - "ターゲット言語: 日本語"
         steps:
           - "任意のページで DevTools から `document.documentElement.lang = 'ja_JP'` を設定してリロード"
+          - "ターゲット言語を中国語簡体に変更し、同じページで `document.documentElement.lang = 'zh_CN'` を設定してリロード"
         expected:
-          - 翻訳バーが表示されない（同言語と認識される）
-          - "ターゲット言語を中国語簡体に変更し `lang = 'zh_CN'` でも同様に出ないこと"
+          - "ja_JP / 日本語ターゲットのケースで翻訳バーが表示されない（同言語と認識される）"
+          - "zh_CN / 中国語簡体ターゲットのケースでも同様に翻訳バーが表示されない"
 
       - id: TB-005
         title: 11 言語すべてで「言語不明」バーの文言が表示できる
