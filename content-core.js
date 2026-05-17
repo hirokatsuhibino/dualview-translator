@@ -38,7 +38,8 @@ var DVT = (function () {
 
   function getLangDisplayName(code) {
     if (!isValidLangCode(code)) return 'Unknown';
-    const lower = String(code).trim().toLowerCase();
+    // BCP47違反のアンダースコア区切り（例: ja_JP）も吸収するため _ を - に正規化
+    const lower = String(code).trim().toLowerCase().replace(/_/g, '-');
     return LANG_NAMES[lower] || LANG_NAMES[lower.split('-')[0]] || code;
   }
 
@@ -66,8 +67,9 @@ var DVT = (function () {
   // ─── 言語コード比較（正規化） ──────────────────────────────────────
   function langMatches(detected, target) {
     if (!detected) return false;
-    const d = detected.toLowerCase().split('-')[0];
-    const tgt = target.toLowerCase().split('-')[0];
+    // ja_JP のようなアンダースコア区切り（BCP47違反だが実在）にも対応
+    const d = detected.toLowerCase().replace(/_/g, '-').split('-')[0];
+    const tgt = target.toLowerCase().replace(/_/g, '-').split('-')[0];
     return d === tgt;
   }
 

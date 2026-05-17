@@ -68,6 +68,15 @@ describe('DVT (content-core)', () => {
     it('detected が空文字の場合は false', () => {
       expect(DVT.langMatches('', 'ja')).toBe(false);
     });
+
+    // 回帰防止: issue #204 — <html lang="ja_JP"> でアンダースコア区切りが分割されず誤判定
+    it('アンダースコア区切り（ja_JP）も ja とマッチ', () => {
+      expect(DVT.langMatches('ja_JP', 'ja')).toBe(true);
+    });
+
+    it('アンダースコア区切り（zh_CN）と zh-CN もマッチ', () => {
+      expect(DVT.langMatches('zh_CN', 'zh-CN')).toBe(true);
+    });
   });
 
   describe('getLangDisplayName()', () => {
@@ -85,6 +94,11 @@ describe('DVT (content-core)', () => {
 
     it('サブタグ付きでも取得可能', () => {
       expect(DVT.getLangDisplayName('en-US')).toBe('English');
+    });
+
+    // 回帰防止: issue #204 — <html lang="ja_JP"> で "ja_JP" がそのまま表示された
+    it('アンダースコア区切り（ja_JP）も日本語として取得可能', () => {
+      expect(DVT.getLangDisplayName('ja_JP')).toBe('日本語');
     });
 
     it('未知の言語コードはそのまま返す', () => {
