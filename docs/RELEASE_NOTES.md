@@ -12,6 +12,9 @@ permalink: /RELEASE_NOTES.html
 
 ### バグ修正
 
+- **`<html lang="ja_JP">` のようにアンダースコア区切りの言語コードで翻訳バーが誤表示される問題を修正**（#204）
+  - 翻訳先が日本語のときに「このページは ja_JP で書かれています。翻訳しますか？」が表示されていた
+  - 言語コード比較・表示名取得の正規化処理でアンダースコア (`_`) もハイフン (`-`) と同等に扱うよう修正
 - **Apple翻訳失敗時のエラー詳細を UI に表示するよう改善**（#202 / PR #203）
   - これまで失敗すると `[翻訳失敗]` だけが表示されていたが、ネイティブハンドラからのエラー文字列も付記されるようになり調査しやすくなった
   - iOS Safari 拡張では Apple Translation が未実装（Extension プロセスが UIWindowScene を持たないため）なのに `appleAvailable = true` になっていた問題を修正。`ping` レスポンスに `translateActionSupported` フラグを追加し、iOS では `false` を返すことで Apple Translation が選択肢に表示されなくなった
