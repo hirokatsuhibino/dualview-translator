@@ -725,3 +725,88 @@ document.getElementById('btnClearCache').addEventListener('click', async () => {
 });
 
 refreshCacheStats();
+
+// ── 設定のバックアップ（エクスポート / インポート） ────────────────────────
+// issue #206: デバッグ等で設定が消える事故への備え。chrome.storage.local の
+// 該当キーだけを JSON に書き出す。APIキーは opt-in（既定 OFF）。
+const SETTINGS_EXPORT_KEYS = [
+  'targetLang', 'translateEngine', 'llmEngine',
+  'autoRules', 'dismissedDomains', 'uiLang', 'dvtTheme'
+];
+const SETTINGS_API_KEYS = ['deeplApiKey', 'claudeApiKey', 'geminiApiKey'];
+const SETTINGS_EXPORT_FORMAT = 'dualview-translator-settings';
+const SETTINGS_EXPORT_VERSION = 1;
+
+function todayStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+}
+
+function storageGetAll(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+function storageSetAll(items) {
+  return new Promise((resolve) => chrome.storage.local.set(items, resolve));
+}
+
+document.getElementById('btnExportSettings').addEventListener('click', async () => {
+  const includeKeys = document.getElementById('backupIncludeKeys').checked;
+  const keys = includeKeys
+    ? [...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]
+    : [...SETTINGS_EXPORT_KEYS];
+  const data = await storageGetAll(keys);
+  // 値が undefined のキーは除外
+  const cleaned = {};
+  for (const k of keys) {
+    if (data[k] !== undefined) cleaned[k] = data[k];
+  }
+  const payload = {
+    format: SETTINGS_EXPORT_FORMAT,
+    version: SETTINGS_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    includesApiKeys: includeKeys,
+    data: cleaned
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dualview-translator-settings-${todayStamp()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+document.getElementById('btnImportSettings').addEventListener('click', () => {
+  document.getElementById('importFileInput').click();
+});
+
+document.getElementById('importFileInput').addEventListener('change', async (ev) => {
+  const file = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!file) return;
+  let payload;
+  try {
+    const text = await file.text();
+    payload = JSON.parse(text);
+  } catch (e) {
+    alert(t('backupImportInvalid'));
+    return;
+  }
+  if (!payload || payload.format !== SETTINGS_EXPORT_FORMAT || typeof payload.data !== 'object') {
+    alert(t('backupImportInvalid'));
+    return;
+  }
+  if (!confirm(t('backupImportConfirm'))) return;
+  // 既知のキーだけ取り込む（不明キーは無視してセキュリティ・互換性確保）
+  const allowed = new Set([...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]);
+  const toSet = {};
+  for (const [k, v] of Object.entries(payload.data)) {
+    if (allowed.has(k)) toSet[k] = v;
+  }
+  await storageSetAll(toSet);
+  alert(t('backupImportDone'));
+  location.reload();
+});

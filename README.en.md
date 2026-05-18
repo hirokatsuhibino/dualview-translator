@@ -221,6 +221,15 @@ The Safari Web Extension Xcode project lives under `safari/` if you want to buil
 
 In the popup's "Settings" tab, find "Display language" — switch the extension UI language anytime.
 
+### Backing up your settings (export / import)
+
+The Settings tab has a "Settings backup" section. Export your current settings to a JSON file, then import that file on another device or after a clean reinstall.
+
+- Included: target language, translation engine, summary engine, auto-translate rules, dismissed domains, UI language, theme
+- **API keys**: not included by default. Tick "Include API keys" to opt in — keeping it separate means you won't leak them by accident
+- Translation/summary caches and hit-rate stats aren't included (device-specific)
+- Importing overwrites your current settings
+
 ## Notes
 
 - Google Translate uses a free endpoint, so heavy use can hit a temporary rate limit

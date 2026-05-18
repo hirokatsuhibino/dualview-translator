@@ -1948,3 +1948,82 @@ suites:
           - 翻訳エンジン選択肢を確認
         expected:
           - 翻訳エンジンの選択肢に Apple Translation が表示される
+
+  # ━━━━━ 設定のバックアップ（issue #206） ━━━━━
+  - id: settings-backup
+    title: 設定のエクスポート / インポート
+    description: "issue #206 — popup の設定タブから JSON で設定をバックアップ／復元できる"
+    related_prs: []
+    scenarios:
+
+      - id: BK-001
+        title: APIキーを含めずにエクスポート（既定動作）
+        priority: p0
+        preconditions:
+          - "API キーをいくつか設定済み（DeepL / Claude / Gemini のいずれか）"
+          - "自動翻訳ルールを 1 件以上登録済み"
+        steps:
+          - ポップアップ → 設定タブ → 「設定のバックアップ」
+          - "「APIキーを含める」チェックが OFF であることを確認"
+          - "「エクスポート」ボタンをクリック"
+          - ダウンロードされた JSON ファイルを開いて中身を確認
+        expected:
+          - "ファイル名が `dualview-translator-settings-YYYYMMDD.json` 形式"
+          - "JSON に `format: \"dualview-translator-settings\"`, `version: 1`, `includesApiKeys: false` が含まれる"
+          - "`data.targetLang` / `data.autoRules` / `data.uiLang` などが含まれる"
+          - "`data.deeplApiKey` / `data.claudeApiKey` / `data.geminiApiKey` が含まれていない"
+          - "`tc:*` / `sc:*` / `cacheHitStats` / `appleAvailable` が含まれていない"
+
+      - id: BK-002
+        title: APIキーを含めてエクスポート（opt-in）
+        priority: p1
+        preconditions:
+          - API キーを設定済み
+        steps:
+          - "「APIキーを含める」チェックを ON にして「エクスポート」"
+        expected:
+          - "JSON に `includesApiKeys: true` が記録される"
+          - "`data.deeplApiKey` などが平文で含まれる（漏洩リスクの説明ヒントがUIに表示されている）"
+
+      - id: BK-003
+        title: エクスポートしたJSONをインポートして設定が復元される
+        priority: p0
+        preconditions:
+          - BK-001 でエクスポートしたJSONがある
+        steps:
+          - "翻訳先言語や自動翻訳ルールを別の値に変更"
+          - "「インポート」→ エクスポートしたJSONを選択"
+          - 確認ダイアログで OK
+        expected:
+          - "確認ダイアログが表示される（誤クリック防止）"
+          - "ポップアップが再読み込みされ、エクスポート時の設定に戻る"
+          - "API キーは（含めずにエクスポートしていた場合）変更前のまま保持される"
+
+      - id: BK-004
+        title: 不正なJSONをインポートしようとした場合のエラーハンドリング
+        priority: p1
+        steps:
+          - "テキストファイルや別アプリの JSON を「インポート」で選択"
+        expected:
+          - "「無効な設定ファイルです」エラーアラートが表示される"
+          - "既存の設定は一切変更されない"
+
+      - id: BK-005
+        title: 不明キーを含むJSONをインポートしてもセキュリティ的に安全
+        priority: p2
+        description: "悪意のあるJSONで `__proto__` や未知キーを注入されてもストレージに書き込まれないこと"
+        steps:
+          - "`{ \"format\": \"dualview-translator-settings\", \"data\": { \"__proto__\": {\"evil\": true}, \"malicious\": \"x\", \"targetLang\": \"en\" } }` を保存してインポート"
+        expected:
+          - "`targetLang` のみが反映され、`__proto__` / `malicious` は無視される"
+          - "Object.prototype が汚染されていない（DevTools で `({}).evil` が undefined）"
+
+      - id: BK-006
+        title: 11 言語すべてで設定タブの「設定のバックアップ」セクションが翻訳されている
+        priority: p2
+        steps:
+          - UI 表示言語を 11 言語に順番に切り替えて設定タブを開く
+        expected:
+          - 各言語で「設定のバックアップ」「エクスポート」「インポート」「APIキーを含める」「ヒント文」が表示される
+          - "未置換の `{` トークンや英語フォールバックが現れない"
+

@@ -10,6 +10,14 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### New features
+
+- **Settings export / import** (#206)
+  - The Settings tab now has a "Settings backup" section.
+  - You can back up and restore target language, engine choices, auto-translate rules, dismissed domains, UI language, and theme as a JSON file.
+  - API keys are **not** included by default. Tick "Include API keys" to opt in — it's a separate toggle so you don't leak them by accident.
+  - Translation/summary caches and hit-rate stats aren't included (too big, and device-specific anyway).
+
 ### Bug Fixes
 
 - **Fixed the translate bar showing up on pages with underscore-style lang codes like `<html lang="ja_JP">`** (#204)
