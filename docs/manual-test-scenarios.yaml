@@ -1986,34 +1986,41 @@ suites:
           - "`data.deeplApiKey` などが平文で含まれる（漏洩リスクの説明ヒントがUIに表示されている）"
 
       - id: BK-003
-        title: エクスポートしたJSONをインポートして設定が復元される
+        title: エクスポートしたJSONを貼り付けてインポートし、設定が復元される
         priority: p0
+        environment: firefox
+        description: "Firefox popup は file picker を開くと閉じてしまうため貼り付け方式に統一済み。実際に storage が書き換わることを Firefox 再起動でも確認する"
         preconditions:
           - BK-001 でエクスポートしたJSONがある
         steps:
-          - "翻訳先言語や自動翻訳ルールを別の値に変更"
-          - "「インポート」→ エクスポートしたJSONを選択"
-          - 確認ダイアログで OK
+          - "翻訳先言語を別の値に変更、自動翻訳ルールを 1 件削除"
+          - エクスポートしたJSONファイルをテキストエディタで開き、中身を全選択してコピー
+          - "ポップアップ → 設定タブ → 「JSONを貼り付けてインポート」欄に貼り付け"
+          - "「インポート」ボタン → 確認ダイアログで OK"
+          - Firefox を再起動して同じポップアップを開き直す
         expected:
-          - "確認ダイアログが表示される（誤クリック防止）"
-          - "ポップアップが再読み込みされ、エクスポート時の設定に戻る"
+          - 確認ダイアログが表示される（誤クリック防止）
+          - ポップアップは閉じずに、その場で自動翻訳ルール一覧・翻訳先言語などが復元される
+          - Firefox 再起動後も復元された設定が保持されている（storage に確実に書き込まれている回帰防止）
           - "API キーは（含めずにエクスポートしていた場合）変更前のまま保持される"
 
       - id: BK-004
-        title: 不正なJSONをインポートしようとした場合のエラーハンドリング
+        title: 不正なJSONを貼り付けた場合のエラーハンドリング
         priority: p1
         steps:
-          - "テキストファイルや別アプリの JSON を「インポート」で選択"
+          - 「JSONを貼り付けてインポート」欄に空文字でインポート実行
+          - 壊れた JSON / 別アプリの JSON を貼り付けてインポート実行
         expected:
-          - "「無効な設定ファイルです」エラーアラートが表示される"
-          - "既存の設定は一切変更されない"
+          - "空のとき: 「インポートするJSONを貼り付けてください」エラー"
+          - "format が異なる or JSON parse 失敗のとき: 「無効な設定データです」エラー"
+          - 既存の設定は一切変更されない
 
       - id: BK-005
         title: 不明キーを含むJSONをインポートしてもセキュリティ的に安全
         priority: p2
         description: "悪意のあるJSONで `__proto__` や未知キーを注入されてもストレージに書き込まれないこと"
         steps:
-          - "`{ \"format\": \"dualview-translator-settings\", \"data\": { \"__proto__\": {\"evil\": true}, \"malicious\": \"x\", \"targetLang\": \"en\" } }` を保存してインポート"
+          - "`{ \"format\": \"dualview-translator-settings\", \"data\": { \"__proto__\": {\"evil\": true}, \"malicious\": \"x\", \"targetLang\": \"en\" } }` を貼り付けてインポート"
         expected:
           - "`targetLang` のみが反映され、`__proto__` / `malicious` は無視される"
           - "Object.prototype が汚染されていない（DevTools で `({}).evil` が undefined）"

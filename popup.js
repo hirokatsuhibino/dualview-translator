@@ -779,23 +779,24 @@ document.getElementById('btnExportSettings').addEventListener('click', async () 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
-document.getElementById('btnImportSettings').addEventListener('click', () => {
-  document.getElementById('importFileInput').click();
-});
-
-document.getElementById('importFileInput').addEventListener('change', async (ev) => {
-  const file = ev.target.files?.[0];
-  ev.target.value = '';
-  if (!file) return;
+// ファイルピッカー方式は Firefox の popup で <input type=file>.click() を行うと
+// popup が閉じてしまい change イベントが届かないため使えない（Bugzilla #1292701 関連）。
+// テキストエリアに JSON を貼り付けてもらう方式に統一する。
+document.getElementById('btnApplyImport').addEventListener('click', async () => {
+  const textarea = document.getElementById('importJsonText');
+  const raw = textarea.value.trim();
+  if (!raw) {
+    alert(t('backupImportEmpty'));
+    return;
+  }
   let payload;
   try {
-    const text = await file.text();
-    payload = JSON.parse(text);
+    payload = JSON.parse(raw);
   } catch (e) {
     alert(t('backupImportInvalid'));
     return;
   }
-  if (!payload || payload.format !== SETTINGS_EXPORT_FORMAT || typeof payload.data !== 'object') {
+  if (!payload || payload.format !== SETTINGS_EXPORT_FORMAT || typeof payload.data !== 'object' || payload.data === null) {
     alert(t('backupImportInvalid'));
     return;
   }
@@ -809,6 +810,7 @@ document.getElementById('importFileInput').addEventListener('change', async (ev)
   await storageSetAll(toSet);
   // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
   await reapplyAllSettings();
+  textarea.value = '';
   alert(t('backupImportDone'));
 });
 

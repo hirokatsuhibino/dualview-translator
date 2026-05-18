@@ -228,6 +228,7 @@ The Settings tab has a "Settings backup" section. Export your current settings t
 - Included: target language, translation engine, summary engine, auto-translate rules, dismissed domains, UI language, theme
 - **API keys**: not included by default. Tick "Include API keys" to opt in — keeping it separate means you won't leak them by accident
 - Translation/summary caches and hit-rate stats aren't included (device-specific)
+- Import flow: open the exported `.json` in any text editor, copy the contents, paste into the "Paste JSON to import" textarea in the popup, hit "Import". (We use paste instead of a file picker because Firefox popups close themselves when a file dialog opens, which silently drops the import.)
 - Importing overwrites your current settings
 
 ## Notes

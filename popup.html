@@ -346,6 +346,32 @@
       line-height: 1.4;
     }
 
+    .backup-import-row {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .backup-import-label {
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .backup-import-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      resize: vertical;
+      outline: none;
+    }
+
     .cache-hit-rates {
       display: flex;
       gap: 12px;
@@ -800,10 +826,14 @@
       </div>
       <div class="backup-row">
         <button class="btn btn-secondary" id="btnExportSettings" data-i18n="backupExportBtn">エクスポート</button>
-        <button class="btn btn-secondary" id="btnImportSettings" data-i18n="backupImportBtn">インポート</button>
-        <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
       </div>
       <div class="backup-hint" data-i18n="backupHint">APIキーはJSONに平文で書き出されます。ファイルの取り扱いに注意してください。</div>
+
+      <div class="backup-import-row">
+        <div class="backup-import-label" data-i18n="backupImportLabel">JSONを貼り付けてインポート</div>
+        <textarea id="importJsonText" class="backup-import-textarea" rows="4" data-i18n-placeholder="backupImportPlaceholder" placeholder="エクスポートしたJSONの中身を貼り付け"></textarea>
+        <button class="btn btn-secondary" id="btnApplyImport" data-i18n="backupImportBtn">インポート</button>
+      </div>
     </div>
 
     <div class="section">
