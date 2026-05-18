@@ -242,29 +242,44 @@ function isSyncEnabled() {
   });
 }
 
+// sync→local 反映中はエコーバック（local→sync）を抑止するためのガード。
+// service worker のメモリに保持（短命だが echo 防止には十分）。
+let __suppressLocalToSync = false;
+
 // local の SYNC_KEYS 変更を sync にミラー
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (areaName !== 'local') return;
   if (!HAS_STORAGE_SYNC) return;
+  if (__suppressLocalToSync) return; // sync→local 由来の書き込みは sync.set にエコーしない
   // SYNC_KEYS のいずれも含まないなら syncEnabled の I/O も発生させない（hot path 最適化）
   const touched = SYNC_KEYS.some(k => k in changes);
   if (!touched) return;
   if (!(await isSyncEnabled())) return;
   const { toSet, toRemove } = pickSyncMirrorPayload(changes);
+  if (toRemove.length === 0 && Object.keys(toSet).length === 0) return;
+  // remove と set を 1 つの Promise チェーンで扱い、いずれかでも完了したら syncLastAt を更新
+  const ops = [];
   for (const key of toRemove) {
-    chrome.storage.sync.remove(key, () => void chrome.runtime.lastError);
+    ops.push(new Promise((resolve) => chrome.storage.sync.remove(key, () => {
+      const err = chrome.runtime.lastError;
+      resolve(err ? err.message : null);
+    })));
   }
-  if (Object.keys(toSet).length === 0) return;
-  chrome.storage.sync.set(toSet, () => {
-    const err = chrome.runtime.lastError;
-    if (err) {
-      // QUOTA_BYTES_PER_ITEM / QUOTA_BYTES などはユーザーに通知できるよう local に記録
-      console.warn('[DVT] sync mirror failed:', err.message);
-      chrome.storage.local.set({ syncError: err.message, syncErrorAt: Date.now() });
-    } else {
-      chrome.storage.local.set({ syncError: null, syncLastAt: Date.now() });
-    }
-  });
+  if (Object.keys(toSet).length > 0) {
+    ops.push(new Promise((resolve) => chrome.storage.sync.set(toSet, () => {
+      const err = chrome.runtime.lastError;
+      resolve(err ? err.message : null);
+    })));
+  }
+  const errors = (await Promise.all(ops)).filter(e => e);
+  if (errors.length > 0) {
+    // QUOTA_BYTES_PER_ITEM / QUOTA_BYTES などはユーザーに通知できるよう local に記録
+    const msg = errors[0];
+    console.warn('[DVT] sync mirror failed:', msg);
+    chrome.storage.local.set({ syncError: msg, syncErrorAt: Date.now() });
+  } else {
+    chrome.storage.local.set({ syncError: null, syncLastAt: Date.now() });
+  }
 });
 
 // sync の変更を local に取り込む（他端末からの更新を反映）
@@ -276,11 +291,14 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (!(await isSyncEnabled())) return;
   chrome.storage.local.get(keys, (current) => {
     const toSet = pickLocalUpdateFromSync(changes, current);
-    if (Object.keys(toSet).length > 0) {
-      chrome.storage.local.set(toSet, () => {
-        chrome.storage.local.set({ syncLastAt: Date.now() });
-      });
-    }
+    if (Object.keys(toSet).length === 0) return;
+    // local.set 中は local→sync エコーバックを抑止し、QUOTA 消費と無限ループを防ぐ
+    __suppressLocalToSync = true;
+    // syncLastAt / syncError を同じ set 呼び出しで一括更新（onChanged 余計発火と
+    // UI 不整合（エラー残ったまま OK にならない）を回避）
+    chrome.storage.local.set({ ...toSet, syncLastAt: Date.now(), syncError: null }, () => {
+      __suppressLocalToSync = false;
+    });
   });
 });
 

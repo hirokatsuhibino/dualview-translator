@@ -769,7 +769,8 @@ syncCheckbox.addEventListener('change', async () => {
   // res が undefined のケース (service worker error / runtime.lastError) も明示処理
   if (!res || !res.ok) {
     syncCheckbox.checked = false;
-    storageSetAll({ syncEnabled: false });
+    // 永続化を await して、失敗時にチェック表示と storage の不整合が残らないようにする
+    await storageSetAll({ syncEnabled: false });
     const errorStr = res?.error || 'no_response';
     const key = errorStr === 'storage_sync_unavailable'
       ? 'syncStatusUnavailable'

@@ -2072,7 +2072,7 @@ suites:
           - "設定タブ → 「端末間で同期」セクションの「端末間で同期する」を ON"
           - 同期ステータスを確認
         expected:
-          - "緑のステータスで「YYYY/MM/DD HH:MM:SS に同期しました」が表示される"
+          - "緑のステータスに「同期しました」を意味するメッセージ + ロケール依存の日時表記（toLocaleString 由来）が表示される"
           - "DevTools で chrome.storage.sync.get(null) を見るとローカルの targetLang / autoRules 等が入っている"
           - "API キー (deeplApiKey 等) は sync 側に書かれていない"
 

@@ -101,6 +101,18 @@ describe('local → sync ミラー (pickSyncMirrorPayload)', () => {
     expect(toSet).toEqual({});
     expect(toRemove).toEqual([]);
   });
+
+  // 回帰防止: toRemove のみのケースで「toSet が空だから早期 return」で syncLastAt が
+  // 更新されないバグが過去に存在した（PR #209 レビュー指摘）。
+  it('toRemove のみのケースでも payload は空ではない（呼び出し側で適切に処理されるべき）', () => {
+    const { toSet, toRemove } = pickSyncMirrorPayload({
+      autoRules: { newValue: undefined, oldValue: [{ id: 'r1', urlPattern: '*' }] },
+      dismissedDomains: { newValue: undefined, oldValue: ['a.com'] },
+    });
+    expect(toSet).toEqual({});
+    expect(toRemove).toEqual(['autoRules', 'dismissedDomains']);
+    // 呼び出し側は (toRemove.length === 0 && toSet 空) のときだけ早期 return すべき
+  });
 });
 
 describe('sync → local ミラー (pickLocalUpdateFromSync, 無限ループ防止)', () => {
