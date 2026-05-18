@@ -765,37 +765,38 @@ syncCheckbox.addEventListener('change', async () => {
   }
   // ON: background に初回合流を依頼
   setSyncStatus('syncInitializing', 'ok');
-  sendMsg({ action: 'syncInitialize' }).then((res) => {
-    if (!res?.ok) {
-      // 失敗時はチェックを戻して理由を表示
-      syncCheckbox.checked = false;
-      storageSetAll({ syncEnabled: false });
-      const key = res?.error === 'storage_sync_unavailable'
-        ? 'syncStatusUnavailable'
-        : 'syncStatusError';
-      setSyncStatus(key, 'error', { error: res?.error || '' });
-      return;
-    }
-    // 合流結果が変化を伴っていれば UI を再描画
-    if (res.fromCloud > 0) {
-      reapplyAllSettings();
-    }
-    const date = new Date();
-    setSyncStatus('syncStatusOk', 'ok', { time: date.toLocaleString() });
-  });
+  const res = await sendMsg({ action: 'syncInitialize' });
+  // res が undefined のケース (service worker error / runtime.lastError) も明示処理
+  if (!res || !res.ok) {
+    syncCheckbox.checked = false;
+    storageSetAll({ syncEnabled: false });
+    const errorStr = res?.error || 'no_response';
+    const key = errorStr === 'storage_sync_unavailable'
+      ? 'syncStatusUnavailable'
+      : 'syncStatusError';
+    setSyncStatus(key, 'error', { error: errorStr });
+    return;
+  }
+  // 合流結果が変化を伴っていれば UI を再描画
+  if (res.fromCloud > 0) {
+    reapplyAllSettings();
+  }
+  const date = new Date();
+  setSyncStatus('syncStatusOk', 'ok', { time: date.toLocaleString() });
 });
 
 // 他端末からの同期で local が変わったとき UI を更新
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local') return;
-  if (changes.syncError) {
-    if (changes.syncError.newValue) {
-      setSyncStatus('syncStatusError', 'error', { error: changes.syncError.newValue });
-    }
-  }
-  if (changes.syncLastAt && changes.syncLastAt.newValue && !changes.syncError) {
-    const date = new Date(changes.syncLastAt.newValue);
-    if (syncCheckbox.checked) {
+  if (changes.syncError && changes.syncError.newValue) {
+    // syncError が truthy にセットされた → エラー表示
+    setSyncStatus('syncStatusError', 'error', { error: changes.syncError.newValue });
+  } else if (changes.syncLastAt && changes.syncLastAt.newValue && syncCheckbox.checked) {
+    // 同じ set 呼び出しで syncError=null と syncLastAt の両方が変わる成功パスにも対応するため、
+    // 「syncError が新しく truthy に設定された」場合のみ OK を抑制（解消イベントは OK 扱い）
+    const errorBeingSet = changes.syncError?.newValue;
+    if (!errorBeingSet) {
+      const date = new Date(changes.syncLastAt.newValue);
       setSyncStatus('syncStatusOk', 'ok', { time: date.toLocaleString() });
     }
   }
