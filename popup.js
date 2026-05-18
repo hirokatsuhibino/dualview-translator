@@ -744,8 +744,12 @@ const SETTINGS_VALIDATORS = {
   translateEngine: (v) => ['google', 'deepl', 'apple'].includes(v),
   llmEngine: (v) => ['claude', 'gemini'].includes(v),
   uiLang: (v) => ['ja', 'en', 'zh-CN', 'zh-TW', 'ko', 'fr', 'de', 'es', 'pt', 'ru', 'ar'].includes(v),
-  autoRules: (v) => Array.isArray(v),
-  dismissedDomains: (v) => Array.isArray(v),
+  // autoRules の各要素は object で string urlPattern を持つこと
+  autoRules: (v) => Array.isArray(v) && v.every(r =>
+    r && typeof r === 'object' && !Array.isArray(r) && typeof r.urlPattern === 'string'
+  ),
+  // dismissedDomains は文字列配列のみ
+  dismissedDomains: (v) => Array.isArray(v) && v.every(s => typeof s === 'string'),
   deeplApiKey: (v) => typeof v === 'string',
   claudeApiKey: (v) => typeof v === 'string',
   geminiApiKey: (v) => typeof v === 'string',
@@ -807,28 +811,31 @@ document.getElementById('btnExportSettings').addEventListener('click', async () 
 // Firefox 検出: WebExtension popup では file picker が popup を閉じてしまうため、
 // Firefox のときは「ファイルから読み込む」ボタンを隠して貼り付け方式のみにする。
 // Chrome / Edge / Safari では popup が閉じないので file picker が使える。
+// 注: navigator.userAgent ベースの判定。将来 popup の挙動が同じ別ブラウザが出てきたら
+// 機能検出（browser.runtime.getBrowserInfo 等）も検討する余地あり。
 const __isFirefox = navigator.userAgent.includes('Firefox');
 if (__isFirefox) {
+  // ボタンを非表示にし、ハンドラ自体も登録しない（誤発火で popup が閉じるのを防ぐ）
   const fileBtn = document.getElementById('btnLoadFromFile');
   if (fileBtn) fileBtn.style.display = 'none';
+} else {
+  document.getElementById('btnLoadFromFile').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+  });
+
+  document.getElementById('importFileInput').addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = ''; // 同じファイルを連続選択しても change が発火するようリセット
+    if (!file) return;
+    try {
+      const text = await file.text();
+      document.getElementById('importJsonText').value = text;
+      setImportStatus(null);
+    } catch (e) {
+      setImportStatus('backupImportInvalid', 'error');
+    }
+  });
 }
-
-document.getElementById('btnLoadFromFile').addEventListener('click', () => {
-  document.getElementById('importFileInput').click();
-});
-
-document.getElementById('importFileInput').addEventListener('change', async (ev) => {
-  const file = ev.target.files?.[0];
-  ev.target.value = ''; // 同じファイルを連続選択しても change が発火するようリセット
-  if (!file) return;
-  try {
-    const text = await file.text();
-    document.getElementById('importJsonText').value = text;
-    setImportStatus(null);
-  } catch (e) {
-    setImportStatus('backupImportInvalid', 'error');
-  }
-});
 
 // Firefox の WebExtension popup では alert() / confirm() / file picker など
 // 「フォーカスを奪うモーダル」を呼ぶと popup そのものが閉じてしまい、
@@ -904,7 +911,11 @@ async function reapplyAllSettings() {
     'claudeApiKey', 'geminiApiKey', 'appleAvailable', 'uiLang'
   ]);
   if (data.targetLang) targetLangSel.value = data.targetLang;
+  // 初期化ロジック（line 52 付近）と同じく Apple Translation オプションの表示制御
+  const appleOption = document.getElementById('engineAppleOption');
+  if (appleOption) appleOption.style.display = data.appleAvailable ? '' : 'none';
   if (data.translateEngine === 'apple' && !data.appleAvailable) {
+    // 別端末 (Safari) でエクスポート → 現端末 (Chrome) でインポート時の整合確保
     engineSel.value = 'google';
     await storageSetAll({ translateEngine: 'google' });
   } else if (data.translateEngine) {

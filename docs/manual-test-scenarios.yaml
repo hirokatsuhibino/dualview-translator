@@ -2029,8 +2029,8 @@ suites:
           - 「JSONを貼り付けてインポート」欄に空文字でインポート実行
           - 壊れた JSON / 別アプリの JSON を貼り付けてインポート実行
         expected:
-          - "空のとき: ボタン下に赤のステータス「インポートするJSONを貼り付けてください」"
-          - "format が異なる or JSON parse 失敗のとき: ボタン下に赤のステータス「無効な設定データです」"
+          - "空のとき: ボタン下に赤のステータスで「JSON を貼り付け／選択するよう促す」内容が表示される（i18n: backupImportEmpty）"
+          - "format 不一致 / JSON parse 失敗 / version 非互換のとき: 赤のステータスで「無効な設定データ」を意味する内容が表示される（i18n: backupImportInvalid）"
           - ステータス表示の間も popup は閉じない（alert/confirm を使わないこと）
           - 既存の設定は一切変更されない
 
