@@ -779,6 +779,32 @@ document.getElementById('btnExportSettings').addEventListener('click', async () 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
+// Firefox 検出: WebExtension popup では file picker が popup を閉じてしまうため、
+// Firefox のときは「ファイルから読み込む」ボタンを隠して貼り付け方式のみにする。
+// Chrome / Edge / Safari では popup が閉じないので file picker が使える。
+const __isFirefox = navigator.userAgent.includes('Firefox');
+if (__isFirefox) {
+  const fileBtn = document.getElementById('btnLoadFromFile');
+  if (fileBtn) fileBtn.style.display = 'none';
+}
+
+document.getElementById('btnLoadFromFile').addEventListener('click', () => {
+  document.getElementById('importFileInput').click();
+});
+
+document.getElementById('importFileInput').addEventListener('change', async (ev) => {
+  const file = ev.target.files?.[0];
+  ev.target.value = ''; // 同じファイルを連続選択しても change が発火するようリセット
+  if (!file) return;
+  try {
+    const text = await file.text();
+    document.getElementById('importJsonText').value = text;
+    setImportStatus(null);
+  } catch (e) {
+    setImportStatus('backupImportInvalid', 'error');
+  }
+});
+
 // Firefox の WebExtension popup では alert() / confirm() / file picker など
 // 「フォーカスを奪うモーダル」を呼ぶと popup そのものが閉じてしまい、
 // await 後の continuation（storage.set など）が実行されない。

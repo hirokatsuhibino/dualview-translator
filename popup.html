@@ -858,8 +858,10 @@
       <div class="backup-hint" data-i18n="backupHint">APIキーはJSONに平文で書き出されます。ファイルの取り扱いに注意してください。</div>
 
       <div class="backup-import-row">
-        <div class="backup-import-label" data-i18n="backupImportLabel">JSONを貼り付けてインポート</div>
-        <textarea id="importJsonText" class="backup-import-textarea" rows="4" data-i18n-placeholder="backupImportPlaceholder" placeholder="エクスポートしたJSONの中身を貼り付け"></textarea>
+        <div class="backup-import-label" data-i18n="backupImportLabel">設定のインポート</div>
+        <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
+        <button class="btn btn-secondary backup-load-file-btn" id="btnLoadFromFile" data-i18n="backupLoadFromFile">ファイルから読み込む</button>
+        <textarea id="importJsonText" class="backup-import-textarea" rows="4" data-i18n-placeholder="backupImportPlaceholder" placeholder="エクスポートしたJSONを選択するか、内容を直接貼り付け"></textarea>
         <button class="btn btn-secondary" id="btnApplyImport" data-i18n="backupImportBtn">インポート</button>
         <div id="importStatus" class="backup-import-status" data-status="none"></div>
       </div>

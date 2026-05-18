@@ -16,7 +16,7 @@ permalink: /RELEASE_NOTES.en.html
   - The Settings tab now has a "Settings backup" section.
   - You can back up and restore target language, engine choices, auto-translate rules, dismissed domains, UI language, and theme as a JSON file.
   - API keys are **not** included by default. Tick "Include API keys" to opt in — it's a separate toggle so you don't leak them by accident.
-  - Import works by pasting the JSON contents into a textarea, with inline status messages instead of alert/confirm (Firefox popups close themselves when you call alert(), confirm(), or open a file picker — all of which would silently drop the import).
+  - Import: on Chrome / Edge / Safari, hit "Load from file" to pick the JSON directly. The file picker button is hidden on Firefox because Firefox popups close themselves when alert(), confirm(), or a file picker opens — paste the JSON into the textarea instead. Status messages stay inline for the same reason.
   - Translation/summary caches and hit-rate stats aren't included (too big, and device-specific anyway).
 
 ### Bug Fixes
