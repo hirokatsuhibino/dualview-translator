@@ -1,15 +1,29 @@
 // Copyright (c) Orangesoft Inc
 // 設定のエクスポート/インポート（issue #206）のロジックテスト。
-// popup.js の実装と対応するデータ整形・バリデーションを再現して検証する。
+// popup.js はブラウザ拡張の popup 専用スクリプトで直接 import できないため、
+// 同等のデータ整形・バリデーションロジックを本ファイルでも保持する。
+// **popup.js を更新したら本ファイルの定数も必ず同期すること**（コピペ重複のため）。
 import { describe, it, expect } from 'vitest';
 
 const SETTINGS_EXPORT_KEYS = [
   'targetLang', 'translateEngine', 'llmEngine',
-  'autoRules', 'dismissedDomains', 'uiLang', 'dvtTheme'
+  'autoRules', 'dismissedDomains', 'uiLang'
+  // dvtTheme は content-core.js が prefers-color-scheme から上書きするため対象外
 ];
 const SETTINGS_API_KEYS = ['deeplApiKey', 'claudeApiKey', 'geminiApiKey'];
 const SETTINGS_EXPORT_FORMAT = 'dualview-translator-settings';
 const SETTINGS_EXPORT_VERSION = 1;
+const SETTINGS_VALIDATORS = {
+  targetLang: (v) => typeof v === 'string' && /^[a-zA-Z-]{2,10}$/.test(v),
+  translateEngine: (v) => ['google', 'deepl', 'apple'].includes(v),
+  llmEngine: (v) => ['claude', 'gemini'].includes(v),
+  uiLang: (v) => ['ja', 'en', 'zh-CN', 'zh-TW', 'ko', 'fr', 'de', 'es', 'pt', 'ru', 'ar'].includes(v),
+  autoRules: (v) => Array.isArray(v),
+  dismissedDomains: (v) => Array.isArray(v),
+  deeplApiKey: (v) => typeof v === 'string',
+  claudeApiKey: (v) => typeof v === 'string',
+  geminiApiKey: (v) => typeof v === 'string',
+};
 
 // popup.js の export ロジックに相当
 function buildExportPayload(storage, { includeKeys }) {
@@ -32,11 +46,15 @@ function buildExportPayload(storage, { includeKeys }) {
 // popup.js の import フィルタに相当
 function filterImportData(payload) {
   if (!payload || payload.format !== SETTINGS_EXPORT_FORMAT) return null;
-  if (typeof payload.data !== 'object' || payload.data === null) return null;
+  if (typeof payload.data !== 'object' || payload.data === null || Array.isArray(payload.data)) return null;
+  if (payload.version !== SETTINGS_EXPORT_VERSION) return null;
   const allowed = new Set([...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]);
   const out = {};
   for (const [k, v] of Object.entries(payload.data)) {
-    if (allowed.has(k)) out[k] = v;
+    if (!allowed.has(k)) continue;
+    const validator = SETTINGS_VALIDATORS[k];
+    if (validator && !validator(v)) continue;
+    out[k] = v;
   }
   return out;
 }
@@ -84,6 +102,13 @@ describe('設定のエクスポート（issue #206）', () => {
     expect(payload.data.pendingRuleSelector).toBeUndefined();
   });
 
+  // dvtTheme は content-core.js が prefers-color-scheme から毎ページ書き直すため
+  // エクスポートしても次ページ表示で上書きされる → 混乱を避けて対象外
+  it('dvtTheme はエクスポート対象外（content-core.js が常に上書きするため）', () => {
+    const payload = buildExportPayload(storage, { includeKeys: false });
+    expect(payload.data.dvtTheme).toBeUndefined();
+  });
+
   it('未設定キー (undefined) は出力に現れない', () => {
     const sparse = { targetLang: 'ja' };
     const payload = buildExportPayload(sparse, { includeKeys: true });
@@ -106,36 +131,59 @@ describe('設定のエクスポート（issue #206）', () => {
 });
 
 describe('設定のインポート（issue #206）', () => {
-  it('format フィールドが一致しない JSON は拒否', () => {
-    expect(filterImportData({ format: 'other', data: { targetLang: 'ja' } })).toBeNull();
-    expect(filterImportData({ data: { targetLang: 'ja' } })).toBeNull();
+  const validPayload = (data) => ({
+    format: SETTINGS_EXPORT_FORMAT,
+    version: SETTINGS_EXPORT_VERSION,
+    data
   });
 
-  it('data フィールドが無い / オブジェクトでない場合は拒否', () => {
-    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT })).toBeNull();
-    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, data: null })).toBeNull();
-    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, data: 'string' })).toBeNull();
+  it('format フィールドが一致しない JSON は拒否', () => {
+    expect(filterImportData({ format: 'other', version: 1, data: { targetLang: 'ja' } })).toBeNull();
+    expect(filterImportData({ version: 1, data: { targetLang: 'ja' } })).toBeNull();
+  });
+
+  it('data フィールドが無い / オブジェクトでない / 配列の場合は拒否', () => {
+    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, version: 1 })).toBeNull();
+    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, version: 1, data: null })).toBeNull();
+    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, version: 1, data: 'string' })).toBeNull();
+    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, version: 1, data: [] })).toBeNull();
+  });
+
+  it('未知バージョンは拒否（将来 v2 を v1 クライアントで誤適用しない）', () => {
+    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, version: 2, data: { targetLang: 'ja' } })).toBeNull();
+    expect(filterImportData({ format: SETTINGS_EXPORT_FORMAT, data: { targetLang: 'ja' } })).toBeNull();
   });
 
   it('既知のキーだけ取り込む（不明キーは無視）', () => {
-    const out = filterImportData({
-      format: SETTINGS_EXPORT_FORMAT,
-      data: {
-        targetLang: 'en',
-        unknownKey: 'malicious',
-        '__proto__': { evil: true },
-        autoRules: []
-      }
-    });
+    const out = filterImportData(validPayload({
+      targetLang: 'en',
+      unknownKey: 'malicious',
+      '__proto__': { evil: true },
+      autoRules: []
+    }));
     expect(out).toEqual({ targetLang: 'en', autoRules: [] });
     expect(out.unknownKey).toBeUndefined();
   });
 
+  it('不正値（型違反・許可外文字列）は静かに無視', () => {
+    const out = filterImportData(validPayload({
+      targetLang: '<script>alert(1)</script>', // 正規表現で弾く
+      translateEngine: 'evil-engine', // 許可リストで弾く
+      llmEngine: 'claude', // 許可
+      autoRules: 'not-an-array', // 型違反
+      dismissedDomains: ['a.com'], // 許可
+    }));
+    expect(out.targetLang).toBeUndefined();
+    expect(out.translateEngine).toBeUndefined();
+    expect(out.llmEngine).toBe('claude');
+    expect(out.autoRules).toBeUndefined();
+    expect(out.dismissedDomains).toEqual(['a.com']);
+  });
+
   it('APIキーも既知キーなので含まれていれば取り込む', () => {
-    const out = filterImportData({
-      format: SETTINGS_EXPORT_FORMAT,
-      data: { deeplApiKey: 'imported-key', claudeApiKey: 'imported-c' }
-    });
+    const out = filterImportData(validPayload({
+      deeplApiKey: 'imported-key', claudeApiKey: 'imported-c'
+    }));
     expect(out.deeplApiKey).toBe('imported-key');
     expect(out.claudeApiKey).toBe('imported-c');
   });

@@ -731,11 +731,25 @@ refreshCacheStats();
 // 該当キーだけを JSON に書き出す。APIキーは opt-in（既定 OFF）。
 const SETTINGS_EXPORT_KEYS = [
   'targetLang', 'translateEngine', 'llmEngine',
-  'autoRules', 'dismissedDomains', 'uiLang', 'dvtTheme'
+  'autoRules', 'dismissedDomains', 'uiLang'
+  // 注: dvtTheme は content-core.js が prefers-color-scheme から毎ページ書き直すため
+  // エクスポート/インポートしても次ページ表示で上書きされる。混乱を避けて対象外。
 ];
 const SETTINGS_API_KEYS = ['deeplApiKey', 'claudeApiKey', 'geminiApiKey'];
 const SETTINGS_EXPORT_FORMAT = 'dualview-translator-settings';
 const SETTINGS_EXPORT_VERSION = 1;
+// 値レベルのバリデーション: 不正値で UI と storage が乖離しないよう許可リストで弾く
+const SETTINGS_VALIDATORS = {
+  targetLang: (v) => typeof v === 'string' && /^[a-zA-Z-]{2,10}$/.test(v),
+  translateEngine: (v) => ['google', 'deepl', 'apple'].includes(v),
+  llmEngine: (v) => ['claude', 'gemini'].includes(v),
+  uiLang: (v) => ['ja', 'en', 'zh-CN', 'zh-TW', 'ko', 'fr', 'de', 'es', 'pt', 'ru', 'ar'].includes(v),
+  autoRules: (v) => Array.isArray(v),
+  dismissedDomains: (v) => Array.isArray(v),
+  deeplApiKey: (v) => typeof v === 'string',
+  claudeApiKey: (v) => typeof v === 'string',
+  geminiApiKey: (v) => typeof v === 'string',
+};
 
 function todayStamp() {
   const d = new Date();
@@ -743,11 +757,22 @@ function todayStamp() {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 }
 
+// chrome.runtime.lastError を確認しないと QUOTA_BYTES 超過などのエラーが silent に握り潰される
 function storageGetAll(keys) {
-  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(keys, (data) => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message || String(err))); else resolve(data);
+    });
+  });
 }
 function storageSetAll(items) {
-  return new Promise((resolve) => chrome.storage.local.set(items, resolve));
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set(items, () => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message || String(err))); else resolve();
+    });
+  });
 }
 
 document.getElementById('btnExportSettings').addEventListener('click', async () => {
@@ -836,17 +861,34 @@ document.getElementById('btnApplyImport').addEventListener('click', async () => 
     setImportStatus('backupImportInvalid', 'error');
     return;
   }
-  if (!payload || payload.format !== SETTINGS_EXPORT_FORMAT || typeof payload.data !== 'object' || payload.data === null) {
+  if (!payload
+      || payload.format !== SETTINGS_EXPORT_FORMAT
+      || typeof payload.data !== 'object'
+      || payload.data === null
+      || Array.isArray(payload.data)) {
     setImportStatus('backupImportInvalid', 'error');
     return;
   }
-  // 既知のキーだけ取り込む（不明キーは無視してセキュリティ・互換性確保）
+  // バージョン互換: 未知バージョンの JSON は拒否（将来 v2 を v1 クライアントで誤適用しない）
+  if (payload.version !== SETTINGS_EXPORT_VERSION) {
+    setImportStatus('backupImportInvalid', 'error');
+    return;
+  }
+  // 既知のキー + 値の妥当性で 2 段階フィルタ（不明キー / 不正値は静かに無視）
   const allowed = new Set([...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]);
   const toSet = {};
   for (const [k, v] of Object.entries(payload.data)) {
-    if (allowed.has(k)) toSet[k] = v;
+    if (!allowed.has(k)) continue;
+    const validator = SETTINGS_VALIDATORS[k];
+    if (validator && !validator(v)) continue;
+    toSet[k] = v;
   }
-  await storageSetAll(toSet);
+  try {
+    await storageSetAll(toSet);
+  } catch (e) {
+    setImportStatus('backupImportInvalid', 'error');
+    return;
+  }
   // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
   await reapplyAllSettings();
   textarea.value = '';

@@ -225,11 +225,13 @@ In the popup's "Settings" tab, find "Display language" — switch the extension 
 
 The Settings tab has a "Settings backup" section. Export your current settings to a JSON file, then import that file on another device or after a clean reinstall.
 
-- Included: target language, translation engine, summary engine, auto-translate rules, dismissed domains, UI language, theme
+- Included: target language, translation engine, summary engine, auto-translate rules, dismissed domains, UI language
+- **Theme**: not included — it's re-derived from your OS `prefers-color-scheme` on every page load, so importing it would be overwritten right away
 - **API keys**: not included by default. Tick "Include API keys" to opt in — keeping it separate means you won't leak them by accident
 - Translation/summary caches and hit-rate stats aren't included (device-specific)
 - Import flow: on Chrome / Edge / Safari, hit "Load from file" to pick the `.json` directly. On Firefox the file picker button is hidden because Firefox popups close themselves when a system dialog opens — paste the JSON contents into the textarea instead.
-- Importing overwrites your current settings
+- Import is a **merge**: only the keys present in the JSON are written. Keys not in the file (e.g. API keys when you exported without them) keep their current values.
+- Mismatched versions (e.g. a future v2 file on a v1 client) are rejected for safety.
 
 ## Notes
 
