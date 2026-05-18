@@ -725,3 +725,227 @@ document.getElementById('btnClearCache').addEventListener('click', async () => {
 });
 
 refreshCacheStats();
+
+// ── 設定のバックアップ（エクスポート / インポート） ────────────────────────
+// issue #206: デバッグ等で設定が消える事故への備え。chrome.storage.local の
+// 該当キーだけを JSON に書き出す。APIキーは opt-in（既定 OFF）。
+const SETTINGS_EXPORT_KEYS = [
+  'targetLang', 'translateEngine', 'llmEngine',
+  'autoRules', 'dismissedDomains', 'uiLang'
+  // 注: dvtTheme は content-core.js が prefers-color-scheme から毎ページ書き直すため
+  // エクスポート/インポートしても次ページ表示で上書きされる。混乱を避けて対象外。
+];
+const SETTINGS_API_KEYS = ['deeplApiKey', 'claudeApiKey', 'geminiApiKey'];
+const SETTINGS_EXPORT_FORMAT = 'dualview-translator-settings';
+const SETTINGS_EXPORT_VERSION = 1;
+// 値レベルのバリデーション: 不正値で UI と storage が乖離しないよう許可リストで弾く
+const SETTINGS_VALIDATORS = {
+  targetLang: (v) => typeof v === 'string' && /^[a-zA-Z-]{2,10}$/.test(v),
+  translateEngine: (v) => ['google', 'deepl', 'apple'].includes(v),
+  llmEngine: (v) => ['claude', 'gemini'].includes(v),
+  uiLang: (v) => ['ja', 'en', 'zh-CN', 'zh-TW', 'ko', 'fr', 'de', 'es', 'pt', 'ru', 'ar'].includes(v),
+  // autoRules の各要素は object で string urlPattern を持つこと
+  autoRules: (v) => Array.isArray(v) && v.every(r =>
+    r && typeof r === 'object' && !Array.isArray(r) && typeof r.urlPattern === 'string'
+  ),
+  // dismissedDomains は文字列配列のみ
+  dismissedDomains: (v) => Array.isArray(v) && v.every(s => typeof s === 'string'),
+  deeplApiKey: (v) => typeof v === 'string',
+  claudeApiKey: (v) => typeof v === 'string',
+  geminiApiKey: (v) => typeof v === 'string',
+};
+
+function todayStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+}
+
+// chrome.runtime.lastError を確認しないと QUOTA_BYTES 超過などのエラーが silent に握り潰される
+function storageGetAll(keys) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(keys, (data) => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message || String(err))); else resolve(data);
+    });
+  });
+}
+function storageSetAll(items) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set(items, () => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message || String(err))); else resolve();
+    });
+  });
+}
+
+document.getElementById('btnExportSettings').addEventListener('click', async () => {
+  const includeKeys = document.getElementById('backupIncludeKeys').checked;
+  const keys = includeKeys
+    ? [...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]
+    : [...SETTINGS_EXPORT_KEYS];
+  const data = await storageGetAll(keys);
+  // 値が undefined のキーは除外
+  const cleaned = {};
+  for (const k of keys) {
+    if (data[k] !== undefined) cleaned[k] = data[k];
+  }
+  const payload = {
+    format: SETTINGS_EXPORT_FORMAT,
+    version: SETTINGS_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    includesApiKeys: includeKeys,
+    data: cleaned
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dualview-translator-settings-${todayStamp()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+// Firefox 検出: WebExtension popup では file picker が popup を閉じてしまうため、
+// Firefox のときは「ファイルから読み込む」ボタンを隠して貼り付け方式のみにする。
+// Chrome / Edge / Safari では popup が閉じないので file picker が使える。
+// 注: navigator.userAgent ベースの判定。将来 popup の挙動が同じ別ブラウザが出てきたら
+// 機能検出（browser.runtime.getBrowserInfo 等）も検討する余地あり。
+const __isFirefox = navigator.userAgent.includes('Firefox');
+if (__isFirefox) {
+  // ボタンを非表示にし、ハンドラ自体も登録しない（誤発火で popup が閉じるのを防ぐ）
+  const fileBtn = document.getElementById('btnLoadFromFile');
+  if (fileBtn) fileBtn.style.display = 'none';
+  // ファイル選択ができない旨をプレースホルダーに反映（UX 誤認防止）。
+  // ta.placeholder を直接書くと後続の DVT_I18N.applyToDOM()（言語切替時など）で
+  // data-i18n-placeholder の値に戻ってしまうため、属性自体を書き換える。
+  const ta = document.getElementById('importJsonText');
+  if (ta) {
+    ta.dataset.i18nPlaceholder = 'backupImportPlaceholderPasteOnly';
+    ta.placeholder = t('backupImportPlaceholderPasteOnly');
+  }
+} else {
+  document.getElementById('btnLoadFromFile').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+  });
+
+  document.getElementById('importFileInput').addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = ''; // 同じファイルを連続選択しても change が発火するようリセット
+    if (!file) return;
+    try {
+      const text = await file.text();
+      document.getElementById('importJsonText').value = text;
+      setImportStatus(null);
+    } catch (e) {
+      setImportStatus('backupImportInvalid', 'error');
+    }
+  });
+}
+
+// Firefox の WebExtension popup では alert() / confirm() / file picker など
+// 「フォーカスを奪うモーダル」を呼ぶと popup そのものが閉じてしまい、
+// await 後の continuation（storage.set など）が実行されない。
+// そのためインライン状態表示で完結させる。
+function setImportStatus(messageKey, type) {
+  const el = document.getElementById('importStatus');
+  if (!el) return;
+  if (!messageKey) {
+    el.dataset.status = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.dataset.status = type; // 'ok' | 'error'
+  el.textContent = t(messageKey);
+}
+
+document.getElementById('btnApplyImport').addEventListener('click', async () => {
+  const textarea = document.getElementById('importJsonText');
+  const raw = textarea.value.trim();
+  setImportStatus(null);
+  if (!raw) {
+    setImportStatus('backupImportEmpty', 'error');
+    return;
+  }
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (e) {
+    setImportStatus('backupImportInvalid', 'error');
+    return;
+  }
+  if (!payload
+      || payload.format !== SETTINGS_EXPORT_FORMAT
+      || typeof payload.data !== 'object'
+      || payload.data === null
+      || Array.isArray(payload.data)) {
+    setImportStatus('backupImportInvalid', 'error');
+    return;
+  }
+  // バージョン互換: 未知バージョンの JSON は拒否（将来 v2 を v1 クライアントで誤適用しない）
+  if (payload.version !== SETTINGS_EXPORT_VERSION) {
+    setImportStatus('backupImportInvalid', 'error');
+    return;
+  }
+  // 既知のキー + 値の妥当性で 2 段階フィルタ（不明キー / 不正値は静かに無視）
+  const allowed = new Set([...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]);
+  const toSet = {};
+  for (const [k, v] of Object.entries(payload.data)) {
+    if (!allowed.has(k)) continue;
+    const validator = SETTINGS_VALIDATORS[k];
+    if (validator && !validator(v)) continue;
+    toSet[k] = v;
+  }
+  try {
+    await storageSetAll(toSet);
+    // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
+    // reapplyAllSettings 内の storage 書き込み（apple フォールバック）もここで try/catch
+    await reapplyAllSettings();
+  } catch (e) {
+    setImportStatus('backupImportInvalid', 'error');
+    return;
+  }
+  textarea.value = '';
+  setImportStatus('backupImportDone', 'ok');
+});
+
+// インポート反映: storage に保存済みの全設定を UI に読み戻す。
+// 初期化ロジック（line 52 付近）と一致させているが、本関数は同期的に呼び出した
+// 全 UI を新しい値に揃える役割を持つ（reload 代替）。
+async function reapplyAllSettings() {
+  const data = await storageGetAll([
+    'targetLang', 'translateEngine', 'deeplApiKey', 'llmEngine',
+    'claudeApiKey', 'geminiApiKey', 'appleAvailable', 'uiLang'
+  ]);
+  if (data.targetLang) targetLangSel.value = data.targetLang;
+  // 初期化ロジック（line 52 付近）と同じく Apple Translation オプションの表示制御
+  const appleOption = document.getElementById('engineAppleOption');
+  if (appleOption) appleOption.style.display = data.appleAvailable ? '' : 'none';
+  if (data.translateEngine === 'apple' && !data.appleAvailable) {
+    // 別端末 (Safari) でエクスポート → 現端末 (Chrome) でインポート時の整合確保
+    engineSel.value = 'google';
+    await storageSetAll({ translateEngine: 'google' });
+  } else if (data.translateEngine) {
+    engineSel.value = data.translateEngine;
+  }
+  deeplApiKeyInput.value = data.deeplApiKey || '';
+  if (data.llmEngine) llmSel.value = data.llmEngine;
+  claudeApiKeyInput.value = data.claudeApiKey || '';
+  geminiApiKeyInput.value = data.geminiApiKey || '';
+  toggleDeepLSettings();
+  toggleLLMSettings();
+  updateTranslateButtons();
+  updateSummaryButtons();
+  updateApiTestButtons();
+  if (data.uiLang) {
+    uiLangSel.value = data.uiLang;
+    DVT_I18N.setLang(data.uiLang);
+    DVT_I18N.applyToDOM();
+    sendToContent({ action: 'setUILang', lang: data.uiLang });
+  }
+  // 自動翻訳ルール一覧を再ロード（ここがインポートで一番見落とされやすい）
+  loadAutoRules();
+  // テーマは popup-init.js の chrome.storage.onChanged リスナで自動反映される
+}

@@ -1948,3 +1948,108 @@ suites:
           - 翻訳エンジン選択肢を確認
         expected:
           - 翻訳エンジンの選択肢に Apple Translation が表示される
+
+  # ━━━━━ 設定のバックアップ（issue #206） ━━━━━
+  - id: settings-backup
+    title: 設定のエクスポート / インポート
+    description: "issue #206 — popup の設定タブから JSON で設定をバックアップ／復元できる"
+    related_prs: []
+    scenarios:
+
+      - id: BK-001
+        title: APIキーを含めずにエクスポート（既定動作）
+        priority: p0
+        preconditions:
+          - "API キーをいくつか設定済み（DeepL / Claude / Gemini のいずれか）"
+          - "自動翻訳ルールを 1 件以上登録済み"
+        steps:
+          - ポップアップ → 設定タブ → 「設定のバックアップ」
+          - "「APIキーを含める」チェックが OFF であることを確認"
+          - "「エクスポート」ボタンをクリック"
+          - ダウンロードされた JSON ファイルを開いて中身を確認
+        expected:
+          - "ファイル名が `dualview-translator-settings-YYYYMMDD.json` 形式"
+          - "JSON に `format: \"dualview-translator-settings\"`, `version: 1`, `includesApiKeys: false` が含まれる"
+          - "`data.targetLang` / `data.autoRules` / `data.uiLang` などが含まれる"
+          - "`data.deeplApiKey` / `data.claudeApiKey` / `data.geminiApiKey` が含まれていない"
+          - "`tc:*` / `sc:*` / `cacheHitStats` / `appleAvailable` が含まれていない"
+
+      - id: BK-002
+        title: APIキーを含めてエクスポート（opt-in）
+        priority: p1
+        preconditions:
+          - API キーを設定済み
+        steps:
+          - "「APIキーを含める」チェックを ON にして「エクスポート」"
+        expected:
+          - "JSON に `includesApiKeys: true` が記録される"
+          - "`data.deeplApiKey` などが平文で含まれる（漏洩リスクの説明ヒントがUIに表示されている）"
+
+      - id: BK-003
+        title: ファイル選択でインポートして設定が復元される（Chrome / Edge / Safari）
+        priority: p0
+        environment: chrome
+        preconditions:
+          - BK-001 でエクスポートしたJSONがある
+        steps:
+          - "翻訳先言語を別の値に変更、自動翻訳ルールを 1 件削除"
+          - "ポップアップ → 設定タブ → 「ファイルから読み込む」ボタンをクリック"
+          - エクスポートしたJSONファイルを選択
+          - "テキストエリアにファイル内容が自動でセットされることを確認"
+          - 「インポート」ボタンをクリック
+        expected:
+          - popup が閉じずにテキストエリアにJSON内容が表示される（Chrome系はファイル選択で popup が閉じない）
+          - "ボタン下に緑のステータス「設定をインポートしました。」が表示される"
+          - 自動翻訳ルール一覧・翻訳先言語などが復元される
+
+      - id: BK-003b
+        title: Firefox では貼り付けインポートで設定が復元される
+        priority: p0
+        environment: firefox
+        description: "Firefox popup は file picker / alert / confirm を開くと閉じてしまうため、Firefox では「ファイルから読み込む」ボタンが非表示になり貼り付けのみ使える"
+        preconditions:
+          - BK-001 でエクスポートしたJSONがある
+        steps:
+          - "ポップアップ → 設定タブ → 「設定のインポート」セクションを確認"
+          - 「ファイルから読み込む」ボタンが表示されていないことを確認
+          - "翻訳先言語を別の値に変更、自動翻訳ルールを 1 件削除"
+          - エクスポートしたJSONファイルをテキストエディタで開き、中身を全選択してコピー
+          - "テキストエリアに貼り付け → 「インポート」"
+          - Firefox を再起動して同じポップアップを開き直す
+        expected:
+          - 「ファイルから読み込む」ボタンは Firefox では非表示
+          - "ボタン下に緑のステータス「設定をインポートしました。」が表示される"
+          - ポップアップは閉じずに、その場でルール一覧・翻訳先言語などが復元される
+          - Firefox 再起動後も復元された設定が保持されている
+
+      - id: BK-004
+        title: 不正なJSONを貼り付けた場合のエラーハンドリング
+        priority: p1
+        steps:
+          - 「JSONを貼り付けてインポート」欄に空文字でインポート実行
+          - 壊れた JSON / 別アプリの JSON を貼り付けてインポート実行
+        expected:
+          - "空のとき: ボタン下に赤のステータスで「JSON を貼り付け／選択するよう促す」内容が表示される（i18n: backupImportEmpty）"
+          - "format 不一致 / JSON parse 失敗 / version 非互換のとき: 赤のステータスで「無効な設定データ」を意味する内容が表示される（i18n: backupImportInvalid）"
+          - ステータス表示の間も popup は閉じない（alert/confirm を使わないこと）
+          - 既存の設定は一切変更されない
+
+      - id: BK-005
+        title: 不明キーを含むJSONをインポートしてもセキュリティ的に安全
+        priority: p2
+        description: "悪意のあるJSONで `__proto__` や未知キーを注入されてもストレージに書き込まれないこと"
+        steps:
+          - "`{ \"format\": \"dualview-translator-settings\", \"data\": { \"__proto__\": {\"evil\": true}, \"malicious\": \"x\", \"targetLang\": \"en\" } }` を貼り付けてインポート"
+        expected:
+          - "`targetLang` のみが反映され、`__proto__` / `malicious` は無視される"
+          - "Object.prototype が汚染されていない（DevTools で `({}).evil` が undefined）"
+
+      - id: BK-006
+        title: 11 言語すべてで設定タブの「設定のバックアップ」セクションが翻訳されている
+        priority: p2
+        steps:
+          - UI 表示言語を 11 言語に順番に切り替えて設定タブを開く
+        expected:
+          - 各言語で「設定のバックアップ」「エクスポート」「インポート」「APIキーを含める」「ヒント文」が表示される
+          - "未置換の `{` トークンや英語フォールバックが現れない"
+

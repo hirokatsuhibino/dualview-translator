@@ -57,8 +57,8 @@
 		7D1D49022F95AD9500B65F5F /* SharedSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1D49002F95AD9500B65F5F /* SharedSettings.swift */; };
 		7DA0CA1F2F95AD9500B65F5F /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 7DA0CA1E2F95AD9500B65F5F /* _locales */; };
 		7DA0CA202F95AD9500B65F5F /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 7DA0CA1E2F95AD9500B65F5F /* _locales */; };
-		7DAFD36B2FAC1B230017615B /* DualView Share Extension (iOS).appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		7DAFD3802FAC1B7C0017615B /* DualView Share Extension (macOS).appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7DAFD36B2FAC1B230017615B /* DualView Share Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7DAFD3612FAC1B230017615B /* DualView Share Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7DAFD3802FAC1B7C0017615B /* DualView Share Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7DAFD3742FAC1B7C0017615B /* DualView Share Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,7 +100,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				7D1D47F12F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */,
-				7DAFD36B2FAC1B230017615B /* DualView Share Extension (iOS).appex in Embed Foundation Extensions */,
+				7DAFD36B2FAC1B230017615B /* DualView Share Extension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -112,7 +112,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				7D1D47FB2F95AD9500B65F5F /* DualView Translator Extension.appex in Embed Foundation Extensions */,
-				7DAFD3802FAC1B7C0017615B /* DualView Share Extension (macOS).appex in Embed Foundation Extensions */,
+				7DAFD3802FAC1B7C0017615B /* DualView Share Extension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -159,8 +159,8 @@
 		7D1D48352F95AD9500B65F5F /* popup-init.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "popup-init.js"; path = "../../../popup-init.js"; sourceTree = "<group>"; };
 		7D1D49002F95AD9500B65F5F /* SharedSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSettings.swift; sourceTree = "<group>"; };
 		7DA0CA1E2F95AD9500B65F5F /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../../_locales; sourceTree = "<group>"; };
-		7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Share Extension (iOS).appex"; sourceTree = BUILT_PRODUCTS_DIR; };
-		7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Share Extension (macOS).appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7DAFD3612FAC1B230017615B /* DualView Share Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Share Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7DAFD3742FAC1B7C0017615B /* DualView Share Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DualView Share Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -302,8 +302,8 @@
 				7D1D47E42F95AD9500B65F5F /* DualView Translator.app */,
 				7D1D47F02F95AD9500B65F5F /* DualView Translator Extension.appex */,
 				7D1D47FA2F95AD9500B65F5F /* DualView Translator Extension.appex */,
-				7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */,
-				7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */,
+				7DAFD3612FAC1B230017615B /* DualView Share Extension.appex */,
+				7DAFD3742FAC1B7C0017615B /* DualView Share Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -471,7 +471,7 @@
 			packageProductDependencies = (
 			);
 			productName = "DualView Share Extension (iOS)";
-			productReference = 7DAFD3612FAC1B230017615B /* DualView Share Extension (iOS).appex */;
+			productReference = 7DAFD3612FAC1B230017615B /* DualView Share Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 		7DAFD3732FAC1B7C0017615B /* DualView Share Extension (macOS) */ = {
@@ -493,7 +493,7 @@
 			packageProductDependencies = (
 			);
 			productName = "DualView Share Extension (macOS)";
-			productReference = 7DAFD3742FAC1B7C0017615B /* DualView Share Extension (macOS).appex */;
+			productReference = 7DAFD3742FAC1B7C0017615B /* DualView Share Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
