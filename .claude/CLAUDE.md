@@ -35,7 +35,9 @@ Copyright (c) Orangesoft Inc.
 - mainへの直接pushは**禁止**。必ずブランチを作成して作業する
 - 作業が終わったらPRを作成してマージする（ローカルマージ禁止）
 - PRには必ず対応するIssueを紐づける（なければIssueを先に作成する）
+  - 例外: `.claude/` 配下のルール / コマンド / スキル / memory のみを変更する `docs(rules):` / `docs(commands):` / `docs(skills):` PR は Issue 不要（下記「PR スコープ分離ルール」参照）
 - PRのbodyに `closes #<番号>` を含め、PRマージ時にIssueも自動クローズされるようにする
+  - 上記例外の Issue 不要 PR では `closes` も不要
 
 ## PR スコープ分離ルール
 
