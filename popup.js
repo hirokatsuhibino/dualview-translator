@@ -818,9 +818,14 @@ if (__isFirefox) {
   // ボタンを非表示にし、ハンドラ自体も登録しない（誤発火で popup が閉じるのを防ぐ）
   const fileBtn = document.getElementById('btnLoadFromFile');
   if (fileBtn) fileBtn.style.display = 'none';
-  // ファイル選択ができない旨をプレースホルダーに反映（UX 誤認防止）
+  // ファイル選択ができない旨をプレースホルダーに反映（UX 誤認防止）。
+  // ta.placeholder を直接書くと後続の DVT_I18N.applyToDOM()（言語切替時など）で
+  // data-i18n-placeholder の値に戻ってしまうため、属性自体を書き換える。
   const ta = document.getElementById('importJsonText');
-  if (ta) ta.placeholder = t('backupImportPlaceholderPasteOnly');
+  if (ta) {
+    ta.dataset.i18nPlaceholder = 'backupImportPlaceholderPasteOnly';
+    ta.placeholder = t('backupImportPlaceholderPasteOnly');
+  }
 } else {
   document.getElementById('btnLoadFromFile').addEventListener('click', () => {
     document.getElementById('importFileInput').click();
