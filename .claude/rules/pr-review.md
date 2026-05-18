@@ -66,24 +66,24 @@ prefix 規約（`.github/pr-guidelines.md` と揃える）:
 | `[ask]` | 逆質問 |
 | `[fyi]` | 参考情報を追記 |
 
-### 概要レビュー（overview review）への返信も必須
+### 概要レビュー（overview review）はインライン返信で実質 ack する
 
-Copilot 等が投稿する **PR 全体に対する overview レビュー**（特定の行に紐付かない、PR 要約レビュー）にも必ず返信する。インライン指摘がなくても overview 自体への acknowledge が必要。
+Copilot 等が投稿する **PR 全体に対する overview レビュー**（特定の行に紐付かない、PR 要約レビュー）について:
 
+- overview review に紐付くインライン指摘がある場合 → **インライン全件への `in_reply_to` 返信が overview の ack を兼ねる**。別途 PR トップレベルに「@reviewer overview ありがとう」コメントを投稿しない（会話タブが散らかる）
+- overview review にインライン指摘が 0 件（純粋な要約のみ）の場合に限り、PR トップレベルに短い ack を 1 件だけ投稿
 - 取得: `gh pr view <番号> --json reviews` の `reviews[].body` 側に出る（インラインAPIには出てこない）
-- 返信: `gh pr comment <番号> --body "@<reviewer> <commit_hash> への overview レビューありがとうございました。..."` で PR トップレベルコメントとして投稿
-- 内容: 対象コミット + インライン指摘の対応状況（[done]/[skip] と対応コミットhash）を 1〜2 行で
 
-**重要: 個別の ack コメント + 全体サマリ、両方を投稿する**
-- 1 つのまとめコメントで複数 review をまとめて acknowledge するのは NG（個別のレビュー submission に紐付かないため、レビュアーから見落とされやすい・追跡しづらい）
-- 同じ PR で複数回 review が submit されたら、**それぞれの review submission に対応する個別の ack コメントを投稿する**
-- 加えて、対応終了時に**全体サマリコメントも 1 件**投稿する（個別 ack と役割が違う: 個別 ack は「このレビューを認識した」、サマリは「全体の対応一覧」）
+**なぜスレッド返信を優先するか:**
+- GitHub UI ではインライン返信は元コメントのスレッド内に nested 表示され、レビュアーが見落としにくい
+- PR トップレベルの ack コメントは会話タブにフラットに並ぶため、レビューが複数ラウンド回ると視認性が低下する
+- インライン全件返信で「どの指摘にどう対応したか」を個別に示せば、overview のテキスト自体に別途応答する必要は薄い
 
 **チェックリスト（返信完了の判定）**:
 
 1. インラインコメント全件に `in_reply_to` で返信したか（`gh api .../comments --paginate` の全件確認。**`--paginate` 必須** — デフォルトでは 30 件で切れて未返信を見逃す）
-2. **`gh pr view --json reviews` で取得できる各 review submission（body 付きのもの）に 1 件ずつ個別の ack コメントが存在するか**（複数 review をまとめた ack は NG）
-3. PR 全体サマリコメントを 1 件投稿したか（個別 ack とは別）
+2. インライン 0 件の overview review があるか確認し、ある場合のみ PR トップレベルに短い ack を投稿
+3. PR 全体サマリコメントを 1 件投稿したか（対応終了時、対応コミット hash と対応一覧）
 
 ### PR全体サマリコメント
 
