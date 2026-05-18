@@ -779,28 +779,41 @@ document.getElementById('btnExportSettings').addEventListener('click', async () 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
-// ファイルピッカー方式は Firefox の popup で <input type=file>.click() を行うと
-// popup が閉じてしまい change イベントが届かないため使えない（Bugzilla #1292701 関連）。
-// テキストエリアに JSON を貼り付けてもらう方式に統一する。
+// Firefox の WebExtension popup では alert() / confirm() / file picker など
+// 「フォーカスを奪うモーダル」を呼ぶと popup そのものが閉じてしまい、
+// await 後の continuation（storage.set など）が実行されない。
+// そのためインライン状態表示で完結させる。
+function setImportStatus(messageKey, type) {
+  const el = document.getElementById('importStatus');
+  if (!el) return;
+  if (!messageKey) {
+    el.dataset.status = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.dataset.status = type; // 'ok' | 'error'
+  el.textContent = t(messageKey);
+}
+
 document.getElementById('btnApplyImport').addEventListener('click', async () => {
   const textarea = document.getElementById('importJsonText');
   const raw = textarea.value.trim();
+  setImportStatus(null);
   if (!raw) {
-    alert(t('backupImportEmpty'));
+    setImportStatus('backupImportEmpty', 'error');
     return;
   }
   let payload;
   try {
     payload = JSON.parse(raw);
   } catch (e) {
-    alert(t('backupImportInvalid'));
+    setImportStatus('backupImportInvalid', 'error');
     return;
   }
   if (!payload || payload.format !== SETTINGS_EXPORT_FORMAT || typeof payload.data !== 'object' || payload.data === null) {
-    alert(t('backupImportInvalid'));
+    setImportStatus('backupImportInvalid', 'error');
     return;
   }
-  if (!confirm(t('backupImportConfirm'))) return;
   // 既知のキーだけ取り込む（不明キーは無視してセキュリティ・互換性確保）
   const allowed = new Set([...SETTINGS_EXPORT_KEYS, ...SETTINGS_API_KEYS]);
   const toSet = {};
@@ -811,7 +824,7 @@ document.getElementById('btnApplyImport').addEventListener('click', async () => 
   // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
   await reapplyAllSettings();
   textarea.value = '';
-  alert(t('backupImportDone'));
+  setImportStatus('backupImportDone', 'ok');
 });
 
 // インポート反映: storage に保存済みの全設定を UI に読み戻す。
