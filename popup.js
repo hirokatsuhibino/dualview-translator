@@ -807,6 +807,42 @@ document.getElementById('importFileInput').addEventListener('change', async (ev)
     if (allowed.has(k)) toSet[k] = v;
   }
   await storageSetAll(toSet);
+  // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
+  await reapplyAllSettings();
   alert(t('backupImportDone'));
-  location.reload();
 });
+
+// インポート反映: storage に保存済みの全設定を UI に読み戻す。
+// 初期化ロジック（line 52 付近）と一致させているが、本関数は同期的に呼び出した
+// 全 UI を新しい値に揃える役割を持つ（reload 代替）。
+async function reapplyAllSettings() {
+  const data = await storageGetAll([
+    'targetLang', 'translateEngine', 'deeplApiKey', 'llmEngine',
+    'claudeApiKey', 'geminiApiKey', 'appleAvailable', 'uiLang'
+  ]);
+  if (data.targetLang) targetLangSel.value = data.targetLang;
+  if (data.translateEngine === 'apple' && !data.appleAvailable) {
+    engineSel.value = 'google';
+    await storageSetAll({ translateEngine: 'google' });
+  } else if (data.translateEngine) {
+    engineSel.value = data.translateEngine;
+  }
+  deeplApiKeyInput.value = data.deeplApiKey || '';
+  if (data.llmEngine) llmSel.value = data.llmEngine;
+  claudeApiKeyInput.value = data.claudeApiKey || '';
+  geminiApiKeyInput.value = data.geminiApiKey || '';
+  toggleDeepLSettings();
+  toggleLLMSettings();
+  updateTranslateButtons();
+  updateSummaryButtons();
+  updateApiTestButtons();
+  if (data.uiLang) {
+    uiLangSel.value = data.uiLang;
+    DVT_I18N.setLang(data.uiLang);
+    DVT_I18N.applyToDOM();
+    sendToContent({ action: 'setUILang', lang: data.uiLang });
+  }
+  // 自動翻訳ルール一覧を再ロード（ここがインポートで一番見落とされやすい）
+  loadAutoRules();
+  // テーマは popup-init.js の chrome.storage.onChanged リスナで自動反映される
+}
