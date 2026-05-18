@@ -726,6 +726,92 @@ document.getElementById('btnClearCache').addEventListener('click', async () => {
 
 refreshCacheStats();
 
+// ── 端末間同期（issue #205） ─────────────────────────────────────────
+// chrome.storage.local の syncEnabled トグルで ON/OFF。
+// 実際のミラー処理は background.js の onChanged リスナで動く。
+// popup 側は UI（チェックボックス + ステータス表示）と初回 ON 時の合流を担当。
+const syncCheckbox = document.getElementById('syncEnabledCheckbox');
+const syncStatusEl = document.getElementById('syncStatus');
+
+function setSyncStatus(messageKey, type, params) {
+  if (!syncStatusEl) return;
+  if (!messageKey) {
+    syncStatusEl.dataset.status = 'none';
+    syncStatusEl.textContent = '';
+    return;
+  }
+  syncStatusEl.dataset.status = type; // 'ok' | 'error'
+  syncStatusEl.textContent = params ? t(messageKey, params) : t(messageKey);
+}
+
+// 初期表示: storage の syncEnabled を反映し、過去エラーがあれば表示
+chrome.storage.local.get(['syncEnabled', 'syncError', 'syncLastAt'], (data) => {
+  syncCheckbox.checked = !!data.syncEnabled;
+  if (data.syncError) {
+    setSyncStatus('syncStatusError', 'error', { error: data.syncError });
+  } else if (data.syncEnabled && data.syncLastAt) {
+    const date = new Date(data.syncLastAt);
+    setSyncStatus('syncStatusOk', 'ok', { time: date.toLocaleString() });
+  }
+});
+
+syncCheckbox.addEventListener('change', async () => {
+  const enabled = syncCheckbox.checked;
+  await storageSetAll({ syncEnabled: enabled });
+  if (!enabled) {
+    // OFF: sync 側のデータは残置（再 ON 時に再利用）
+    setSyncStatus(null);
+    return;
+  }
+  // ON: background に初回合流を依頼
+  setSyncStatus('syncInitializing', 'ok');
+  sendMsg({ action: 'syncInitialize' }).then((res) => {
+    if (!res?.ok) {
+      // 失敗時はチェックを戻して理由を表示
+      syncCheckbox.checked = false;
+      storageSetAll({ syncEnabled: false });
+      const key = res?.error === 'storage_sync_unavailable'
+        ? 'syncStatusUnavailable'
+        : 'syncStatusError';
+      setSyncStatus(key, 'error', { error: res?.error || '' });
+      return;
+    }
+    // 合流結果が変化を伴っていれば UI を再描画
+    if (res.fromCloud > 0) {
+      reapplyAllSettings();
+    }
+    const date = new Date();
+    setSyncStatus('syncStatusOk', 'ok', { time: date.toLocaleString() });
+  });
+});
+
+// 他端末からの同期で local が変わったとき UI を更新
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  if (changes.syncError) {
+    if (changes.syncError.newValue) {
+      setSyncStatus('syncStatusError', 'error', { error: changes.syncError.newValue });
+    }
+  }
+  if (changes.syncLastAt && changes.syncLastAt.newValue && !changes.syncError) {
+    const date = new Date(changes.syncLastAt.newValue);
+    if (syncCheckbox.checked) {
+      setSyncStatus('syncStatusOk', 'ok', { time: date.toLocaleString() });
+    }
+  }
+  // SYNC_KEYS が他端末から更新された場合は UI を再描画
+  const syncKeys = ['targetLang', 'translateEngine', 'llmEngine', 'autoRules', 'dismissedDomains', 'uiLang'];
+  const updated = Object.keys(changes).filter(k => syncKeys.includes(k));
+  if (updated.length > 0 && syncCheckbox.checked) {
+    // autoRules 単独変更なら loadAutoRules だけで十分
+    if (updated.length === 1 && updated[0] === 'autoRules') {
+      loadAutoRules();
+    } else {
+      reapplyAllSettings();
+    }
+  }
+});
+
 // ── 設定のバックアップ（エクスポート / インポート） ────────────────────────
 // issue #206: デバッグ等で設定が消える事故への備え。chrome.storage.local の
 // 該当キーだけを JSON に書き出す。APIキーは opt-in（既定 OFF）。

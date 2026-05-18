@@ -167,6 +167,87 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 chrome.runtime.onInstalled.addListener(() => { initSettingsMirror(); });
 chrome.runtime.onStartup?.addListener(() => { initSettingsMirror(); });
 
+// ─── 端末間同期（issue #205） ─────────────────────────────────────────
+// chrome.storage.local を source of truth として維持し、syncEnabled が true のときだけ
+// chrome.storage.sync にミラーする。API キーは漏洩リスクのため対象外（含めるなら別途 opt-in）。
+const SYNC_KEYS = Object.freeze([
+  'targetLang', 'translateEngine', 'llmEngine',
+  'autoRules', 'dismissedDomains', 'uiLang'
+]);
+
+// chrome.storage.sync が利用可能か（Safari / 一部環境で undefined になる）
+const HAS_STORAGE_SYNC = !!(chrome.storage && chrome.storage.sync);
+
+// 同値判定 — JSON 文字列で比較してミラー無限ループを防ぐ
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+// syncEnabled の現在値を取得（lastError 無視で false にフォールバック）
+function isSyncEnabled() {
+  return new Promise(resolve => {
+    chrome.storage.local.get('syncEnabled', (data) => {
+      resolve(!!data?.syncEnabled);
+    });
+  });
+}
+
+// local の SYNC_KEYS 変更を sync にミラー
+chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName !== 'local') return;
+  if (!HAS_STORAGE_SYNC) return;
+  if (!(await isSyncEnabled())) return;
+  const entries = {};
+  for (const key of SYNC_KEYS) {
+    if (changes[key]) {
+      const newValue = changes[key].newValue;
+      // newValue が undefined（削除）の場合は sync 側も削除
+      if (newValue === undefined) {
+        chrome.storage.sync.remove(key, () => void chrome.runtime.lastError);
+      } else {
+        entries[key] = newValue;
+      }
+    }
+  }
+  if (Object.keys(entries).length === 0) return;
+  chrome.storage.sync.set(entries, () => {
+    const err = chrome.runtime.lastError;
+    if (err) {
+      // QUOTA_BYTES_PER_ITEM / QUOTA_BYTES などはユーザーに通知できるよう local に記録
+      console.warn('[DVT] sync mirror failed:', err.message);
+      chrome.storage.local.set({ syncError: err.message, syncErrorAt: Date.now() });
+    } else {
+      chrome.storage.local.set({ syncError: null, syncLastAt: Date.now() });
+    }
+  });
+});
+
+// sync の変更を local に取り込む（他端末からの更新を反映）
+chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName !== 'sync') return;
+  if (!(await isSyncEnabled())) return;
+  // local の現在値と比較し、変わっていれば書き換える（無限ループ防止）
+  const keys = Object.keys(changes).filter(k => SYNC_KEYS.includes(k));
+  if (keys.length === 0) return;
+  chrome.storage.local.get(keys, (current) => {
+    const toSet = {};
+    for (const k of keys) {
+      const newValue = changes[k].newValue;
+      if (newValue === undefined) continue; // 削除イベントは無視（明示同期時のみ削除）
+      if (!deepEqual(current[k], newValue)) {
+        toSet[k] = newValue;
+      }
+    }
+    if (Object.keys(toSet).length > 0) {
+      chrome.storage.local.set(toSet, () => {
+        chrome.storage.local.set({ syncLastAt: Date.now() });
+      });
+    }
+  });
+});
+
 // ─── コンテキストメニュー登録 ─────────────────────────────────────────
 if (HAS_CONTEXT_MENUS) {
   chrome.runtime.onInstalled.addListener(() => {
@@ -314,7 +395,62 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
+  // 端末間同期の初期化（issue #205）: 初回 ON 時に sync と local の合流を行う。
+  // クラウド優先（他端末で既に設定済みの内容を尊重）。クラウドに無いキーはローカルから書き込む。
+  if (msg.action === 'syncInitialize') {
+    if (!HAS_STORAGE_SYNC) {
+      sendResponse({ ok: false, error: 'storage_sync_unavailable' });
+      return true;
+    }
+    initialMergeSync()
+      .then(result => sendResponse({ ok: true, ...result }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
 });
+
+// 初回同期の合流処理 — sync に既存値があればローカルを上書き、無ければローカルから push。
+// 結果として両端末で同じ最新セットになる（last-write-wins ではなく初回はクラウド優先）。
+async function initialMergeSync() {
+  const [localData, syncData] = await Promise.all([
+    new Promise(resolve => chrome.storage.local.get(SYNC_KEYS, resolve)),
+    new Promise((resolve, reject) => chrome.storage.sync.get(SYNC_KEYS, (data) => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message)); else resolve(data);
+    }))
+  ]);
+  const toLocal = {};
+  const toSync = {};
+  let fromCloud = 0;
+  let toCloud = 0;
+  for (const key of SYNC_KEYS) {
+    if (syncData[key] !== undefined) {
+      // クラウドに既存 → ローカルへ反映（値が異なる場合のみ）
+      if (!deepEqual(localData[key], syncData[key])) {
+        toLocal[key] = syncData[key];
+        fromCloud++;
+      }
+    } else if (localData[key] !== undefined) {
+      // クラウドに無い → ローカルから push
+      toSync[key] = localData[key];
+      toCloud++;
+    }
+  }
+  if (Object.keys(toLocal).length > 0) {
+    await new Promise(resolve => chrome.storage.local.set(toLocal, resolve));
+  }
+  if (Object.keys(toSync).length > 0) {
+    await new Promise((resolve, reject) => chrome.storage.sync.set(toSync, () => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message)); else resolve();
+    }));
+  }
+  await new Promise(resolve => chrome.storage.local.set({
+    syncLastAt: Date.now(),
+    syncError: null
+  }, resolve));
+  return { fromCloud, toCloud };
+}
 
 // ─── エンジン設定をstorageから取得（Promise キャッシュ + onChanged 連動） ──
 // ページ全体翻訳・MutationObserver 連動翻訳では数十〜数百要素を並行翻訳するため、

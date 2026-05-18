@@ -316,6 +316,54 @@
       font-size: 11.5px;
     }
 
+    /* ── Sync ── */
+    .sync-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .sync-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .sync-hint {
+      font-size: 10.5px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    .sync-status {
+      font-size: 11px;
+      line-height: 1.4;
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin-top: 6px;
+    }
+    .sync-status[data-status="none"] { display: none; }
+    .sync-status[data-status="ok"] {
+      color: #b9f5b9;
+      background: rgba(80, 200, 80, 0.12);
+      border: 1px solid rgba(80, 200, 80, 0.35);
+    }
+    .sync-status[data-status="error"] {
+      color: #ffb4b4;
+      background: rgba(255, 80, 80, 0.12);
+      border: 1px solid rgba(255, 80, 80, 0.35);
+    }
+    :root.dvt-light .sync-status[data-status="ok"] {
+      color: #115a11;
+      background: rgba(80, 200, 80, 0.18);
+    }
+    :root.dvt-light .sync-status[data-status="error"] {
+      color: #a30000;
+      background: rgba(255, 80, 80, 0.15);
+    }
+
     /* ── Backup ── */
     .backup-row {
       display: flex;
@@ -842,6 +890,18 @@
           <span class="cache-hit-rate-bar" aria-hidden="true"><span class="cache-hit-rate-fill" id="scHitRateFill" style="width:0%"></span></span>
         </div>
       </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label" data-i18n="syncSectionLabel">端末間で同期</div>
+      <div class="sync-row">
+        <label class="sync-checkbox-label">
+          <input type="checkbox" id="syncEnabledCheckbox">
+          <span data-i18n="syncEnabledLabel">端末間で同期する</span>
+        </label>
+      </div>
+      <div class="sync-hint" data-i18n="syncHint">翻訳先言語・エンジン・自動翻訳ルール等が同期されます。APIキーは漏洩対策のため同期されません。Google / Firefox アカウントへのログインが必要です。</div>
+      <div id="syncStatus" class="sync-status" data-status="none"></div>
     </div>
 
     <div class="section">

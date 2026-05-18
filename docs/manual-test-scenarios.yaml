@@ -2053,3 +2053,99 @@ suites:
           - 各言語で「設定のバックアップ」「エクスポート」「インポート」「APIキーを含める」「ヒント文」が表示される
           - "未置換の `{` トークンや英語フォールバックが現れない"
 
+
+  # ━━━━━ 端末間で設定を同期（issue #205） ━━━━━
+  - id: settings-sync
+    title: 端末間で設定を同期
+    description: "issue #205 — chrome.storage.sync 経由でブラウザアカウントを使った端末間同期"
+    related_prs: []
+    scenarios:
+
+      - id: SY-001
+        title: 同期トグル ON で初回 push が動作
+        priority: p0
+        environment: chrome
+        preconditions:
+          - 翻訳先言語などを設定済み
+          - クラウド側 (sync) には何も入っていない（Google アカウント新規 or 別端末で未使用）
+        steps:
+          - "設定タブ → 「端末間で同期」セクションの「端末間で同期する」を ON"
+          - 同期ステータスを確認
+        expected:
+          - "緑のステータスで「YYYY/MM/DD HH:MM:SS に同期しました」が表示される"
+          - "DevTools で chrome.storage.sync.get(null) を見るとローカルの targetLang / autoRules 等が入っている"
+          - "API キー (deeplApiKey 等) は sync 側に書かれていない"
+
+      - id: SY-002
+        title: クラウドに既存値があれば初回 ON でクラウド優先で合流
+        priority: p0
+        environment: chrome
+        description: "別端末で先に同期 ON した後、別マシン or 別プロファイルで再 ON するシナリオ"
+        preconditions:
+          - "端末 A で同期 ON、autoRules: [rule-X] / targetLang: 'fr' を設定"
+          - "端末 B で同期 OFF、autoRules: [rule-Y] / targetLang: 'ja' を保持"
+        steps:
+          - "端末 B で同期トグル ON"
+        expected:
+          - 端末 B のローカル設定がクラウド側 (rule-X / fr) で上書きされ、UI（ルール一覧・翻訳先セレクタ）が再描画される
+          - 端末 B 独自の API キーや dvtTheme は変化しない
+
+      - id: SY-003
+        title: 他端末からのリアルタイム同期で UI が即時更新
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 端末 A / B 両方で同期 ON
+        steps:
+          - 端末 A で翻訳先言語を ja → en に変更
+          - 端末 B の popup を開く
+        expected:
+          - 端末 B でも翻訳先セレクタが en になっている（onChanged 経由）
+          - autoRules を端末 A で追加すると端末 B のルール一覧にも即時反映
+
+      - id: SY-004
+        title: 同期トグル OFF でミラー停止
+        priority: p1
+        steps:
+          - 同期 ON で sync 側に値が入っている状態
+          - トグルを OFF
+          - ローカルで autoRules を変更
+        expected:
+          - sync 側のデータは残置（chrome.storage.sync.get で残っている）
+          - OFF 後のローカル変更は sync 側に反映されない（オフライン編集相当）
+          - "ステータス表示が消える"
+
+      - id: SY-005
+        title: API キーは同期されない（漏洩防止）
+        priority: p0
+        description: "クラウド経由の API キー漏洩を防ぐ仕様"
+        preconditions:
+          - 端末 A / B 両方で同期 ON
+        steps:
+          - 端末 A で deeplApiKey に値を設定
+          - 端末 B の popup を開く
+        expected:
+          - 端末 B の deeplApiKey は空のまま（同期されない）
+          - chrome.storage.sync.get('deeplApiKey') で undefined
+
+      - id: SY-006
+        title: 容量制限超過時のエラー表示
+        priority: p2
+        description: "chrome.storage.sync の 8KB/item 制限を超えた autoRules でのエラーハンドリング"
+        steps:
+          - 同期 ON で autoRules に大量のルールを追加（8KB 超まで）
+        expected:
+          - 赤のステータスで「同期エラー: QUOTA_BYTES_PER_ITEM」が表示される
+          - ローカル設定は保持される（autoRules はそのまま使える）
+
+      - id: SY-007
+        title: sync 非対応 / 未ログイン環境のフォールバック
+        priority: p1
+        environment: safari-mac
+        description: "Safari など chrome.storage.sync が動作しない / アカウント未ログインのケース"
+        steps:
+          - 同期トグルを ON
+        expected:
+          - "エラーステータス「このブラウザは sync ストレージに対応していません」または同期エラー"
+          - トグルが自動で OFF に戻る
+          - ローカル設定は変化しない

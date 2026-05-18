@@ -221,6 +221,16 @@ The Safari Web Extension Xcode project lives under `safari/` if you want to buil
 
 In the popup's "Settings" tab, find "Display language" — switch the extension UI language anytime.
 
+### Syncing settings across devices
+
+Tick the checkbox in the "Sync between devices" section of the Settings tab, and your settings will sync automatically across all your devices.
+
+- Synced: target language, translation engine, summary engine, auto-translate rules, dismissed domains, UI language
+- **API keys**: not synced — they stay on each device to avoid leaking through your cloud account. Set them per device
+- Engines: Google account on Chrome / Edge, Firefox account on Firefox, iCloud Keychain on Safari (beta)
+- First-time enable: cloud values win (so anything already synced from another device stays), and local-only keys get pushed up
+- If you hit chrome.storage.sync's 8KB-per-item limit (can happen with lots of auto-translate rules), you'll see an inline error.
+
 ### Backing up your settings (export / import)
 
 The Settings tab has a "Settings backup" section. Export your current settings to a JSON file, then import that file on another device or after a clean reinstall.
