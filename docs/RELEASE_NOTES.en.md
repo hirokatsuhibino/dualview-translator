@@ -12,6 +12,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ### New features
 
+- **Sync settings across devices** (#205)
+  - The Settings tab now has a "Sync between devices" section. Tick the checkbox to enable `chrome.storage.sync`-backed syncing.
+  - Synced: target language, translation engine, summary engine, auto-translate rules, dismissed domains, UI language.
+  - **API keys are NOT synced** — they stay local to each device to avoid leaking them through the cloud account. Set them per device.
+  - Engines: Google account on Chrome / Edge, Firefox account on Firefox, iCloud Keychain on Safari (beta).
+  - First-time enable: cloud values win (so settings already synced from another device are kept), and any local-only keys get pushed up.
+  - Hits chrome.storage.sync limits (8KB per item / 100KB total) → shows an inline error.
 - **Settings export / import** (#206)
   - The Settings tab now has a "Settings backup" section.
   - You can back up and restore target language, engine choices, auto-translate rules, dismissed domains, and UI language as a JSON file.
