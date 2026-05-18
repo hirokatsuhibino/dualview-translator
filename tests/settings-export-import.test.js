@@ -18,8 +18,10 @@ const SETTINGS_VALIDATORS = {
   translateEngine: (v) => ['google', 'deepl', 'apple'].includes(v),
   llmEngine: (v) => ['claude', 'gemini'].includes(v),
   uiLang: (v) => ['ja', 'en', 'zh-CN', 'zh-TW', 'ko', 'fr', 'de', 'es', 'pt', 'ru', 'ar'].includes(v),
-  autoRules: (v) => Array.isArray(v),
-  dismissedDomains: (v) => Array.isArray(v),
+  autoRules: (v) => Array.isArray(v) && v.every(r =>
+    r && typeof r === 'object' && !Array.isArray(r) && typeof r.urlPattern === 'string'
+  ),
+  dismissedDomains: (v) => Array.isArray(v) && v.every(s => typeof s === 'string'),
   deeplApiKey: (v) => typeof v === 'string',
   claudeApiKey: (v) => typeof v === 'string',
   geminiApiKey: (v) => typeof v === 'string',
@@ -201,7 +203,7 @@ describe('エクスポート→インポートの往復', () => {
       translateEngine: 'google',
       llmEngine: 'gemini',
       deeplApiKey: 'should-not-leak',
-      autoRules: [{ id: 'r1' }],
+      autoRules: [{ id: 'r1', urlPattern: '*://example.com/*' }],
       dismissedDomains: ['a.com'],
       uiLang: 'ja',
       dvtTheme: 'light'
@@ -210,7 +212,7 @@ describe('エクスポート→インポートの往復', () => {
     const imported = filterImportData(payload);
     expect(imported.targetLang).toBe('ja');
     expect(imported.translateEngine).toBe('google');
-    expect(imported.autoRules).toEqual([{ id: 'r1' }]);
+    expect(imported.autoRules).toEqual([{ id: 'r1', urlPattern: '*://example.com/*' }]);
     expect(imported.deeplApiKey).toBeUndefined();
   });
 

@@ -818,6 +818,9 @@ if (__isFirefox) {
   // ボタンを非表示にし、ハンドラ自体も登録しない（誤発火で popup が閉じるのを防ぐ）
   const fileBtn = document.getElementById('btnLoadFromFile');
   if (fileBtn) fileBtn.style.display = 'none';
+  // ファイル選択ができない旨をプレースホルダーに反映（UX 誤認防止）
+  const ta = document.getElementById('importJsonText');
+  if (ta) ta.placeholder = t('backupImportPlaceholderPasteOnly');
 } else {
   document.getElementById('btnLoadFromFile').addEventListener('click', () => {
     document.getElementById('importFileInput').click();
@@ -892,12 +895,13 @@ document.getElementById('btnApplyImport').addEventListener('click', async () => 
   }
   try {
     await storageSetAll(toSet);
+    // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
+    // reapplyAllSettings 内の storage 書き込み（apple フォールバック）もここで try/catch
+    await reapplyAllSettings();
   } catch (e) {
     setImportStatus('backupImportInvalid', 'error');
     return;
   }
-  // popup を reload するとブラウザによっては閉じてしまうため in-place で UI を再描画する
-  await reapplyAllSettings();
   textarea.value = '';
   setImportStatus('backupImportDone', 'ok');
 });
