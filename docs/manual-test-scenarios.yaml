@@ -2149,3 +2149,44 @@ suites:
           - "エラーステータス「このブラウザは sync ストレージに対応していません」または同期エラー"
           - トグルが自動で OFF に戻る
           - ローカル設定は変化しない
+
+  # ━━━━━ 領域選択翻訳の Esc キャンセル（#211 回帰防止） ━━━━━
+  - id: region-mode-escape
+    title: 領域選択翻訳・要素ピッカーの Esc キャンセル
+    description: "Firefox でポップアップから領域選択モードに入った直後の Esc が効かなかった問題（#211）の回帰防止"
+    related_prs: [211]
+    scenarios:
+      - id: REG-001
+        title: Firefox で「領域を選択して翻訳」を Esc でキャンセルできる
+        priority: p1
+        environment: firefox
+        preconditions:
+          - 任意のページを開く
+        steps:
+          - ツールバーから拡張ポップアップを開き「領域を選択して翻訳」をクリック
+          - ページ内をどこもクリックせずに Esc キーを押す
+        expected:
+          - 領域選択モードが解除される（ハイライト・ヒントバナーが消える）
+          - カーソルが crosshair から通常に戻る
+        description: "#211 で報告された Firefox 固有の Esc 無反応バグの回帰防止"
+
+      - id: REG-002
+        title: Chrome で「領域を選択して翻訳」を Esc でキャンセルできる
+        priority: p1
+        environment: chrome
+        steps:
+          - ポップアップから「領域を選択して翻訳」を開始
+          - ページ内をクリックせずに Esc
+        expected:
+          - 領域選択モードが解除される
+        description: "#211 の修正で Chrome に回帰が起きていないかの確認"
+
+      - id: REG-003
+        title: 要素ピッカー（ルールタブ「要素を選択」）も Esc でキャンセルできる
+        priority: p2
+        steps:
+          - ポップアップの「ルール」タブから「要素を選択」をクリック
+          - ページ内をクリックせずに Esc
+        expected:
+          - 要素ピッカーモードが解除される
+          - ハイライト・ヒントバナーが消える
