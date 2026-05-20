@@ -90,8 +90,8 @@ describe('DVT_PAGE (content-page)', () => {
       DVT.state.regionMode = false;
       DVT_PAGE.enterSelectorPickMode('*://example.com/*');
       expect(DVT.state.regionMode).toBe(true);
-      // クリーンアップ: Escapeイベントで終了させる
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      // クリーンアップ: window への Escape イベントで終了させる（Firefox 対策で capture phase）
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       expect(DVT.state.regionMode).toBe(false);
     });
 
@@ -100,6 +100,33 @@ describe('DVT_PAGE (content-page)', () => {
       // 既存のヒントがない状態でも例外が起きないことを確認
       expect(() => DVT_PAGE.enterSelectorPickMode('*://example.com/*')).not.toThrow();
       DVT.state.regionMode = false;
+    });
+  });
+
+  // Issue #211 回帰防止: Firefox で領域選択モードを Esc キャンセルできない問題
+  describe('enterRegionMode / enterSelectorPickMode — Esc キャンセル（Issue #211）', () => {
+    afterEach(() => {
+      DVT.state.regionMode = false;
+      document.body.style.cursor = '';
+      document.querySelectorAll('.dvt-region-hint').forEach(el => el.remove());
+    });
+
+    it('enterRegionMode: window への Escape keydown でモードが解除される', () => {
+      DVT.state.regionMode = false;
+      DVT_PAGE.enterRegionMode('translate');
+      expect(DVT.state.regionMode).toBe(true);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(DVT.state.regionMode).toBe(false);
+      expect(document.querySelectorAll('.dvt-region-hint').length).toBe(0);
+    });
+
+    it('enterSelectorPickMode: window への Escape keydown でモードが解除される', () => {
+      DVT.state.regionMode = false;
+      DVT_PAGE.enterSelectorPickMode('*://example.com/*');
+      expect(DVT.state.regionMode).toBe(true);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(DVT.state.regionMode).toBe(false);
+      expect(document.querySelectorAll('.dvt-region-hint').length).toBe(0);
     });
   });
 

@@ -280,6 +280,9 @@ var DVT_PAGE = (function () {
   function enterRegionMode(mode) {
     const summarize = (mode === 'summarize');
     DVT.state.regionMode = true;
+    // Firefox 対策: ポップアップ閉鎖直後はページ document に focus が戻らず
+    // document への keydown が発火しないため、明示的に window に focus を戻す
+    try { window.focus(); } catch (e) {}
     document.body.style.cursor = 'crosshair';
     let highlightedEl = null;
 
@@ -327,12 +330,14 @@ var DVT_PAGE = (function () {
       hint.remove();
       document.removeEventListener('mousemove', onMousemove);
       document.removeEventListener('click', onClick, true);
-      document.removeEventListener('keydown', onKeydown);
+      window.removeEventListener('keydown', onKeydown, true);
     }
 
     document.addEventListener('mousemove', onMousemove);
     document.addEventListener('click', onClick, true);
-    document.addEventListener('keydown', onKeydown);
+    // Firefox 対策: document への keydown はサイト側で stopPropagation される
+    // ことがあるため window の capture phase で受ける
+    window.addEventListener('keydown', onKeydown, true);
   }
 
   // ─── 領域内要素の抽出（共通処理） ────────────────────────────────────
@@ -568,6 +573,8 @@ var DVT_PAGE = (function () {
   function enterSelectorPickMode(urlPattern) {
     if (DVT.state.regionMode) return;
     DVT.state.regionMode = true;
+    // Firefox 対策: enterRegionMode と同じ理由でページに focus を戻す
+    try { window.focus(); } catch (e) {}
 
     // ヒントバナーを表示
     const hint = document.createElement('div');
@@ -594,7 +601,7 @@ var DVT_PAGE = (function () {
       if (lastHighlighted) lastHighlighted.classList.remove('dvt-region-highlight');
       document.removeEventListener('mouseover', onMouseOver);
       document.removeEventListener('click', onClick, true);
-      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, true);
     }
 
     // ─── CSSセレクタを自動生成 ─────────────────────────────────────
@@ -644,7 +651,8 @@ var DVT_PAGE = (function () {
 
     document.addEventListener('mouseover', onMouseOver);
     document.addEventListener('click', onClick, true);
-    document.addEventListener('keydown', onKeyDown);
+    // Firefox 対策: enterRegionMode と同じ理由で window の capture phase で受ける
+    window.addEventListener('keydown', onKeyDown, true);
   }
 
   return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode };

@@ -35,6 +35,9 @@ permalink: /RELEASE_NOTES.html
 - **Apple翻訳失敗時のエラー詳細を UI に表示するよう改善**（#202 / PR #203）
   - これまで失敗すると `[翻訳失敗]` だけが表示されていたが、ネイティブハンドラからのエラー文字列も付記されるようになり調査しやすくなった
   - iOS Safari 拡張では Apple Translation が未実装（Extension プロセスが UIWindowScene を持たないため）なのに `appleAvailable = true` になっていた問題を修正。`ping` レスポンスに `translateActionSupported` フラグを追加し、iOS では `false` を返すことで Apple Translation が選択肢に表示されなくなった
+- **Firefox で「領域を選択して翻訳」を Esc キーでキャンセルできない問題を修正**（#211）
+  - ポップアップを閉じた直後はページ document にキーボードフォーカスが戻らないため、`document` への `keydown` リスナーが発火していなかった
+  - モード開始時に `window.focus()` を呼びつつ、`keydown` リスナーを `window` の capture phase に変更して堅牢化。要素ピッカー（ルールタブの「要素を選択」）にも同等の修正を適用
 
 ---
 
