@@ -2153,8 +2153,8 @@ suites:
   # ━━━━━ 領域選択翻訳の Esc キャンセル（#211 回帰防止） ━━━━━
   - id: region-mode-escape
     title: 領域選択翻訳・要素ピッカーの Esc キャンセル
-    description: "Firefox でポップアップから領域選択モードに入った直後の Esc が効かなかった問題（#211）の回帰防止"
-    related_prs: [211]
+    description: "Firefox でポップアップから領域選択モードに入った直後の Esc が効かなかった問題（Issue #211）の回帰防止"
+    related_prs: [212]
     scenarios:
       - id: REG-001
         title: Firefox で「領域を選択して翻訳」を Esc でキャンセルできる
