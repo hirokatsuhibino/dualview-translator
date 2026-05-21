@@ -30,6 +30,10 @@ import AppKit
 struct DualViewRenderer: View {
     let pairs: [TranslationProviderGoogle.ParagraphPair]
 
+    /// 文ペア表示（原文1→訳1→原文2→訳2…）を有効にする訳文長の閾値。
+    /// Web 拡張側（content-page.js の PAIR_MIN_TRANS_LENGTH）と一致させている。
+    static let pairMinTransLength: Int = 80
+
     var body: some View {
         DualViewWebView(html: Self.makeHTML(pairs: pairs))
     }
@@ -37,12 +41,7 @@ struct DualViewRenderer: View {
     /// HTML を組み立てる。Swift コードからテスト可能にするため static にしている。
     static func makeHTML(pairs: [TranslationProviderGoogle.ParagraphPair]) -> String {
         let body = pairs.map { pair in
-            """
-            <div class="dvt-pair">
-              <div class="dvt-orig">\(escapeHTML(pair.original))</div>
-              <div class="dvt-trans">\(escapeHTML(pair.translated))</div>
-            </div>
-            """
+            renderPair(pair)
         }.joined(separator: "\n")
 
         // 共有テキストは任意の文字列が入りうるため、XSS 対策として
@@ -88,9 +87,35 @@ struct DualViewRenderer: View {
           white-space: pre-wrap;
           word-break: break-word;
         }
+        /* 文ペア表示（長文段落向け）。原文・訳文を文単位で交互に並べる */
+        .dvt-pair-paired {
+          padding: 0;
+        }
+        .dvt-sent {
+          margin-bottom: 8px;
+        }
+        .dvt-sent:last-child {
+          margin-bottom: 0;
+        }
+        .dvt-sent-orig {
+          display: block;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        .dvt-sent-trans {
+          display: block;
+          margin-top: 3px;
+          padding-left: 8px;
+          border-left: 2px solid rgba(245, 166, 35, 0.6);
+          font-size: 0.95em;
+          opacity: 0.9;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
         @media (prefers-color-scheme: dark) {
           body { color: #f2f2f7; }
           .dvt-trans { border-left-color: #f5a623; }
+          .dvt-sent-trans { border-left-color: rgba(245, 166, 35, 0.6); }
         }
         </style>
         </head>
@@ -98,6 +123,40 @@ struct DualViewRenderer: View {
         \(body)
         </body>
         </html>
+        """
+    }
+
+    /// 段落 1 件分のペア HTML を生成する。
+    /// 訳文長が閾値以上で、原文・訳文を文分割した結果が両側 2 文以上かつ同数なら
+    /// 文単位のサブペアを内側に並べる。それ以外は従来通りの単一ペア表示。
+    private static func renderPair(_ pair: TranslationProviderGoogle.ParagraphPair) -> String {
+        let translatedTrimmed = pair.translated.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if translatedTrimmed.count >= pairMinTransLength {
+            let origSents = SentenceSplitter.split(pair.original)
+            let transSents = SentenceSplitter.split(pair.translated)
+            if origSents.count >= 2 && origSents.count == transSents.count {
+                let inner = zip(origSents, transSents).map { o, t in
+                    """
+                      <div class="dvt-sent">
+                        <div class="dvt-sent-orig">\(escapeHTML(o))</div>
+                        <div class="dvt-sent-trans">\(escapeHTML(t))</div>
+                      </div>
+                    """
+                }.joined(separator: "\n")
+                return """
+                <div class="dvt-pair dvt-pair-paired">
+                \(inner)
+                </div>
+                """
+            }
+        }
+
+        return """
+        <div class="dvt-pair">
+          <div class="dvt-orig">\(escapeHTML(pair.original))</div>
+          <div class="dvt-trans">\(escapeHTML(pair.translated))</div>
+        </div>
         """
     }
 

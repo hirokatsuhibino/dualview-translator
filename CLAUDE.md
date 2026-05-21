@@ -131,6 +131,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - 両側の文数が一致し、原文がインライン要素を含まない純テキストの場合のみ「原文1→訳1→原文2→訳2…」と交互配置（`.dvt-pair` / `.dvt-pair-orig` / `.dvt-pair-trans`）
 - 元の `.dvt-orig` は `.dvt-orig-paired` クラスで CSS 非表示。undo 時の `restoreOriginalContent()` が `.dvt-orig` の子ノードを使うため、復元ロジックは変更不要
 - 文数不一致・インライン要素を含む・短い段落は従来の単一ペア表示にフォールバック
+- iOS / macOS の Share Extension（`safari/.../DualViewRenderer.swift`）にも同じロジックを移植済み。`SentenceSplitter.swift`（`DVT.splitSentences` の Swift ポート）で文分割し、訳文 80 字以上かつ両側文数一致のときに `.dvt-pair-paired` で交互表示する
 
 ### 動的コンテンツ監視
 
