@@ -15,7 +15,7 @@
 //   - 文末の句点も保持する
 //   - 前後空白を trim、空要素を除外
 //
-//  Web Ext / macOS Share Ext と同一実装（folder reference 制約でファイル重複あり）。
+//  iOS / macOS Share Ext で共有される同一実装（folder reference 制約でファイル重複あり）。
 //
 
 import Foundation
@@ -82,12 +82,14 @@ enum SentenceSplitter {
         return c == "。" || c == "．" || c == "！" || c == "？"
     }
 
+    /// 一般的な閉じ括弧・引用符（CJK / Latin）。
+    /// `isClosingBracket` 呼び出しごとに再生成しないよう静的に保持する。
+    private static let closingBrackets: Set<Character> = [
+        "）", "｝", "］", "」", "』", ")", "]", "}", "\"", "'", "”", "’",
+    ]
+
     private static func isClosingBracket(_ c: Character) -> Bool {
-        // 一般的な閉じ括弧・引用符（CJK / Latin）
-        let s: Set<Character> = [
-            "）", "｝", "］", "」", "』", ")", "]", "}", "\"", "'", "”", "’",
-        ]
-        return s.contains(c)
+        return closingBrackets.contains(c)
     }
 
     private static func isWhitespace(_ c: Character) -> Bool {
