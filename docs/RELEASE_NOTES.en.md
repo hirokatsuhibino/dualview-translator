@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **Sentence-level pairing for long paragraphs** (#214)
+  - Fixes the visual gap between the end of the source block and the start of the translation block in long paragraphs.
+  - Translation still happens at the paragraph level so accuracy isn't compromised. When sentence counts match on both sides, we interleave them: "source 1 → translation 1 → source 2 → translation 2..."
+  - Falls back to the original single-pair layout when sentence counts don't match, when the paragraph contains inline elements (e.g. `<a>`), or when the paragraph is short.
+
 ---
 
 ## v1.7.1 (2026-05-20)

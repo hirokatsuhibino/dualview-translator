@@ -35,6 +35,68 @@ describe('DVT (content-core)', () => {
     });
   });
 
+  describe('splitSentences()', () => {
+    it('空文字・非文字列は空配列を返す', () => {
+      expect(DVT.splitSentences('')).toEqual([]);
+      expect(DVT.splitSentences(null)).toEqual([]);
+      expect(DVT.splitSentences(undefined)).toEqual([]);
+      expect(DVT.splitSentences(123)).toEqual([]);
+    });
+
+    it('CJK 句点（。）で文を分割', () => {
+      const result = DVT.splitSentences('これは最初の文です。これは次の文です。最後の文。');
+      expect(result).toEqual([
+        'これは最初の文です。',
+        'これは次の文です。',
+        '最後の文。',
+      ]);
+    });
+
+    it('CJK の ！？ も区切る', () => {
+      expect(DVT.splitSentences('本当ですか？はい！'))
+        .toEqual(['本当ですか？', 'はい！']);
+    });
+
+    it('閉じ括弧は直前の句点とまとめる（引用句末で区切る）', () => {
+      // 文末の "。" + "」" は単純に閉じ括弧を吸収して区切る方針。
+      // 文中の引用句（例: ...「○○。」と言った。）は完全には扱わないが、
+      // ペア表示候補は原文・訳文の文数一致を見るため、誤分割は安全側にフォールバックする。
+      expect(DVT.splitSentences('彼は言った。「行く。」'))
+        .toEqual(['彼は言った。', '「行く。」']);
+    });
+
+    it('英語の . は空白＋大文字が続くときのみ区切る', () => {
+      expect(DVT.splitSentences('This is one. This is two. And three.'))
+        .toEqual(['This is one.', 'This is two.', 'And three.']);
+    });
+
+    it('小数 (3.14) では区切らない', () => {
+      // "Pi is 3.14." の後ろに続く文がないため1文として扱われる
+      expect(DVT.splitSentences('Pi is 3.14.')).toEqual(['Pi is 3.14.']);
+    });
+
+    it('小文字で始まる略語直後は区切らない（誤分割抑制）', () => {
+      // "e.g. some example" の "e.g." 直後は小文字 some なので区切らない
+      expect(DVT.splitSentences('Use e.g. some example.'))
+        .toEqual(['Use e.g. some example.']);
+    });
+
+    it('文末で区切る（末尾の句点）', () => {
+      expect(DVT.splitSentences('Hello.')).toEqual(['Hello.']);
+    });
+
+    it('単一文はそのまま返す', () => {
+      expect(DVT.splitSentences('これは1文だけです。')).toEqual(['これは1文だけです。']);
+      expect(DVT.splitSentences('No period here')).toEqual(['No period here']);
+    });
+
+    it('空白だけの段は除外される', () => {
+      // 連続句点があっても結果は trim される
+      const out = DVT.splitSentences('A。  B。');
+      expect(out).toEqual(['A。', 'B。']);
+    });
+  });
+
   describe('langMatches()', () => {
     it('同一言語コードはマッチ', () => {
       expect(DVT.langMatches('ja', 'ja')).toBe(true);

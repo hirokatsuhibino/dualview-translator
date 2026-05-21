@@ -78,6 +78,51 @@ var DVT = (function () {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // テキストを文単位に分割する。
+  // - CJK の句点（。．！？、全角ピリオド）の直後で常に分割
+  // - Latin の `.!?` は、直後が空白＋大文字相当（A-Z / ひらがな / カタカナ / 漢字 / Latin 大文字）の場合のみ分割
+  //   ※ 略語（Mr. e.g.）や小数（3.14）での誤分割を抑制
+  // - 文末の句点も保持する
+  // - 結果は前後空白を trim、空要素を除外
+  function splitSentences(text) {
+    if (!text || typeof text !== 'string') return [];
+    const parts = [];
+    let buf = '';
+    const len = text.length;
+    for (let i = 0; i < len; i++) {
+      const c = text[i];
+      buf += c;
+      if (c === '。' || c === '．' || c === '！' || c === '？') {
+        // CJK 句点: 連続する句点・閉じ括弧などはまとめてから区切る
+        while (i + 1 < len && /[）｝］」』）)\]}"'’”]/.test(text[i + 1])) {
+          i++;
+          buf += text[i];
+        }
+        parts.push(buf.trim());
+        buf = '';
+      } else if (c === '.' || c === '!' || c === '?') {
+        // Latin: 直後の状況で判定
+        const next = text[i + 1];
+        if (!next) {
+          // 文末: 区切る
+          parts.push(buf.trim());
+          buf = '';
+        } else if (/\s/.test(next)) {
+          // 後続文の開始文字を確認（空白を読み飛ばす）
+          let j = i + 1;
+          while (j < len && /\s/.test(text[j])) j++;
+          const nextNonSpace = text[j];
+          if (nextNonSpace && /[A-Z぀-ゟ゠-ヿ一-鿿]/.test(nextNonSpace)) {
+            parts.push(buf.trim());
+            buf = '';
+          }
+        }
+      }
+    }
+    if (buf.trim()) parts.push(buf.trim());
+    return parts.filter(s => s.length > 0);
+  }
+
   function showToast(message, persistent = false, duration = 0) {
     const el = document.createElement('div');
     el.className = 'dvt-toast';
@@ -388,6 +433,7 @@ var DVT = (function () {
     translate,
     langMatches,
     escapeHtml,
+    splitSentences,
     showToast,
     updateToast,
     getLangDisplayName,
