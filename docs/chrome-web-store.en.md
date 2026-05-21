@@ -99,6 +99,10 @@ Foreign-language page? A bar pops up automatically. One click to go.
 ### Screenshot 6: Auto-translation rules
 Set up your regular sites once, and they get auto-translated. Element picker generates selectors for you.
 
+## Notes for reviewers
+
+The red `dev` badge next to the version number in the popup only shows up for **unpacked developer-mode loads**. Extensions installed from the Chrome Web Store get `installType: 'normal'` from `chrome.management.getSelf()`, so the badge stays hidden (CSS `display: none`).
+
 ---
 
 Copyright (c) Orangesoft Inc.
