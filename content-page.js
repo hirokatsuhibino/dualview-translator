@@ -127,11 +127,16 @@ var DVT_PAGE = (function () {
     const orig = document.createElement('span');
     orig.className = 'dvt-orig';
     orig.setAttribute('data-dvt', 'true');
+    // インラインスタイルで display:block を強制。
+    // Reddit など `* { display: inline !important }` 相当の高 specificity ルールを当てる
+    // ホストでは外部 CSS の class 指定では勝てないため、要素自身の inline style に !important で書く。
+    orig.style.setProperty('display', 'block', 'important');
     // 元のDOM構造を保持するため子ノードを直接移動
     while (el.firstChild) orig.appendChild(el.firstChild);
     const trans = document.createElement('span');
     trans.className = 'dvt-trans';
     trans.setAttribute('data-dvt', 'true');
+    trans.style.setProperty('display', 'block', 'important');
     const spinner = document.createElement('span');
     spinner.className = 'dvt-spinner';
     trans.appendChild(spinner);
@@ -165,19 +170,25 @@ var DVT_PAGE = (function () {
   // 各ペア内に原文文を再掲する。undo 時の復元は元の .dvt-orig が保持しているので問題ない。
   function renderPairedTranslation(transEl, origEl, origSents, transSents) {
     origEl.classList.add('dvt-orig-paired');
+    // dvt-orig-paired 側は display:none を inline style で当てて確実に隠す
+    // （ホスト CSS で display:inline !important が当たると、CSS の display:none が負ける）
+    origEl.style.setProperty('display', 'none', 'important');
     transEl.classList.add('dvt-trans-paired');
     transEl.textContent = '';
     for (let i = 0; i < origSents.length; i++) {
       const pair = document.createElement('span');
       pair.className = 'dvt-pair';
       pair.setAttribute('data-dvt', 'true');
+      pair.style.setProperty('display', 'block', 'important');
       const oSent = document.createElement('span');
       oSent.className = 'dvt-pair-orig';
       oSent.setAttribute('data-dvt', 'true');
+      oSent.style.setProperty('display', 'block', 'important');
       oSent.textContent = origSents[i];
       const tSent = document.createElement('span');
       tSent.className = 'dvt-pair-trans';
       tSent.setAttribute('data-dvt', 'true');
+      tSent.style.setProperty('display', 'block', 'important');
       tSent.textContent = transSents[i];
       pair.appendChild(oSent);
       pair.appendChild(tSent);
