@@ -745,11 +745,9 @@ describe('DVT_PAGE (content-page)', () => {
       // 同一祖先を共有する 2 つ目の翻訳の undo で refcount が即 0 になり誤って復元されてしまう。
       document.body.innerHTML = `
         <div id="ancestor">
-          <p id="a">段落A</p>
           <p id="b">段落B</p>
         </div>
       `;
-      const a = document.getElementById('a');
       const b = document.getElementById('b');
       const ancestor = document.getElementById('ancestor');
 
@@ -764,6 +762,7 @@ describe('DVT_PAGE (content-page)', () => {
       expect(DVT_PAGE._isClampedElement(ancestor)).toBe(false);
 
       // この前提でも、CLAMP_OVERRIDE_ATTR を見て refcount を上げる実装なら 2 回目で refcount=2 になる
+      // （1 回目の override は attribute レベルで再現済みなので、ここでは b のみ override すれば足りる）
       DVT_PAGE._overrideAncestorClamp(b);
       expect(ancestor.getAttribute('data-dvt-clamp-refcount')).toBe('2');
     });
