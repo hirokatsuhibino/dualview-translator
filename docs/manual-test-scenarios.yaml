@@ -2253,6 +2253,33 @@ suites:
           - 段落全体が元の DOM 構造に戻る（原文のみ表示）
           - `.dvt-pair` / `.dvt-orig` / `.dvt-trans` がいずれも残らない
 
+      - id: PAIR-006
+        title: iOS Share Extension で長文段落が文ペア表示になる
+        priority: p1
+        environment: safari-ios-sim
+        related_prs: [220]
+        preconditions:
+          - DualView Translator の iOS Share Extension が有効化済み
+        steps:
+          - メモ.app などで 3 文以上を含む長文段落（合計 200 字程度の英語など）を選択
+          - 共有シートから "DualView Translator" を選ぶ
+        expected:
+          - 翻訳結果が「原文文1→訳文1→原文文2→訳文2…」と文単位で交互表示される
+          - 各文ペア間に薄いオレンジの左縦線が表示される
+          - 短い段落や 1 文のみの段落は従来通り段落単位の単一ペアで表示される
+
+      - id: PAIR-007
+        title: macOS Share Extension でも文ペア表示が機能する
+        priority: p1
+        environment: safari-mac
+        related_prs: [220]
+        steps:
+          - 任意のアプリ（Safari / メモ / メール等）で長文段落（3 文以上）を選択
+          - 共有シートから "DualView Translator" を選ぶ
+        expected:
+          - WKWebView 内に文単位のペア表示が描画される
+          - ダークモード / ライトモード切替で文ペアの縦線色が破綻しない
+
   # ━━━━━ 開発版識別バッジ（#216） ━━━━━
   - id: dev-version-badge
     title: 開発者モードロード時の dev バッジ表示
