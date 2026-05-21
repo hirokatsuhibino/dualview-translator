@@ -137,6 +137,10 @@ var DVT_PAGE = (function () {
     trans.className = 'dvt-trans';
     trans.setAttribute('data-dvt', 'true');
     trans.style.setProperty('display', 'block', 'important');
+    // Reddit の \`* { border: 0 !important }\` 相当の reset で外部 CSS の border-left が消える対策。
+    // 同様に padding / background も外部 CSS で当てているがホストでリセットされやすいので inline で当てる。
+    trans.style.setProperty('border-left', '3px solid #f5a623', 'important');
+    trans.style.setProperty('padding-left', '14px', 'important');
     const spinner = document.createElement('span');
     spinner.className = 'dvt-spinner';
     trans.appendChild(spinner);
@@ -189,6 +193,8 @@ var DVT_PAGE = (function () {
       tSent.className = 'dvt-pair-trans';
       tSent.setAttribute('data-dvt', 'true');
       tSent.style.setProperty('display', 'block', 'important');
+      tSent.style.setProperty('border-left', '2px solid rgba(245, 166, 35, 0.4)', 'important');
+      tSent.style.setProperty('padding-left', '8px', 'important');
       tSent.textContent = transSents[i];
       pair.appendChild(oSent);
       pair.appendChild(tSent);
