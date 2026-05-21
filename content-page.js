@@ -8,6 +8,10 @@ var DVT_PAGE = (function () {
   // ─── 定数 ─────────────────────────────────────────────────────────────────
   const MIN_TEXT_LENGTH = 4;                // 翻訳対象とする最小テキスト長
   const CONCURRENCY = 6;                    // 並列翻訳ワーカー数
+  // 文ペア表示（原文1→訳1→原文2→訳2…）を有効にする訳文長の閾値。
+  // 短い段落で適用するとレイアウトが過剰になるため、視覚的な分離が問題になる長文のみに限定する。
+  // 日本語は1文あたり30字前後のため、3文程度の段落（≒90字）を境界として 80 字を採用。
+  const PAIR_MIN_TRANS_LENGTH = 80;
   const OBSERVER_DEBOUNCE_MS = 500;         // MutationObserver デバウンス間隔(ms)
   const TOAST_DONE_DURATION_MS = 2500;      // 翻訳完了トースト表示時間(ms)
   const TOAST_SHORT_DURATION_MS = 2000;     // リセット完了トースト表示時間(ms)
@@ -63,6 +67,31 @@ var DVT_PAGE = (function () {
     }
   }
 
+  // ─── 文ペア表示の描画 ─────────────────────────────────────────────
+  // 原文文と訳文文を 1:1 で交互配置する。原文の .dvt-orig は CSS で非表示にし、
+  // 各ペア内に原文文を再掲する。undo 時の復元は元の .dvt-orig が保持しているので問題ない。
+  function renderPairedTranslation(transEl, origEl, origSents, transSents) {
+    origEl.classList.add('dvt-orig-paired');
+    transEl.classList.add('dvt-trans-paired');
+    transEl.textContent = '';
+    for (let i = 0; i < origSents.length; i++) {
+      const pair = document.createElement('span');
+      pair.className = 'dvt-pair';
+      pair.setAttribute('data-dvt', 'true');
+      const oSent = document.createElement('span');
+      oSent.className = 'dvt-pair-orig';
+      oSent.setAttribute('data-dvt', 'true');
+      oSent.textContent = origSents[i];
+      const tSent = document.createElement('span');
+      tSent.className = 'dvt-pair-trans';
+      tSent.setAttribute('data-dvt', 'true');
+      tSent.textContent = transSents[i];
+      pair.appendChild(oSent);
+      pair.appendChild(tSent);
+      transEl.appendChild(pair);
+    }
+  }
+
   // ─── 翻訳結果の反映（共通処理） ────────────────────────────────────
   function applyTranslation(el, result, detectedLang, tl) {
     const transEl = el.querySelector('.dvt-trans');
@@ -90,7 +119,28 @@ var DVT_PAGE = (function () {
     }
 
     if (transEl) {
-      transEl.textContent = result;
+      // 文ペア表示の判定
+      //  - 原文が純テキスト（インライン要素を含まない）であること
+      //    インライン要素（<a> 等）を含む場合は文単位に切ると意味/リンクが壊れるため対象外
+      //  - 訳文が一定長を超える長文であること（短文ではレイアウトが過剰）
+      //  - 原文・訳文を文分割した結果が2文以上かつ同数であること
+      //    不一致時は無理にアラインせず単一ペアの従来表示にフォールバック
+      const canPair = origEl
+        && origEl.children.length === 0
+        && translatedText.length >= PAIR_MIN_TRANS_LENGTH;
+      let paired = false;
+      if (canPair) {
+        const origSents = DVT.splitSentences(originalText);
+        const transSents = DVT.splitSentences(translatedText);
+        if (origSents.length >= 2 && origSents.length === transSents.length) {
+          renderPairedTranslation(transEl, origEl, origSents, transSents);
+          paired = true;
+        }
+      }
+
+      if (!paired) {
+        transEl.textContent = result;
+      }
       // 読み上げボタン（× の左、ホバー時のみ表示）
       // ここに到達する時点で同一言語スキップは早期 return 済みなので無条件で追加して問題ない
       if (DVT.isSpeechSupported()) {
