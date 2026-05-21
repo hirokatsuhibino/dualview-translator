@@ -440,6 +440,78 @@ describe('DVT_PAGE (content-page)', () => {
       expect(trans).toBeTruthy();
       expect(trans.textContent).toContain('こんにちは世界');
     });
+
+    it('長文段落かつ文数一致時は文ペア表示になる（#214）', async () => {
+      // 3文ずつの長文段落を翻訳。原文・訳文ともに splitSentences で同数に分割できる。
+      const original = 'This is the first long sentence with enough content to demonstrate the paragraph length scenario. Here comes the second sentence with similar weight and verbosity for the test. And finally the third one to satisfy the threshold and ensure pair rendering activates.';
+      const translated = 'これは最初の長い文で、段落の長さのシナリオを示すのに十分な内容を含んでいます。次に2番目の文が同程度の重みと冗長性で続き、テストを成立させます。最後に3番目の文があり、閾値を満たしてペア表示を有効化します。';
+      DVT.translate = async () => ({ text: translated, detectedLang: 'en' });
+      chrome.storage.local.set({ translateEngine: 'google' });
+      document.body.innerHTML = `<p id="target">${original}</p>`;
+      DVT.state.targetLang = 'ja';
+
+      await DVT_PAGE.translatePage('ja');
+
+      const target = document.getElementById('target');
+      const trans = target?.querySelector('.dvt-trans');
+      expect(trans).toBeTruthy();
+      expect(trans.classList.contains('dvt-trans-paired')).toBe(true);
+      const origEl = target?.querySelector('.dvt-orig');
+      expect(origEl.classList.contains('dvt-orig-paired')).toBe(true);
+      const pairs = trans.querySelectorAll('.dvt-pair');
+      expect(pairs.length).toBe(3);
+      // 各ペアに原文文と訳文文が含まれる
+      expect(pairs[0].querySelector('.dvt-pair-orig').textContent).toContain('first long sentence');
+      expect(pairs[0].querySelector('.dvt-pair-trans').textContent).toContain('最初の長い文');
+      expect(pairs[2].querySelector('.dvt-pair-trans').textContent).toContain('3番目の文');
+    });
+
+    it('短い段落（閾値未満）はペア表示にしない', async () => {
+      // 訳文が PAIR_MIN_TRANS_LENGTH (80) 未満なら通常表示にフォールバック
+      DVT.translate = async () => ({ text: '短い訳。続きの文。', detectedLang: 'en' });
+      chrome.storage.local.set({ translateEngine: 'google' });
+      document.body.innerHTML = '<p id="target">Short text. Next one.</p>';
+      DVT.state.targetLang = 'ja';
+
+      await DVT_PAGE.translatePage('ja');
+
+      const trans = document.getElementById('target').querySelector('.dvt-trans');
+      expect(trans.classList.contains('dvt-trans-paired')).toBe(false);
+      expect(trans.querySelector('.dvt-pair')).toBeNull();
+    });
+
+    it('文数不一致時はペア表示にせず単一ペアにフォールバック', async () => {
+      // 原文3文・訳文2文の場合はアラインできないのでフォールバック
+      const original = 'This is the first long sentence with enough content. Here comes the second sentence with similar weight. And finally the third one to satisfy the threshold.';
+      const translated = 'これは原文を1文に圧縮した翻訳ですが結合された結果として2文になっています。もう一つの文。';
+      DVT.translate = async () => ({ text: translated, detectedLang: 'en' });
+      chrome.storage.local.set({ translateEngine: 'google' });
+      document.body.innerHTML = `<p id="target">${original}</p>`;
+      DVT.state.targetLang = 'ja';
+
+      await DVT_PAGE.translatePage('ja');
+
+      const trans = document.getElementById('target').querySelector('.dvt-trans');
+      expect(trans.classList.contains('dvt-trans-paired')).toBe(false);
+      expect(trans.querySelector('.dvt-pair')).toBeNull();
+      // 単一の訳文として全文が反映される
+      expect(trans.textContent).toContain('もう一つの文');
+    });
+
+    it('インライン要素を含む段落はペア表示にしない（テキストのみ対応）', async () => {
+      const translated = 'これは最初の長い文です。次に2番目の文が続きます。最後に3番目の文があります。やや長めの内容です。';
+      DVT.translate = async () => ({ text: translated, detectedLang: 'en' });
+      chrome.storage.local.set({ translateEngine: 'google' });
+      // <a> を含むためペア表示の対象外
+      document.body.innerHTML = '<p id="target">Long sentence with <a href="#">a link</a> inside it. Second one is here too. Third one wraps it up.</p>';
+      DVT.state.targetLang = 'ja';
+
+      await DVT_PAGE.translatePage('ja');
+
+      const trans = document.getElementById('target').querySelector('.dvt-trans');
+      expect(trans.classList.contains('dvt-trans-paired')).toBe(false);
+      expect(trans.querySelector('.dvt-pair')).toBeNull();
+    });
   });
 
   describe('要約ブロックの個別 × ボタン（#134）', () => {

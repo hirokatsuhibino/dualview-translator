@@ -125,6 +125,13 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - クリックで要素を確定 → `translateClickedElement()` or `translateAndSummarizeClickedElement()`
 - 子要素の葉要素のみを翻訳対象として抽出（親子重複を除外）
 
+### 文ペア表示（長文段落のアライメント）
+
+- `applyTranslation()` で訳文長が `PAIR_MIN_TRANS_LENGTH`（80字）を超える場合、原文・訳文を `DVT.splitSentences()` で文単位に分割
+- 両側の文数が一致し、原文がインライン要素を含まない純テキストの場合のみ「原文1→訳1→原文2→訳2…」と交互配置（`.dvt-pair` / `.dvt-pair-orig` / `.dvt-pair-trans`）
+- 元の `.dvt-orig` は `.dvt-orig-paired` クラスで CSS 非表示。undo 時の `restoreOriginalContent()` が `.dvt-orig` の子ノードを使うため、復元ロジックは変更不要
+- 文数不一致・インライン要素を含む・短い段落は従来の単一ペア表示にフォールバック
+
 ### 動的コンテンツ監視
 
 - ページ全体翻訳がアクティブな間、`MutationObserver` でDOMの `childList` + `subtree` を監視
