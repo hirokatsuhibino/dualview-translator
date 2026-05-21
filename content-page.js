@@ -55,8 +55,11 @@ var DVT_PAGE = (function () {
       const ovY = cs.overflowY;
       if (ov === 'hidden' || ov === 'clip' || ovY === 'hidden' || ovY === 'clip') clamped = true;
     }
-    // -webkit-box 単独でも、line-clamp 解除後に子が水平に並ぶリスクがあるので上書き対象に含める
-    return { clamped: clamped || isBox, isBox };
+    // clamped 判定は line-clamp 有効 / max-height+overflow:hidden のみ。
+    // display:-webkit-box 単独は line-clamp なしの純粋なフレックス的レイアウトもあり得るため
+    // clamped 扱いにしない（誤って display:block で潰すとホストのレイアウトが壊れる）。
+    // isBox は line-clamp が clamped と判定されたときに display:block の上書きが必要かを示すフラグ。
+    return { clamped, isBox };
   }
 
   function isClampedElement(el) {
@@ -70,7 +73,11 @@ var DVT_PAGE = (function () {
       const info = detectClamp(node);
       if (info.clamped) {
         if (!node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
-          node.setAttribute(CLAMP_ORIGINAL_ATTR, node.getAttribute('style') || '');
+          // 元々 style 属性が無かった場合は CLAMP_ORIGINAL_ATTR を設定しない。
+          // 「style 属性なし」と「style=''」を区別して復元できるようにするため。
+          if (node.hasAttribute('style')) {
+            node.setAttribute(CLAMP_ORIGINAL_ATTR, node.getAttribute('style'));
+          }
           node.setAttribute(CLAMP_OVERRIDE_ATTR, 'true');
           node.style.setProperty('-webkit-line-clamp', 'unset', 'important');
           node.style.setProperty('max-height', 'none', 'important');
@@ -97,11 +104,11 @@ var DVT_PAGE = (function () {
       if (node.hasAttribute && node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
         const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '1', 10) - 1;
         if (n <= 0) {
-          const original = node.getAttribute(CLAMP_ORIGINAL_ATTR);
-          if (!original) {
-            node.removeAttribute('style');
+          // 元々 style 属性が無かった場合は CLAMP_ORIGINAL_ATTR も付いていない（overrideAncestorClamp で設定をスキップ）
+          if (node.hasAttribute(CLAMP_ORIGINAL_ATTR)) {
+            node.setAttribute('style', node.getAttribute(CLAMP_ORIGINAL_ATTR));
           } else {
-            node.setAttribute('style', original);
+            node.removeAttribute('style');
           }
           node.removeAttribute(CLAMP_OVERRIDE_ATTR);
           node.removeAttribute(CLAMP_ORIGINAL_ATTR);
@@ -223,6 +230,9 @@ var DVT_PAGE = (function () {
       if (origEl) {
         restoreOriginalContent(el, { keepDvtId: true });
       } else if (transEl) {
+        // restoreOriginalContent を経由しないため、insertDualView で増やした
+        // 祖先 clamp の refcount を明示的に戻す（リーク防止）
+        restoreAncestorClamp(el);
         transEl.remove();
       }
       return;

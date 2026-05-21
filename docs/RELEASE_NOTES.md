@@ -12,7 +12,7 @@ permalink: /RELEASE_NOTES.html
 
 ### バグ修正
 
-- **領域選択翻訳でホストページの line-clamp により原文後半が隠れる問題を修正**（#221）
+- **領域選択翻訳でホストページの line-clamp により原文後半が隠れる問題を修正**（#222 / closes #221）
   - Reddit など投稿本文を `-webkit-line-clamp` / `max-height + overflow:hidden` で切り詰めるサイトで、翻訳挿入後に原文の後半が clamp 範囲外へ押し出されて見えなくなる問題を修正
   - 翻訳挿入時に祖先要素を辿り該当する truncation を一時解除し、undo / ページリセット時に元のスタイルへ復元する
   - 同一祖先を共有する複数翻訳に備えて参照カウントで管理

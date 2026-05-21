@@ -653,9 +653,9 @@ describe('DVT_PAGE (content-page)', () => {
       expect(ancestor.style.maxHeight).toBe('80px');
     });
 
-    it('インラインスタイルが元々無い祖先は復元時に style 属性が削除される', () => {
+    it('元の inline スタイルが復元される（max-height/overflow を持つ祖先）', () => {
       // jsdom では <style> タグの CSS を getComputedStyle で取れない場合があるため、
-      // ここではインライン経由で clamp 状態を作り、復元後に style 属性が消えることを検証
+      // ここではインライン経由で clamp 状態を作り、復元後に元の inline 値に戻ることを検証
       document.body.innerHTML = `
         <div id="ancestor">
           <p id="target">段落</p>
@@ -674,6 +674,59 @@ describe('DVT_PAGE (content-page)', () => {
       // 復元後は元の inline スタイル（max-height:60px; overflow:hidden;）が戻る
       expect(ancestor.style.maxHeight).toBe('60px');
       expect(ancestor.style.overflow).toBe('hidden');
+    });
+
+    it('display: -webkit-box + -webkit-line-clamp の祖先を検出して display:block へ上書きする', () => {
+      // jsdom の getComputedStyle は -webkit-line-clamp を返さない場合があるため、
+      // getComputedStyle を一時的にラップして必要なプロパティだけ inline style から
+      // 拾えるようにする。
+      document.body.innerHTML = `
+        <div id="ancestor">
+          <p id="target">長文段落</p>
+        </div>
+      `;
+      const ancestor = document.getElementById('ancestor');
+      ancestor.style.display = '-webkit-box';
+      ancestor.style.setProperty('-webkit-line-clamp', '3');
+      const target = document.getElementById('target');
+
+      const origGetComputedStyle = window.getComputedStyle;
+      const stub = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        const cs = origGetComputedStyle.call(window, el);
+        // -webkit-line-clamp を inline style から拾えるようプロキシ
+        return new Proxy(cs, {
+          get(target, prop) {
+            if (prop === 'webkitLineClamp') return el.style.webkitLineClamp || el.style.getPropertyValue('-webkit-line-clamp') || '';
+            if (prop === 'getPropertyValue') {
+              return (name) => {
+                if (name === '-webkit-line-clamp') return el.style.getPropertyValue('-webkit-line-clamp') || '';
+                return target.getPropertyValue(name);
+              };
+            }
+            if (prop === 'display') return el.style.display || target.display;
+            return target[prop];
+          },
+        });
+      });
+
+      try {
+        expect(DVT_PAGE._isClampedElement(ancestor)).toBe(true);
+        DVT_PAGE._overrideAncestorClamp(target);
+        expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(true);
+        // -webkit-box なので display:block で上書きされる
+        expect(ancestor.style.display).toBe('block');
+      } finally {
+        stub.mockRestore();
+      }
+    });
+
+    it('display: -webkit-box 単独（line-clamp なし）は clamp 扱いしない', () => {
+      // line-clamp なしの純粋な -webkit-box レイアウトは clamped=false でなければならない
+      // （誤って display:block で潰すとホストのレイアウトが壊れる）
+      const div = document.createElement('div');
+      div.style.display = '-webkit-box';
+      document.body.appendChild(div);
+      expect(DVT_PAGE._isClampedElement(div)).toBe(false);
     });
   });
 });

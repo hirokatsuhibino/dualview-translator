@@ -12,7 +12,7 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Bug Fixes
 
-- **Fix original text getting clipped by host line-clamp on region translate** (#221)
+- **Fix original text getting clipped by host line-clamp on region translate** (#222 / closes #221)
   - On sites like Reddit that truncate post bodies with `-webkit-line-clamp` or `max-height + overflow:hidden`, inserting the translation pushed the tail of the original past the clamp so it disappeared.
   - Now we walk up the ancestors when inserting a dual-view block, temporarily lift any clamp / max-height we find, and restore the original inline styles on undo or page reset.
   - A refcount on the ancestor handles the case where multiple translated paragraphs share the same clamped container.
