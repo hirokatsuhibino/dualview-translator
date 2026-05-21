@@ -36,19 +36,35 @@ var DVT_PAGE = (function () {
   const CLAMP_REFCOUNT_ATTR = 'data-dvt-clamp-refcount';
   const CLAMP_ANCESTOR_LIMIT = 10;
 
-  // 戻り値: { clamped, isBox } — clamped は通常の clamp/max-height、isBox は
-  // -webkit-box（line-clamp の依存 display）。後者は line-clamp 解除後も子要素を
-  // 水平に並べるため display:block への上書きが必要。
+  // 戻り値: { clamped, isBox, lineClampActive }
+  //   - clamped: line-clamp 有効、または max-height+overflow:hidden 由来で内容が切り詰められている可能性
+  //   - isBox: display が -webkit-box / -webkit-inline-box
+  //   - lineClampActive: -webkit-line-clamp が non-none かつ正の値で実際に line-clamp が効いている
+  // display:block の上書きは `lineClampActive && isBox` のときだけ行う。
+  // max-height+overflow 由来の clamped で -webkit-box 併用ケース（line-clamp なしの単なるレイアウト）
+  // では display には触らずに max-height / overflow / -webkit-line-clamp の上書きに留める。
   function detectClamp(el) {
-    if (!el || el.nodeType !== 1) return { clamped: false, isBox: false };
+    if (!el || el.nodeType !== 1) return { clamped: false, isBox: false, lineClampActive: false };
     let cs;
-    try { cs = (el.ownerDocument && el.ownerDocument.defaultView || window).getComputedStyle(el); } catch (_) { return { clamped: false, isBox: false }; }
-    if (!cs) return { clamped: false, isBox: false };
+    try { cs = (el.ownerDocument && el.ownerDocument.defaultView || window).getComputedStyle(el); } catch (_) { return { clamped: false, isBox: false, lineClampActive: false }; }
+    if (!cs) return { clamped: false, isBox: false, lineClampActive: false };
     const lineClamp = cs.webkitLineClamp || cs.getPropertyValue('-webkit-line-clamp');
     const display = cs.display || '';
     const isBox = display === '-webkit-box' || display === '-webkit-inline-box';
+    let lineClampActive = false;
     let clamped = false;
-    if (lineClamp && lineClamp !== 'none' && lineClamp !== '0' && lineClamp !== '') clamped = true;
+    if (lineClamp && lineClamp !== 'none' && lineClamp !== '0' && lineClamp !== '') {
+      // 数値として正の値なら line-clamp が効いている
+      const n = parseInt(lineClamp, 10);
+      if (!isNaN(n) && n > 0) {
+        lineClampActive = true;
+        clamped = true;
+      } else if (lineClamp !== 'none') {
+        // 数値でないが non-none な場合（"auto" など）は念のため active 扱い
+        lineClampActive = true;
+        clamped = true;
+      }
+    }
     const maxH = cs.maxHeight;
     if (!clamped && maxH && maxH !== 'none') {
       const ov = cs.overflow;
@@ -58,8 +74,7 @@ var DVT_PAGE = (function () {
     // clamped 判定は line-clamp 有効 / max-height+overflow:hidden のみ。
     // display:-webkit-box 単独は line-clamp なしの純粋なフレックス的レイアウトもあり得るため
     // clamped 扱いにしない（誤って display:block で潰すとホストのレイアウトが壊れる）。
-    // isBox は line-clamp が clamped と判定されたときに display:block の上書きが必要かを示すフラグ。
-    return { clamped, isBox };
+    return { clamped, isBox, lineClampActive };
   }
 
   function isClampedElement(el) {
@@ -91,7 +106,10 @@ var DVT_PAGE = (function () {
           node.style.setProperty('max-height', 'none', 'important');
           node.style.setProperty('overflow', 'visible', 'important');
           // -webkit-box は line-clamp の依存 display。残すと子が水平に並んだままになる。
-          if (info.isBox) {
+          // ただし display:block へ上書きするのは「実際に line-clamp が効いている -webkit-box」のみ。
+          // max-height+overflow 由来の clamped で -webkit-box 併用ケース（純粋なレイアウト用途）では
+          // display を block に変えるとホストのレイアウトを破壊するため触らない。
+          if (info.lineClampActive && info.isBox) {
             node.style.setProperty('display', 'block', 'important');
           }
           node.setAttribute(CLAMP_REFCOUNT_ATTR, '1');

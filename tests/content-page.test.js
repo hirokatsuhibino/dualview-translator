@@ -775,5 +775,57 @@ describe('DVT_PAGE (content-page)', () => {
       document.body.appendChild(div);
       expect(DVT_PAGE._isClampedElement(div)).toBe(false);
     });
+
+    it('display: -webkit-box + max-height + overflow:hidden（line-clamp なし）は display を上書きしない', () => {
+      // -webkit-box をフレックス的なレイアウト目的で使い、加えて max-height+overflow:hidden で
+      // 縦方向の高さだけ制限しているケース。line-clamp は効いていないので display:block への
+      // 上書きはホストのレイアウトを破壊する。max-height / overflow は上書きしてよい。
+      document.body.innerHTML = `
+        <div id="ancestor" style="display: -webkit-box; max-height: 100px; overflow: hidden;">
+          <p id="target">長文段落</p>
+        </div>
+      `;
+      const ancestor = document.getElementById('ancestor');
+      const target = document.getElementById('target');
+
+      // jsdom の getComputedStyle は -webkit-box / -webkit-line-clamp を素直に返さないので
+      // 既存テストと同じく Proxy でラップして inline style から拾えるようにする
+      const origGetComputedStyle = window.getComputedStyle;
+      const stub = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        const cs = origGetComputedStyle.call(window, el);
+        return new Proxy(cs, {
+          get(target, prop) {
+            if (prop === 'webkitLineClamp') return el.style.webkitLineClamp || el.style.getPropertyValue('-webkit-line-clamp') || '';
+            if (prop === 'getPropertyValue') {
+              return (name) => {
+                if (name === '-webkit-line-clamp') return el.style.getPropertyValue('-webkit-line-clamp') || '';
+                return target.getPropertyValue(name);
+              };
+            }
+            if (prop === 'display') return el.style.display || target.display;
+            if (prop === 'maxHeight') return el.style.maxHeight || target.maxHeight;
+            if (prop === 'overflow') return el.style.overflow || target.overflow;
+            if (prop === 'overflowY') return el.style.overflowY || target.overflowY;
+            return target[prop];
+          },
+        });
+      });
+
+      try {
+        DVT_PAGE._overrideAncestorClamp(target);
+        // max-height+overflow 由来で clamp 検出されるので overridden 属性は付く
+        expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(true);
+        // max-height / overflow は上書きされる
+        expect(ancestor.style.maxHeight).toBe('none');
+        expect(ancestor.style.overflow).toBe('visible');
+        // 一方 display は line-clamp が効いていないので触らない → 元の -webkit-box が残る
+        expect(ancestor.style.display).toBe('-webkit-box');
+        // CLAMP_ORIGINAL_ATTR に元 style が保存されており、その中に display:-webkit-box が残っている
+        const orig = ancestor.getAttribute('data-dvt-clamp-original-style') || '';
+        expect(orig).toMatch(/-webkit-box/);
+      } finally {
+        stub.mockRestore();
+      }
+    });
   });
 });
