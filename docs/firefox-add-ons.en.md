@@ -113,6 +113,10 @@ Foreign-language page? A bar pops up automatically. One click to go.
 ### Screenshot 6: Auto-translation rules
 Set up your regular sites once, and they get auto-translated. Element picker generates selectors for you.
 
+## Notes for reviewers
+
+The red `dev` badge next to the version number in the popup only shows up when the extension is loaded as a **temporary add-on in developer mode**. Add-ons installed through Firefox AMO get `installType: 'normal'` from `browser.management.getSelf()`, so the badge stays hidden (CSS `display: none`).
+
 ---
 
 Copyright (c) Orangesoft Inc.

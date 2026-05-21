@@ -4,6 +4,32 @@
 // ── バージョン表示 ──────────────────────────────────────────────────────
 document.getElementById('appVersion').textContent = 'v' + chrome.runtime.getManifest().version;
 
+// development ビルド（unpacked ロード）を視認できるよう dev バッジを表示する。
+// chrome.management.getSelf() は management 権限なしで呼び出せる（Chrome / Firefox / Safari 共通）。
+// installType:
+//   'development' → 開発者モードで読み込んだ unpacked 拡張
+//   'normal'      → Chrome Web Store / Firefox AMO / App Store 等の正式配信
+//   'sideload' / 'admin' → 企業/管理者経由のインストール（ストア扱いとしてバッジ非表示）
+if (chrome.management && typeof chrome.management.getSelf === 'function') {
+  try {
+    const maybePromise = chrome.management.getSelf((info) => {
+      if (info && info.installType === 'development') {
+        document.getElementById('devBadge').classList.add('is-dev');
+      }
+    });
+    // Firefox は Promise を返すパターンもあるため両対応
+    if (maybePromise && typeof maybePromise.then === 'function') {
+      maybePromise.then((info) => {
+        if (info && info.installType === 'development') {
+          document.getElementById('devBadge').classList.add('is-dev');
+        }
+      }).catch(() => { /* 取得失敗時は非表示のまま */ });
+    }
+  } catch (_e) {
+    // 取得失敗時は非表示のまま（ストア版扱い）
+  }
+}
+
 // ── タブ切り替え ────────────────────────────────────────────────────────
 document.querySelectorAll('.dvt-tab').forEach(tab => {
   tab.addEventListener('click', () => {

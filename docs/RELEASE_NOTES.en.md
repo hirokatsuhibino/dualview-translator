@@ -16,6 +16,10 @@ permalink: /RELEASE_NOTES.en.html
   - Fixes the visual gap between the end of the source block and the start of the translation block in long paragraphs.
   - Translation still happens at the paragraph level so accuracy isn't compromised. When sentence counts match on both sides, we interleave them: "source 1 → translation 1 → source 2 → translation 2..."
   - Falls back to the original single-pair layout when sentence counts don't match, when the paragraph contains inline elements (e.g. `<a>`), or when the paragraph is short.
+- **"dev" badge for unpacked developer-mode loads** (#216)
+  - The popup now shows a red `dev` badge next to the version number when the extension was loaded as an unpacked developer build, so you can tell at a glance whether you're poking at the dev copy or the store-installed one.
+  - Detection uses `chrome.management.getSelf()`'s `installType === 'development'` — no extra permission required.
+  - Store builds (Chrome Web Store / Firefox AMO / App Store) and enterprise sideloads don't get the badge.
 
 ---
 

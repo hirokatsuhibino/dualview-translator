@@ -111,6 +111,10 @@ translation, translator, translate, deepl, google translate, dual view, bilingua
 ### スクリーンショット6: 自動翻訳ルール
 URLパターンとCSSセレクタでサイトごとの自動翻訳ルールを設定。要素ピッカーでセレクタを自動生成できます。
 
+## 審査担当者向け注記
+
+ポップアップのバージョン番号横に表示される赤い `dev` バッジは、**開発者モードで一時的な拡張機能としてロードした場合**でのみ表示されます。Firefox AMO 経由でインストールされた拡張では `browser.management.getSelf()` の `installType` が `normal` を返すため、バッジは表示されません（CSS で `display: none` になります）。
+
 ---
 
 Copyright (c) Orangesoft Inc.
