@@ -67,12 +67,20 @@ var DVT_PAGE = (function () {
   }
 
   function overrideAncestorClamp(el) {
-    let node = el.parentElement;
+    // 対象要素自身に clamp が掛かっているケースもあるため el から開始する。
+    let node = el;
     let depth = 0;
     while (node && depth < CLAMP_ANCESTOR_LIMIT) {
-      const info = detectClamp(node);
-      if (info.clamped) {
-        if (!node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
+      // 既に上書き済みの場合は detectClamp の結果（max-height/overflow を書き換えた後は
+      // clamped=false になる）に関係なく refcount を加算する。
+      // そうしないと 2 回目以降の override で refcount が増えず、
+      // 別の翻訳がまだ参照中なのに 1 回目の restore で復元されてしまう。
+      if (node.hasAttribute && node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
+        const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '0', 10) + 1;
+        node.setAttribute(CLAMP_REFCOUNT_ATTR, String(n));
+      } else {
+        const info = detectClamp(node);
+        if (info.clamped) {
           // 元々 style 属性が無かった場合は CLAMP_ORIGINAL_ATTR を設定しない。
           // 「style 属性なし」と「style=''」を区別して復元できるようにするため。
           if (node.hasAttribute('style')) {
@@ -87,9 +95,6 @@ var DVT_PAGE = (function () {
             node.style.setProperty('display', 'block', 'important');
           }
           node.setAttribute(CLAMP_REFCOUNT_ATTR, '1');
-        } else {
-          const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '0', 10) + 1;
-          node.setAttribute(CLAMP_REFCOUNT_ATTR, String(n));
         }
       }
       node = node.parentElement;
@@ -98,7 +103,8 @@ var DVT_PAGE = (function () {
   }
 
   function restoreAncestorClamp(el) {
-    let node = el.parentElement;
+    // override 側と対称に el 自身から走査する。
+    let node = el;
     let depth = 0;
     while (node && depth < CLAMP_ANCESTOR_LIMIT) {
       if (node.hasAttribute && node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
@@ -144,8 +150,8 @@ var DVT_PAGE = (function () {
     trans.className = 'dvt-trans';
     trans.setAttribute('data-dvt', 'true');
     trans.style.setProperty('display', 'block', 'important');
-    // Reddit の \`* { border: 0 !important }\` 相当の reset で外部 CSS の border-left が消える対策。
-    // 同様に padding / background も外部 CSS で当てているがホストでリセットされやすいので inline で当てる。
+    // Reddit の \`* { border: 0 !important }\` 相当の reset で外部 CSS の border-left が消える対策として
+    // border-left と padding-left のみ inline で当てる。background などのその他装飾は外部 CSS に任せる。
     trans.style.setProperty('border-left', '3px solid #f5a623', 'important');
     trans.style.setProperty('padding-left', '14px', 'important');
     const spinner = document.createElement('span');

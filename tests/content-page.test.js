@@ -720,6 +720,54 @@ describe('DVT_PAGE (content-page)', () => {
       }
     });
 
+    it('overrideAncestorClamp: 対象要素自身に max-height がある場合も上書きする', () => {
+      // el.parentElement から走査開始すると対象要素自身の clamp を取りこぼすため、
+      // el 自身から走査する仕様の回帰防止テスト。
+      document.body.innerHTML = `
+        <p id="target" style="max-height: 50px; overflow: hidden;">長文の段落</p>
+      `;
+      const target = document.getElementById('target');
+      DVT_PAGE._overrideAncestorClamp(target);
+      expect(target.hasAttribute('data-dvt-clamp-overridden')).toBe(true);
+      expect(target.style.maxHeight).toBe('none');
+      expect(target.style.overflow).toBe('visible');
+
+      // restore 側も対称に復元できること
+      DVT_PAGE._restoreAncestorClamp(target);
+      expect(target.hasAttribute('data-dvt-clamp-overridden')).toBe(false);
+      expect(target.style.maxHeight).toBe('50px');
+      expect(target.style.overflow).toBe('hidden');
+    });
+
+    it('refcount: 上書き済みで detectClamp が clamped=false を返す状態でも 2 回目の override で refcount が増える', () => {
+      // 1 回目の override で max-height/overflow が書き換わり、実ブラウザでは detectClamp は clamped=false を返す。
+      // それでも CLAMP_OVERRIDE_ATTR を見て refcount をインクリメントしなければ、
+      // 同一祖先を共有する 2 つ目の翻訳の undo で refcount が即 0 になり誤って復元されてしまう。
+      document.body.innerHTML = `
+        <div id="ancestor">
+          <p id="a">段落A</p>
+          <p id="b">段落B</p>
+        </div>
+      `;
+      const a = document.getElementById('a');
+      const b = document.getElementById('b');
+      const ancestor = document.getElementById('ancestor');
+
+      // 「1 回目の override が完了した状態」を直接 attribute レベルで再現:
+      // - CLAMP_OVERRIDE_ATTR=true / CLAMP_REFCOUNT_ATTR=1
+      // - max-height/overflow は visible（detectClamp は clamped=false を返す）
+      ancestor.setAttribute('data-dvt-clamp-overridden', 'true');
+      ancestor.setAttribute('data-dvt-clamp-refcount', '1');
+      ancestor.style.maxHeight = 'none';
+      ancestor.style.overflow = 'visible';
+      // この状態で detectClamp は false を返すはず
+      expect(DVT_PAGE._isClampedElement(ancestor)).toBe(false);
+
+      // この前提でも、CLAMP_OVERRIDE_ATTR を見て refcount を上げる実装なら 2 回目で refcount=2 になる
+      DVT_PAGE._overrideAncestorClamp(b);
+      expect(ancestor.getAttribute('data-dvt-clamp-refcount')).toBe('2');
+    });
+
     it('display: -webkit-box 単独（line-clamp なし）は clamp 扱いしない', () => {
       // line-clamp なしの純粋な -webkit-box レイアウトは clamped=false でなければならない
       // （誤って display:block で潰すとホストのレイアウトが壊れる）
