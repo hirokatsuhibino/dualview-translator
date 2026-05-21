@@ -36,33 +36,49 @@ var DVT_PAGE = (function () {
   const CLAMP_REFCOUNT_ATTR = 'data-dvt-clamp-refcount';
   const CLAMP_ANCESTOR_LIMIT = 10;
 
-  function isClampedElement(el) {
-    if (!el || el.nodeType !== 1) return false;
+  // 戻り値: { clamped, isBox } — clamped は通常の clamp/max-height、isBox は
+  // -webkit-box（line-clamp の依存 display）。後者は line-clamp 解除後も子要素を
+  // 水平に並べるため display:block への上書きが必要。
+  function detectClamp(el) {
+    if (!el || el.nodeType !== 1) return { clamped: false, isBox: false };
     let cs;
-    try { cs = (el.ownerDocument && el.ownerDocument.defaultView || window).getComputedStyle(el); } catch (_) { return false; }
-    if (!cs) return false;
+    try { cs = (el.ownerDocument && el.ownerDocument.defaultView || window).getComputedStyle(el); } catch (_) { return { clamped: false, isBox: false }; }
+    if (!cs) return { clamped: false, isBox: false };
     const lineClamp = cs.webkitLineClamp || cs.getPropertyValue('-webkit-line-clamp');
-    if (lineClamp && lineClamp !== 'none' && lineClamp !== '0' && lineClamp !== '') return true;
+    const display = cs.display || '';
+    const isBox = display === '-webkit-box' || display === '-webkit-inline-box';
+    let clamped = false;
+    if (lineClamp && lineClamp !== 'none' && lineClamp !== '0' && lineClamp !== '') clamped = true;
     const maxH = cs.maxHeight;
-    if (maxH && maxH !== 'none') {
+    if (!clamped && maxH && maxH !== 'none') {
       const ov = cs.overflow;
       const ovY = cs.overflowY;
-      if (ov === 'hidden' || ov === 'clip' || ovY === 'hidden' || ovY === 'clip') return true;
+      if (ov === 'hidden' || ov === 'clip' || ovY === 'hidden' || ovY === 'clip') clamped = true;
     }
-    return false;
+    // -webkit-box 単独でも、line-clamp 解除後に子が水平に並ぶリスクがあるので上書き対象に含める
+    return { clamped: clamped || isBox, isBox };
+  }
+
+  function isClampedElement(el) {
+    return detectClamp(el).clamped;
   }
 
   function overrideAncestorClamp(el) {
     let node = el.parentElement;
     let depth = 0;
     while (node && depth < CLAMP_ANCESTOR_LIMIT) {
-      if (isClampedElement(node)) {
+      const info = detectClamp(node);
+      if (info.clamped) {
         if (!node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
           node.setAttribute(CLAMP_ORIGINAL_ATTR, node.getAttribute('style') || '');
           node.setAttribute(CLAMP_OVERRIDE_ATTR, 'true');
           node.style.setProperty('-webkit-line-clamp', 'unset', 'important');
           node.style.setProperty('max-height', 'none', 'important');
           node.style.setProperty('overflow', 'visible', 'important');
+          // -webkit-box は line-clamp の依存 display。残すと子が水平に並んだままになる。
+          if (info.isBox) {
+            node.style.setProperty('display', 'block', 'important');
+          }
           node.setAttribute(CLAMP_REFCOUNT_ATTR, '1');
         } else {
           const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '0', 10) + 1;
