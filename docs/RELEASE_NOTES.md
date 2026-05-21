@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+### 改善
+
+- **開発者モードで読み込んだ拡張に「dev」バッジを表示**（#216）
+  - ポップアップのバージョン番号の隣に赤色の `dev` バッジを表示し、unpacked ロード（開発者モードで読み込んだ拡張）と Chrome Web Store / Firefox AMO / App Store 配信版とを視覚的に識別できるようにした
+  - 判定は `chrome.management.getSelf()` の `installType === 'development'` で行う（management 権限の追加は不要）
+  - ストア版・企業 sideload 版ではバッジは表示されない
+
 ---
 
 ## v1.7.1（2026-05-20）

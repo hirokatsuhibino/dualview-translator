@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **"dev" badge for unpacked developer-mode loads** (#216)
+  - The popup now shows a red `dev` badge next to the version number when the extension was loaded as an unpacked developer build, so you can tell at a glance whether you're poking at the dev copy or the store-installed one.
+  - Detection uses `chrome.management.getSelf()`'s `installType === 'development'` — no extra permission required.
+  - Store builds (Chrome Web Store / Firefox AMO / App Store) and enterprise sideloads don't get the badge.
+
 ---
 
 ## v1.7.1 (2026-05-20)

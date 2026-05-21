@@ -2190,3 +2190,41 @@ suites:
         expected:
           - 要素ピッカーモードが解除される
           - ハイライト・ヒントバナーが消える
+
+  # ━━━━━ 開発版識別バッジ（#216） ━━━━━
+  - id: dev-version-badge
+    title: 開発者モードロード時の dev バッジ表示
+    description: "unpacked ロードした開発版とストア配信版を popup で識別できることの検証"
+    related_prs: [217]
+    scenarios:
+      - id: DEV-001
+        title: 開発者モードで読み込んだ拡張は popup に赤い dev バッジが表示される
+        priority: p1
+        preconditions:
+          - "chrome://extensions （または about:debugging）で本リポジトリを unpacked ロード"
+        steps:
+          - 拡張アイコンをクリックして popup を開く
+        expected:
+          - 'ブランド名 "DualView Translator" の右、バージョン番号 (vX.Y.Z) のさらに右に赤い "dev" バッジが表示される'
+
+      - id: DEV-002
+        title: Chrome Web Store からインストールした拡張には dev バッジが表示されない
+        priority: p1
+        environment: chrome
+        preconditions:
+          - "Chrome Web Store 公開版からインストールされていること"
+        steps:
+          - 拡張アイコンをクリックして popup を開く
+        expected:
+          - dev バッジは表示されない（バージョン番号のみ）
+
+      - id: DEV-003
+        title: Firefox の一時アドオンとしてロードした場合も dev バッジが表示される
+        priority: p2
+        environment: firefox
+        preconditions:
+          - "about:debugging から「一時的なアドオンを読み込む」で manifest.json を選択"
+        steps:
+          - 拡張アイコンをクリックして popup を開く
+        expected:
+          - '赤い "dev" バッジが表示される'

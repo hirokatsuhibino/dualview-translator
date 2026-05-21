@@ -535,6 +535,24 @@
       opacity: 0.7;
     }
 
+    /* development（unpacked ロード）時の赤バッジ。ストア版では非表示 */
+    .dev-badge {
+      display: none;
+      margin-left: 4px;
+      padding: 1px 6px;
+      font-size: 9px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      color: #fff;
+      background: #e53935;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+      vertical-align: 1px;
+    }
+    .dev-badge.is-dev {
+      display: inline-block;
+    }
+
     /* ── Auto Rules ── */
     .rule-list {
       margin-bottom: 10px;
@@ -710,7 +728,7 @@
       >
     </div>
     <div class="brand">
-      <div class="brand-name">DualView Translator <span class="version" id="appVersion"></span></div>
+      <div class="brand-name">DualView Translator <span class="version" id="appVersion"></span><span class="dev-badge" id="devBadge">dev</span></div>
       <div class="brand-sub" data-i18n="brandSub">原文と翻訳を並べて表示</div>
     </div>
   </div>
