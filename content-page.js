@@ -26,21 +26,152 @@ var DVT_PAGE = (function () {
   const BLOCK_TAGS = ['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'NAV',
     'HEADER', 'FOOTER', 'BLOCKQUOTE', 'FIGURE', 'DETAILS', 'TD', 'TH', 'LI'];
 
+  // ─── ホストページの line-clamp / max-height 検出と一時解除 ───────────
+  // 翻訳ブロックを挿入すると要素の総高さが伸びるため、祖先に line-clamp や max-height を
+  // 仕掛けているホストページ（例: Reddit shreddit-post）では原文の後半が clamp で押し出され
+  // 表示されなくなる。挿入時に祖先を辿って該当属性を一時的に上書きし、undo / 復元時に元へ戻す。
+  // 同一祖先を共有する複数翻訳に備えて参照カウントを保持する。
+  const CLAMP_OVERRIDE_ATTR = 'data-dvt-clamp-overridden';
+  const CLAMP_ORIGINAL_ATTR = 'data-dvt-clamp-original-style';
+  const CLAMP_REFCOUNT_ATTR = 'data-dvt-clamp-refcount';
+  const CLAMP_ANCESTOR_LIMIT = 10;
+
+  // 戻り値: { clamped, isBox, lineClampActive }
+  //   - clamped: line-clamp 有効、または max-height+overflow:hidden 由来で内容が切り詰められている可能性
+  //   - isBox: display が -webkit-box / -webkit-inline-box
+  //   - lineClampActive: -webkit-line-clamp が non-none かつ正の値で実際に line-clamp が効いている
+  // display:block の上書きは `lineClampActive && isBox` のときだけ行う。
+  // max-height+overflow 由来の clamped で -webkit-box 併用ケース（line-clamp なしの単なるレイアウト）
+  // では display には触らずに max-height / overflow / -webkit-line-clamp の上書きに留める。
+  function detectClamp(el) {
+    if (!el || el.nodeType !== 1) return { clamped: false, isBox: false, lineClampActive: false };
+    let cs;
+    try { cs = (el.ownerDocument && el.ownerDocument.defaultView || window).getComputedStyle(el); } catch (_) { return { clamped: false, isBox: false, lineClampActive: false }; }
+    if (!cs) return { clamped: false, isBox: false, lineClampActive: false };
+    const lineClamp = cs.webkitLineClamp || cs.getPropertyValue('-webkit-line-clamp');
+    const display = cs.display || '';
+    const isBox = display === '-webkit-box' || display === '-webkit-inline-box';
+    let lineClampActive = false;
+    let clamped = false;
+    if (lineClamp && lineClamp !== 'none' && lineClamp !== '0' && lineClamp !== '') {
+      // 数値として正の値なら line-clamp が効いている
+      const n = parseInt(lineClamp, 10);
+      if (!isNaN(n) && n > 0) {
+        lineClampActive = true;
+        clamped = true;
+      } else if (lineClamp !== 'none') {
+        // 数値でないが non-none な場合（"auto" など）は念のため active 扱い
+        lineClampActive = true;
+        clamped = true;
+      }
+    }
+    const maxH = cs.maxHeight;
+    if (!clamped && maxH && maxH !== 'none') {
+      const ov = cs.overflow;
+      const ovY = cs.overflowY;
+      if (ov === 'hidden' || ov === 'clip' || ovY === 'hidden' || ovY === 'clip') clamped = true;
+    }
+    // clamped 判定は line-clamp 有効 / max-height+overflow:hidden のみ。
+    // display:-webkit-box 単独は line-clamp なしの純粋なフレックス的レイアウトもあり得るため
+    // clamped 扱いにしない（誤って display:block で潰すとホストのレイアウトが壊れる）。
+    return { clamped, isBox, lineClampActive };
+  }
+
+  function isClampedElement(el) {
+    return detectClamp(el).clamped;
+  }
+
+  function overrideAncestorClamp(el) {
+    // 対象要素自身に clamp が掛かっているケースもあるため el から開始する。
+    let node = el;
+    let depth = 0;
+    while (node && depth < CLAMP_ANCESTOR_LIMIT) {
+      // 既に上書き済みの場合は detectClamp の結果（max-height/overflow を書き換えた後は
+      // clamped=false になる）に関係なく refcount を加算する。
+      // そうしないと 2 回目以降の override で refcount が増えず、
+      // 別の翻訳がまだ参照中なのに 1 回目の restore で復元されてしまう。
+      if (node.hasAttribute && node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
+        const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '0', 10) + 1;
+        node.setAttribute(CLAMP_REFCOUNT_ATTR, String(n));
+      } else {
+        const info = detectClamp(node);
+        if (info.clamped) {
+          // 元々 style 属性が無かった場合は CLAMP_ORIGINAL_ATTR を設定しない。
+          // 「style 属性なし」と「style=''」を区別して復元できるようにするため。
+          if (node.hasAttribute('style')) {
+            node.setAttribute(CLAMP_ORIGINAL_ATTR, node.getAttribute('style'));
+          }
+          node.setAttribute(CLAMP_OVERRIDE_ATTR, 'true');
+          node.style.setProperty('-webkit-line-clamp', 'unset', 'important');
+          node.style.setProperty('max-height', 'none', 'important');
+          node.style.setProperty('overflow', 'visible', 'important');
+          // -webkit-box は line-clamp の依存 display。残すと子が水平に並んだままになる。
+          // ただし display:block へ上書きするのは「実際に line-clamp が効いている -webkit-box」のみ。
+          // max-height+overflow 由来の clamped で -webkit-box 併用ケース（純粋なレイアウト用途）では
+          // display を block に変えるとホストのレイアウトを破壊するため触らない。
+          if (info.lineClampActive && info.isBox) {
+            node.style.setProperty('display', 'block', 'important');
+          }
+          node.setAttribute(CLAMP_REFCOUNT_ATTR, '1');
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+  }
+
+  function restoreAncestorClamp(el) {
+    // override 側と対称に el 自身から走査する。
+    let node = el;
+    let depth = 0;
+    while (node && depth < CLAMP_ANCESTOR_LIMIT) {
+      if (node.hasAttribute && node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
+        const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '1', 10) - 1;
+        if (n <= 0) {
+          // 元々 style 属性が無かった場合は CLAMP_ORIGINAL_ATTR も付いていない（overrideAncestorClamp で設定をスキップ）
+          if (node.hasAttribute(CLAMP_ORIGINAL_ATTR)) {
+            node.setAttribute('style', node.getAttribute(CLAMP_ORIGINAL_ATTR));
+          } else {
+            node.removeAttribute('style');
+          }
+          node.removeAttribute(CLAMP_OVERRIDE_ATTR);
+          node.removeAttribute(CLAMP_ORIGINAL_ATTR);
+          node.removeAttribute(CLAMP_REFCOUNT_ATTR);
+        } else {
+          node.setAttribute(CLAMP_REFCOUNT_ATTR, String(n));
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+  }
+
   // ─── デュアルビュー挿入（共通処理） ────────────────────────────────
   function insertDualView(el, idPrefix) {
     const id = idPrefix + Math.random().toString(36).slice(2);
     el.dataset.dvtId = id;
+    // ホストページ側の truncation（line-clamp / max-height）を一時解除
+    overrideAncestorClamp(el);
 
     const wrapper = document.createElement('span');
     wrapper.setAttribute('data-dvt', 'true');
     const orig = document.createElement('span');
     orig.className = 'dvt-orig';
     orig.setAttribute('data-dvt', 'true');
+    // インラインスタイルで display:block を強制。
+    // Reddit など `* { display: inline !important }` 相当の高 specificity ルールを当てる
+    // ホストでは外部 CSS の class 指定では勝てないため、要素自身の inline style に !important で書く。
+    orig.style.setProperty('display', 'block', 'important');
     // 元のDOM構造を保持するため子ノードを直接移動
     while (el.firstChild) orig.appendChild(el.firstChild);
     const trans = document.createElement('span');
     trans.className = 'dvt-trans';
     trans.setAttribute('data-dvt', 'true');
+    trans.style.setProperty('display', 'block', 'important');
+    // Reddit の \`* { border: 0 !important }\` 相当の reset で外部 CSS の border-left が消える対策として
+    // border-left と padding-left のみ inline で当てる。background などのその他装飾は外部 CSS に任せる。
+    trans.style.setProperty('border-left', '3px solid #f5a623', 'important');
+    trans.style.setProperty('padding-left', '14px', 'important');
     const spinner = document.createElement('span');
     spinner.className = 'dvt-spinner';
     trans.appendChild(spinner);
@@ -65,6 +196,8 @@ var DVT_PAGE = (function () {
     if (!keepDvtId) {
       delete el.dataset.dvtId;
     }
+    // 祖先の clamp 上書きを参照カウント単位で復元
+    restoreAncestorClamp(el);
   }
 
   // ─── 文ペア表示の描画 ─────────────────────────────────────────────
@@ -72,19 +205,27 @@ var DVT_PAGE = (function () {
   // 各ペア内に原文文を再掲する。undo 時の復元は元の .dvt-orig が保持しているので問題ない。
   function renderPairedTranslation(transEl, origEl, origSents, transSents) {
     origEl.classList.add('dvt-orig-paired');
+    // dvt-orig-paired 側は display:none を inline style で当てて確実に隠す
+    // （ホスト CSS で display:inline !important が当たると、CSS の display:none が負ける）
+    origEl.style.setProperty('display', 'none', 'important');
     transEl.classList.add('dvt-trans-paired');
     transEl.textContent = '';
     for (let i = 0; i < origSents.length; i++) {
       const pair = document.createElement('span');
       pair.className = 'dvt-pair';
       pair.setAttribute('data-dvt', 'true');
+      pair.style.setProperty('display', 'block', 'important');
       const oSent = document.createElement('span');
       oSent.className = 'dvt-pair-orig';
       oSent.setAttribute('data-dvt', 'true');
+      oSent.style.setProperty('display', 'block', 'important');
       oSent.textContent = origSents[i];
       const tSent = document.createElement('span');
       tSent.className = 'dvt-pair-trans';
       tSent.setAttribute('data-dvt', 'true');
+      tSent.style.setProperty('display', 'block', 'important');
+      tSent.style.setProperty('border-left', '2px solid rgba(245, 166, 35, 0.4)', 'important');
+      tSent.style.setProperty('padding-left', '8px', 'important');
       tSent.textContent = transSents[i];
       pair.appendChild(oSent);
       pair.appendChild(tSent);
@@ -113,6 +254,9 @@ var DVT_PAGE = (function () {
       if (origEl) {
         restoreOriginalContent(el, { keepDvtId: true });
       } else if (transEl) {
+        // restoreOriginalContent を経由しないため、insertDualView で増やした
+        // 祖先 clamp の refcount を明示的に戻す（リーク防止）
+        restoreAncestorClamp(el);
         transEl.remove();
       }
       return;
@@ -705,5 +849,5 @@ var DVT_PAGE = (function () {
     window.addEventListener('keydown', onKeyDown, true);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode };
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement };
 })();

@@ -3,11 +3,11 @@
 
 /* ── Dual-View Page Translation ──────────────────────────────────────── */
 .dvt-orig {
-  display: block;
+  display: block !important;
 }
 
 .dvt-trans {
-  display: block;
+  display: block !important;
   margin-top: 5px;
   padding: 6px 10px 6px 14px;
   border-left: 3px solid #f5a623;
@@ -39,23 +39,23 @@
 }
 
 .dvt-pair {
-  display: block;
-  margin-bottom: 6px;
+  display: block !important;
+  margin-bottom: 6px !important;
 }
 
 .dvt-pair:last-of-type {
-  margin-bottom: 0;
+  margin-bottom: 0 !important;
 }
 
 .dvt-pair-orig {
-  display: block;
+  display: block !important;
   opacity: 0.95;
   font-size: 1em;
   /* 訳文と区別するため original の色を継承し、訳文はやや薄く */
 }
 
 .dvt-pair-trans {
-  display: block;
+  display: block !important;
   opacity: 0.85;
   font-size: 0.93em;
   line-height: 1.55;
