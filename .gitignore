@@ -21,3 +21,6 @@ package-lock.json
 safari/**/xcuserdata/
 safari/**/*.xcuserstate
 safari/**/build/
+
+# Claude Code worktrees（ローカル一時作業ディレクトリ。embedded git repo として誤コミットされやすい）
+.claude/worktrees/
