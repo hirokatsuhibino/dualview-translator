@@ -576,4 +576,104 @@ describe('DVT_PAGE (content-page)', () => {
       expect(document.querySelectorAll('[data-dvt-id]').length).toBe(0);
     });
   });
+
+  // Issue #221: ホストページの line-clamp / max-height で翻訳挿入時に原文後半が隠れる問題
+  describe('祖先要素の line-clamp / max-height 一時解除（Issue #221）', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('isClampedElement: max-height + overflow:hidden を持つ要素を検出する', () => {
+      const div = document.createElement('div');
+      div.style.maxHeight = '100px';
+      div.style.overflow = 'hidden';
+      document.body.appendChild(div);
+      expect(DVT_PAGE._isClampedElement(div)).toBe(true);
+    });
+
+    it('isClampedElement: 通常の要素は検出しない', () => {
+      const div = document.createElement('div');
+      document.body.appendChild(div);
+      expect(DVT_PAGE._isClampedElement(div)).toBe(false);
+    });
+
+    it('overrideAncestorClamp: 祖先の max-height/overflow を上書きする', () => {
+      document.body.innerHTML = `
+        <div id="ancestor" style="max-height: 80px; overflow: hidden;">
+          <p id="target">長文の段落</p>
+        </div>
+      `;
+      const target = document.getElementById('target');
+      const ancestor = document.getElementById('ancestor');
+      DVT_PAGE._overrideAncestorClamp(target);
+      expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(true);
+      expect(ancestor.style.maxHeight).toBe('none');
+      expect(ancestor.style.overflow).toBe('visible');
+    });
+
+    it('restoreAncestorClamp: 元のインラインスタイルを復元する', () => {
+      document.body.innerHTML = `
+        <div id="ancestor" style="max-height: 80px; overflow: hidden; color: red;">
+          <p id="target">長文の段落</p>
+        </div>
+      `;
+      const target = document.getElementById('target');
+      const ancestor = document.getElementById('ancestor');
+      DVT_PAGE._overrideAncestorClamp(target);
+      DVT_PAGE._restoreAncestorClamp(target);
+      expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(false);
+      expect(ancestor.hasAttribute('data-dvt-clamp-original-style')).toBe(false);
+      expect(ancestor.style.maxHeight).toBe('80px');
+      expect(ancestor.style.overflow).toBe('hidden');
+      expect(ancestor.style.color).toBe('red');
+    });
+
+    it('参照カウント: 同一祖先を共有する 2 要素が両方 restore されるまで解除を維持', () => {
+      document.body.innerHTML = `
+        <div id="ancestor" style="max-height: 80px; overflow: hidden;">
+          <p id="a">段落A</p>
+          <p id="b">段落B</p>
+        </div>
+      `;
+      const a = document.getElementById('a');
+      const b = document.getElementById('b');
+      const ancestor = document.getElementById('ancestor');
+      DVT_PAGE._overrideAncestorClamp(a);
+      DVT_PAGE._overrideAncestorClamp(b);
+      expect(ancestor.getAttribute('data-dvt-clamp-refcount')).toBe('2');
+
+      DVT_PAGE._restoreAncestorClamp(a);
+      // まだ b が参照しているので解除されない
+      expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(true);
+      expect(ancestor.style.maxHeight).toBe('none');
+
+      DVT_PAGE._restoreAncestorClamp(b);
+      // 全て解除済み → 元のスタイルに復元
+      expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(false);
+      expect(ancestor.style.maxHeight).toBe('80px');
+    });
+
+    it('インラインスタイルが元々無い祖先は復元時に style 属性が削除される', () => {
+      // jsdom では <style> タグの CSS を getComputedStyle で取れない場合があるため、
+      // ここではインライン経由で clamp 状態を作り、復元後に style 属性が消えることを検証
+      document.body.innerHTML = `
+        <div id="ancestor">
+          <p id="target">段落</p>
+        </div>
+      `;
+      const ancestor = document.getElementById('ancestor');
+      ancestor.style.maxHeight = '60px';
+      ancestor.style.overflow = 'hidden';
+      // この時点で style 属性は inline で設定されている。clamp 検出のため必要。
+      const target = document.getElementById('target');
+
+      DVT_PAGE._overrideAncestorClamp(target);
+      expect(ancestor.hasAttribute('data-dvt-clamp-overridden')).toBe(true);
+
+      DVT_PAGE._restoreAncestorClamp(target);
+      // 復元後は元の inline スタイル（max-height:60px; overflow:hidden;）が戻る
+      expect(ancestor.style.maxHeight).toBe('60px');
+      expect(ancestor.style.overflow).toBe('hidden');
+    });
+  });
 });

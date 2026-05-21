@@ -2317,3 +2317,38 @@ suites:
           - 拡張アイコンをクリックして popup を開く
         expected:
           - '赤い "dev" バッジが表示される'
+
+  # ━━━━━ line-clamp 上書き（#221） ━━━━━
+  - id: line-clamp-override
+    title: 領域選択翻訳時にホストページの line-clamp / max-height を一時解除
+    description: "Reddit など投稿本文を truncation するサイトで翻訳挿入により原文後半が隠れる問題（#221）の回帰防止"
+    related_prs: [222]
+    scenarios:
+      - id: LC-001
+        title: Reddit の長文投稿で領域選択翻訳しても原文後半が clamp で隠れない
+        priority: p1
+        environment: firefox
+        preconditions:
+          - "DeepL API キー設定済み・翻訳エンジン=DeepL"
+          - "https://www.reddit.com/r/PorscheMacan/ などで本文が複数文ある長文投稿を開く"
+        steps:
+          - 領域選択翻訳モードを起動し、投稿本文をクリックして翻訳する
+        expected:
+          - 訳文ブロック挿入後も原文（英語）全文が読める
+          - 末尾に "After..." のような原文の途中で見切れる箇所が出ない
+          - undo ボタン (×) で訳文を取り消すと、Reddit の元の clamp 状態が完全に復元される（"see more" の見え方が元通り）
+
+      - id: LC-002
+        title: 同一の clamp 祖先内で複数段落を翻訳しても、全部 undo するまで clamp が解除されたまま
+        priority: p2
+        environment: chrome
+        preconditions:
+          - "max-height + overflow:hidden を持つ祖先内に複数の翻訳可能な要素があるページ"
+        steps:
+          - 領域選択モードで段落 A を翻訳
+          - 続けて領域選択モードで段落 B を翻訳
+          - 段落 A の undo (×) を押す
+          - 段落 B の undo (×) を押す
+        expected:
+          - 段落 A だけ undo した時点では clamp は解除されたまま（B の訳文が clamp で隠れない）
+          - 段落 B も undo すると祖先の元の clamp / max-height / overflow が復元される

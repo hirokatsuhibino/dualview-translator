@@ -26,10 +26,85 @@ var DVT_PAGE = (function () {
   const BLOCK_TAGS = ['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'NAV',
     'HEADER', 'FOOTER', 'BLOCKQUOTE', 'FIGURE', 'DETAILS', 'TD', 'TH', 'LI'];
 
+  // ─── ホストページの line-clamp / max-height 検出と一時解除 ───────────
+  // 翻訳ブロックを挿入すると要素の総高さが伸びるため、祖先に line-clamp や max-height を
+  // 仕掛けているホストページ（例: Reddit shreddit-post）では原文の後半が clamp で押し出され
+  // 表示されなくなる。挿入時に祖先を辿って該当属性を一時的に上書きし、undo / 復元時に元へ戻す。
+  // 同一祖先を共有する複数翻訳に備えて参照カウントを保持する。
+  const CLAMP_OVERRIDE_ATTR = 'data-dvt-clamp-overridden';
+  const CLAMP_ORIGINAL_ATTR = 'data-dvt-clamp-original-style';
+  const CLAMP_REFCOUNT_ATTR = 'data-dvt-clamp-refcount';
+  const CLAMP_ANCESTOR_LIMIT = 10;
+
+  function isClampedElement(el) {
+    if (!el || el.nodeType !== 1) return false;
+    let cs;
+    try { cs = (el.ownerDocument && el.ownerDocument.defaultView || window).getComputedStyle(el); } catch (_) { return false; }
+    if (!cs) return false;
+    const lineClamp = cs.webkitLineClamp || cs.getPropertyValue('-webkit-line-clamp');
+    if (lineClamp && lineClamp !== 'none' && lineClamp !== '0' && lineClamp !== '') return true;
+    const maxH = cs.maxHeight;
+    if (maxH && maxH !== 'none') {
+      const ov = cs.overflow;
+      const ovY = cs.overflowY;
+      if (ov === 'hidden' || ov === 'clip' || ovY === 'hidden' || ovY === 'clip') return true;
+    }
+    return false;
+  }
+
+  function overrideAncestorClamp(el) {
+    let node = el.parentElement;
+    let depth = 0;
+    while (node && depth < CLAMP_ANCESTOR_LIMIT) {
+      if (isClampedElement(node)) {
+        if (!node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
+          node.setAttribute(CLAMP_ORIGINAL_ATTR, node.getAttribute('style') || '');
+          node.setAttribute(CLAMP_OVERRIDE_ATTR, 'true');
+          node.style.setProperty('-webkit-line-clamp', 'unset', 'important');
+          node.style.setProperty('max-height', 'none', 'important');
+          node.style.setProperty('overflow', 'visible', 'important');
+          node.setAttribute(CLAMP_REFCOUNT_ATTR, '1');
+        } else {
+          const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '0', 10) + 1;
+          node.setAttribute(CLAMP_REFCOUNT_ATTR, String(n));
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+  }
+
+  function restoreAncestorClamp(el) {
+    let node = el.parentElement;
+    let depth = 0;
+    while (node && depth < CLAMP_ANCESTOR_LIMIT) {
+      if (node.hasAttribute && node.hasAttribute(CLAMP_OVERRIDE_ATTR)) {
+        const n = parseInt(node.getAttribute(CLAMP_REFCOUNT_ATTR) || '1', 10) - 1;
+        if (n <= 0) {
+          const original = node.getAttribute(CLAMP_ORIGINAL_ATTR);
+          if (!original) {
+            node.removeAttribute('style');
+          } else {
+            node.setAttribute('style', original);
+          }
+          node.removeAttribute(CLAMP_OVERRIDE_ATTR);
+          node.removeAttribute(CLAMP_ORIGINAL_ATTR);
+          node.removeAttribute(CLAMP_REFCOUNT_ATTR);
+        } else {
+          node.setAttribute(CLAMP_REFCOUNT_ATTR, String(n));
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+  }
+
   // ─── デュアルビュー挿入（共通処理） ────────────────────────────────
   function insertDualView(el, idPrefix) {
     const id = idPrefix + Math.random().toString(36).slice(2);
     el.dataset.dvtId = id;
+    // ホストページ側の truncation（line-clamp / max-height）を一時解除
+    overrideAncestorClamp(el);
 
     const wrapper = document.createElement('span');
     wrapper.setAttribute('data-dvt', 'true');
@@ -65,6 +140,8 @@ var DVT_PAGE = (function () {
     if (!keepDvtId) {
       delete el.dataset.dvtId;
     }
+    // 祖先の clamp 上書きを参照カウント単位で復元
+    restoreAncestorClamp(el);
   }
 
   // ─── 文ペア表示の描画 ─────────────────────────────────────────────
@@ -705,5 +782,5 @@ var DVT_PAGE = (function () {
     window.addEventListener('keydown', onKeyDown, true);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode };
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement };
 })();
