@@ -112,6 +112,23 @@ describe('DVT (content-core)', () => {
       expect(DVT.splitSentences('Some text. [1] continued text.'))
         .toEqual(['Some text. [1] continued text.']);
     });
+
+    it('連続脚注 [10][11] (空白なし) を正しく区切る', () => {
+      // Wikipedia 典型ケース: 連続する脚注が空白なしで並ぶ
+      expect(DVT.splitSentences('First sentence. [10][11] Second sentence.'))
+        .toEqual(['First sentence. [10][11]', 'Second sentence.']);
+    });
+
+    it('連続脚注 [10] [11] (空白あり) を正しく区切る', () => {
+      // 連続脚注の間に空白がある場合
+      expect(DVT.splitSentences('First sentence. [10] [11] Second sentence.'))
+        .toEqual(['First sentence. [10] [11]', 'Second sentence.']);
+    });
+
+    it('3つ以上の連続脚注 [1][2][3] にも対応', () => {
+      expect(DVT.splitSentences('First. [1][2][3] Second.'))
+        .toEqual(['First. [1][2][3]', 'Second.']);
+    });
   });
 
   describe('langMatches()', () => {
