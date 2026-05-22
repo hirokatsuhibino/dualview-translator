@@ -2284,7 +2284,7 @@ suites:
         title: ペア表示時に外側の縦バーが原文行の左に見えない（回帰防止）
         priority: p1
         description: "PR #222 系で .dvt-trans に inline border-left を強制した結果、ペア表示時に外側の縦バーが原文（英語）行の左にも見えてしまった問題（Issue #228）の回帰防止"
-        related_prs: [228]
+        related_prs: [229]
         preconditions:
           - 拡張をインストール、翻訳エンジン設定済み
           - 3 文以上を含む長文段落のあるページ（例: 記事系サイト）を開く
