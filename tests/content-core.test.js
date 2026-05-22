@@ -129,6 +129,17 @@ describe('DVT (content-core)', () => {
       expect(DVT.splitSentences('First. [1][2][3] Second.'))
         .toEqual(['First. [1][2][3]', 'Second.']);
     });
+
+    it('Wikipedia形式 ".[10] Next" (脚注前スペースなし) を正しく区切る', () => {
+      // 実際のWikipediaで最頻出のパターン
+      expect(DVT.splitSentences('First sentence.[10] Second sentence.'))
+        .toEqual(['First sentence.[10]', 'Second sentence.']);
+    });
+
+    it('Wikipedia形式の連続脚注 ".[10][11] Next" にも対応', () => {
+      expect(DVT.splitSentences('First.[10][11] Second.'))
+        .toEqual(['First.[10][11]', 'Second.']);
+    });
   });
 
   describe('langMatches()', () => {

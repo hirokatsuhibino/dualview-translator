@@ -108,9 +108,11 @@ var DVT = (function () {
           // 文末: 区切る
           parts.push(buf.trim());
           buf = '';
-        } else if (/\s/.test(next)) {
-          // 後続文の開始文字を確認（空白を読み飛ばす）
+        } else if (/\s/.test(next) || next === '[') {
+          // Wikipedia の "sentence.[10] Next" のように `.` の直後に脚注が
+          // スペースなしで続くケースもあるため `[` も後続文の手がかりとして扱う
           let j = i + 1;
+          // 空白があれば読み飛ばす（". [10]" 形式）
           while (j < len && /\s/.test(text[j])) j++;
           // Wikipedia 等の脚注番号 [数字] を検出してスキップ
           // 連続脚注 "[10][11]" や "[10] [11]" にも対応
