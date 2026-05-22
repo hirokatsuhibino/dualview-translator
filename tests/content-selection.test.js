@@ -143,11 +143,19 @@ describe('選択翻訳 — ミニアイコン方式', () => {
     expect(jsCode).toMatch(/mousedown[\s\S]{0,200}ev\.button !== 0/);
   });
 
-  it('クリック時に Range から rect を再取得して位置ズレに対応している', () => {
+  it('末尾行の rect を使う getRangeEndRect ヘルパーが定義されている', () => {
+    expect(jsCode).toContain('function getRangeEndRect');
+    expect(jsCode).toContain('range.getClientRects()');
+    // getClientRects が空の場合は getBoundingClientRect にフォールバック
     expect(jsCode).toContain('range.getBoundingClientRect()');
-    // 初期化時に1度、クリック時に再取得で計2回以上呼ばれることを確認
-    const matches = jsCode.match(/getBoundingClientRect\(\)/g) || [];
-    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('showSelectionMiniBtn が getRangeEndRect を使って初期位置を決めている', () => {
+    expect(jsCode).toMatch(/const rect = getRangeEndRect\(range\)/);
+  });
+
+  it('クリック時も getRangeEndRect で末尾行の rect を再取得している', () => {
+    expect(jsCode).toMatch(/const freshRect = getRangeEndRect\(range\)/);
   });
 
   it('アイコン要素に aria-hidden を付与してスクリーンリーダーでの二重読み上げを防いでいる', () => {
@@ -189,6 +197,42 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     sel.removeAllRanges();
     sel.addRange(range);
   }
+
+  // ─── Issue #240: 複数行選択時の末尾 rect 使用 ──────────────────────
+  it('getClientRects が複数行 rect を返すとき末尾 rect の right/bottom を基準にアイコンを配置する', () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world translation test';
+    document.body.appendChild(p);
+
+    selectTextOf(p, 0, 20);
+
+    // getClientRects をモックして「2行分」の rect を返す
+    // 1行目は right=800（広い）、2行目は right=200（狭い、カーソル位置）
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      return [
+        { top: 0, bottom: 20, left: 0, right: 800, width: 800, height: 20 },
+        { top: 20, bottom: 40, left: 0, right: 200, width: 200, height: 20 },
+      ];
+    };
+
+    try {
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+      const btn = document.querySelector('.dvt-sel-mini-btn');
+      expect(btn).toBeTruthy();
+
+      const btnLeft = parseFloat(btn.style.left);
+      const btnTop  = parseFloat(btn.style.top);
+
+      // 末尾 rect（right=200, bottom=40）基準: left ≈ 204, top ≈ 44
+      // getBoundingClientRect（right=800）基準だと left ≈ 804 になる（クランプで変わりうる）
+      // 末尾 rect を使っていれば left は 300 以下
+      expect(btnLeft).toBeLessThan(300);
+      expect(btnTop).toBeGreaterThanOrEqual(40);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
 
   it('テキスト選択直後の mouseup でミニアイコンが生成される', () => {
     const p = document.createElement('p');

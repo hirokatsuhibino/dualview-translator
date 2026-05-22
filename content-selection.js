@@ -142,6 +142,19 @@ var DVT_SEL = (function () {
   const MINI_BTN_SIZE = 36;
   const MINI_BTN_GAP = 4;
 
+  // Range の「末尾行」の矩形を返す。
+  // getBoundingClientRect() は複数行選択時に全行を囲む外接矩形を返すため、
+  // 1 行目が長くて 2 行目が短い場合などに right が実際のカーソル位置より大きくなる。
+  // getClientRects() は行ごとの個別矩形を返すため、最後の矩形を使うとカーソル位置に近くなる。
+  function getRangeEndRect(range) {
+    const rects = range.getClientRects();
+    if (rects.length > 0) {
+      return rects[rects.length - 1];
+    }
+    // jsdom など getClientRects() が空配列を返す環境ではフォールバック
+    return range.getBoundingClientRect();
+  }
+
   // rect の右下端基準でミニアイコンの top/left を決め、ビューポート内にクランプする
   function computeMiniBtnPosition(rect) {
     const top = rect.bottom + window.scrollY + MINI_BTN_GAP;
@@ -158,9 +171,11 @@ var DVT_SEL = (function () {
 
   function showSelectionMiniBtn(sel, text) {
     // クリック時にスクロール／リサイズで位置がずれないよう、Range を保持して
-    // クリック時点で再度 getBoundingClientRect() を呼べるようにする
+    // クリック時点で再度矩形を取得できるようにする
     const range = sel.getRangeAt(0).cloneRange();
-    const rect = range.getBoundingClientRect();
+    // 複数行選択では getBoundingClientRect() の right が全体外接矩形の右端になりカーソル位置と
+    // 大きくズレるため、末尾行の矩形（getRangeEndRect）を使う（#240）
+    const rect = getRangeEndRect(range);
 
     // 翻訳アイコンだけの小さな角丸正方形ボタン
     const btn = document.createElement('button');
@@ -197,8 +212,8 @@ var DVT_SEL = (function () {
       ev.stopPropagation();
       removeSelectionMiniBtn();
       // クリック時点でスクロール・リサイズが発生している可能性があるため、
-      // 保持していた Range から rect を再取得する
-      const freshRect = range.getBoundingClientRect();
+      // 保持していた Range から末尾行の rect を再取得する（#240）
+      const freshRect = getRangeEndRect(range);
       // 選択が完全に解除されて Range が無効化された場合のフォールバック
       const safeRect = (freshRect.width === 0 && freshRect.height === 0) ? rect : freshRect;
       showSelectionPanelAtRect(safeRect, text);
