@@ -12,6 +12,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Bug Fixes
 
+- **Fix outer vertical bar showing up next to source lines in paired mode** (#228)
+  - The PR #222 follow-up that forced an inline `border-left` on `.dvt-trans` also made the outer bar visible alongside the source (English) lines in sentence-pair mode.
+  - In paired mode each `.dvt-pair-trans` already has its own inner bar, so the outer one is redundant — we now clear it inline.
+  - Short single-sentence translations (non-paired mode) still keep the outer bar as before.
 - **Fix original text getting clipped by host line-clamp on region translate** (#222 / closes #221)
   - On sites like Reddit that truncate post bodies with `-webkit-line-clamp` or `max-height + overflow:hidden`, inserting the translation pushed the tail of the original past the clamp so it disappeared.
   - Now we walk up the ancestors when inserting a dual-view block, temporarily lift any clamp / max-height we find, and restore the original inline styles on undo or page reset.

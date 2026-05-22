@@ -34,8 +34,11 @@
 }
 
 .dvt-trans-paired {
-  /* ペア配置時は元の左枠線・背景は維持しつつパディングを調整 */
-  padding: 6px 10px 6px 14px;
+  /* ペア配置時は各 .dvt-pair-trans が内側で縦バーを持つので、
+     外側 .dvt-trans の左枠線は冗長（原文行の左にも縦バーが見えて邪魔）。
+     border / padding-left は inline でも上書きしているが CSS でも整合させる。 */
+  border-left: none !important;
+  padding-left: 0 !important;
 }
 
 .dvt-pair {
