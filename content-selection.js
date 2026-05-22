@@ -139,7 +139,7 @@ var DVT_SEL = (function () {
 
   // ─── ミニアイコン表示（選択直後） ────────────────────────────────
   // ミニアイコンサイズ（CSS の width/height と一致させること）
-  const MINI_BTN_SIZE = 28;
+  const MINI_BTN_SIZE = 36;
   const MINI_BTN_GAP = 4;
 
   // rect の右下端基準でミニアイコンの top/left を決め、ビューポート内にクランプする

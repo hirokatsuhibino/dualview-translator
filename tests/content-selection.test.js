@@ -122,8 +122,8 @@ describe('選択翻訳 — ミニアイコン方式', () => {
   });
 
   it('ホストページの幅指定で横に伸びないよう min/max-width を固定している', () => {
-    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,800}min-width:\s*28px[\s\S]{0,400}max-width:\s*28px/);
-    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,800}flex:\s*0\s+0\s+28px/);
+    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,800}min-width:\s*36px[\s\S]{0,400}max-width:\s*36px/);
+    expect(cssCode).toMatch(/\.dvt-sel-mini-btn[\s\S]{0,800}flex:\s*0\s+0\s+36px/);
   });
 
   it('CSS にミニアイコン表示アニメーションが定義されている', () => {
