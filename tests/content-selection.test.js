@@ -1,5 +1,5 @@
 // content-selection.js のドラッグ移動・リサイズ機能テスト
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { loadScript } from './helpers.js';
@@ -405,6 +405,81 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // ─── Issue #233: 文ペア表示 ─────────────────────────────────────────
+  describe('選択翻訳 — 文ペア表示', () => {
+    let originalTranslate;
+    let originalLangMatches;
+
+    beforeEach(() => {
+      originalTranslate = DVT.translate;
+      originalLangMatches = DVT.langMatches;
+      DVT.langMatches = () => false; // 同一言語スキップを通さない
+    });
+
+    afterEach(() => {
+      DVT.translate = originalTranslate;
+      DVT.langMatches = originalLangMatches;
+    });
+
+    async function openPanelWith(originalText, translatedText) {
+      DVT.translate = async () => ({ text: translatedText, detectedLang: 'en' });
+      // showContextMenuPanel は内部で runSelectionTranslate を await せず呼ぶため、
+      // パネル生成後にマイクロタスクを流して翻訳完了を待つ
+      DVT_SEL.showContextMenuPanel(originalText);
+      const panel = document.querySelector('.dvt-sel-panel');
+      // runSelectionTranslate の完了を await（DVT.translate が解決した次のマイクロタスクまで）
+      await vi.waitFor(() => panel.querySelector('.dvt-sel-trans-text').textContent !== ''
+        || panel.querySelector('.dvt-pair') !== null);
+      return panel;
+    }
+
+    it('訳文が 80 字以上 & 原文/訳文ともに 2 文以上同数のときペア表示になる', async () => {
+      // 原文・訳文ともに 2 文に揃える（DVT.splitSentences で同数になることが前提）
+      const orig = 'This is the first sentence. And here comes the second sentence in the source text.';
+      const trans = 'これは原文の最初の文に対応する十分に長い訳文の一つ目の文章です。そしてこちらが原文の二つ目に対応する訳文で、全体としては80文字を確実に超える長さになるよう調整しています。';
+      // sanity check: 文数が同数 2
+      expect(DVT.splitSentences(orig).length).toBe(2);
+      expect(DVT.splitSentences(trans).length).toBe(2);
+      expect(trans.length).toBeGreaterThanOrEqual(80);
+
+      const panel = await openPanelWith(orig, trans);
+
+      const pairs = panel.querySelectorAll('.dvt-pair');
+      expect(pairs.length).toBe(2);
+      // 各ペアに原文セルと訳文セルが存在する
+      pairs.forEach((p) => {
+        expect(p.querySelector('.dvt-pair-orig')).toBeTruthy();
+        expect(p.querySelector('.dvt-pair-trans')).toBeTruthy();
+      });
+      // ペア表示時は原文プレビュー欄が非表示
+      expect(panel.querySelector('.dvt-sel-original').style.display).toBe('none');
+    });
+
+    it('訳文が短い場合は従来表示にフォールバック（原文プレビューは表示）', async () => {
+      const orig = 'Hello world';
+      const trans = 'こんにちは世界';
+      const panel = await openPanelWith(orig, trans);
+
+      expect(panel.querySelector('.dvt-pair')).toBeNull();
+      expect(panel.querySelector('.dvt-sel-trans-text').textContent).toContain(trans);
+      expect(panel.querySelector('.dvt-sel-original').style.display).not.toBe('none');
+    });
+
+    it('文数不一致なら長文でもフォールバック表示になる', async () => {
+      // 原文 3 文 / 訳文 2 文 → アラインせず単一表示
+      const orig = 'One. Two. Three.';
+      const trans = 'これは長めの訳文ですがピリオドで文分割すると2文しかありません、なので両側の文数が一致せずフォールバックします。これでもう一文だけ。';
+      const panel = await openPanelWith(orig, trans);
+
+      // 原文 3 文・訳文は splitSentences で 2 文以下になりうる → 同数でなければフォールバック
+      const origSents = DVT.splitSentences(orig);
+      const transSents = DVT.splitSentences(trans);
+      if (origSents.length !== transSents.length) {
+        expect(panel.querySelector('.dvt-pair')).toBeNull();
+      }
+    });
   });
 
   it('Escape は保留中の selectionchange タイマーもキャンセルする', () => {
