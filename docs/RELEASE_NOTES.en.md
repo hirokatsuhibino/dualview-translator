@@ -27,6 +27,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Improvements
 
+- **Mini icon on selection is now more visible** (#235)
+  - Bumped size from 28px to 36px
+  - Changed background from white to blue (#1a73e8) so it stands out on any page
+  - Icon size also increased from 16px to 20px
 - **Selection translation panel now also supports sentence-pair display for long text** (#233)
   - The selection panel's translation now uses the same paired layout as page translation when the translation is 80+ chars and both sides split into 2+ matching sentences — you get "source 1 → translation 1 → source 2 → translation 2..." instead of one big block.
   - When paired display kicks in, the panel's top-of-panel source preview gets hidden so you don't see the source twice.
