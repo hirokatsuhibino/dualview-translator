@@ -298,6 +298,44 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     expect(panel.querySelector('.dvt-sel-btn')).toBeTruthy();
   });
 
+  it('ミニアイコンをクリックするとパネル展開と同時に翻訳が即時開始される', async () => {
+    DVT_I18N.setLang('ja');
+    const p = document.createElement('p');
+    p.textContent = 'Hello world';
+    document.body.appendChild(p);
+
+    // sendMessage の呼び出し回数をリセットして確認できるようにする
+    chrome.runtime.sendMessage.mockClear();
+
+    selectTextOf(p, 0, 11);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+
+    const btn = document.querySelector('.dvt-sel-mini-btn');
+    expect(btn).toBeTruthy();
+
+    btn.click();
+
+    const panel = document.querySelector('.dvt-sel-panel');
+    expect(panel).toBeTruthy();
+
+    // クリック直後（翻訳非同期待ち）: 翻訳ボタンが disabled になる
+    const transBtn = panel.querySelector('.dvt-sel-btn');
+    expect(transBtn.disabled).toBe(true);
+
+    // 結果欄がすでに visible になっている
+    const result = panel.querySelector('.dvt-sel-result');
+    expect(result.style.display).toBe('block');
+
+    // sendMessage が translate アクションで呼ばれている
+    const calls = chrome.runtime.sendMessage.mock.calls;
+    const translateCall = calls.find(([msg]) => msg?.action === 'translate');
+    expect(translateCall).toBeTruthy();
+
+    // 非同期処理完了後: ボタンが再有効化される
+    await vi.waitFor(() => !transBtn.disabled);
+    expect(transBtn.disabled).toBe(false);
+  });
+
   it('selectionchange イベント経路でもミニアイコンが生成される（iOS Safari 対応の動作保証）', () => {
     vi.useFakeTimers();
     try {

@@ -113,9 +113,10 @@ globalThis.chrome = {
     },
   },
   runtime: {
-    sendMessage: vi.fn((msg, cb) => {
-      if (cb) cb({ ok: true });
-      return Promise.resolve({ ok: true });
+    sendMessage: vi.fn((_msg, cb) => {
+      const res = { ok: true, result: { text: 'mock translation', detectedLang: 'en' } };
+      if (cb) cb(res);
+      return Promise.resolve(res);
     }),
     onMessage: {
       addListener: vi.fn(),

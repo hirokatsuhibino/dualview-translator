@@ -27,6 +27,9 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Improvements
 
+- **Instant translation when clicking the mini icon on selection** (#234)
+  - Clicking the 🌐 mini icon that appears after text selection now starts translation immediately as the panel opens — no need to hit the "Translate" button.
+  - This used to be a 2-step flow: open panel → click "Translate". Now it's 1 click, matching the right-click context-menu translation behavior.
 - **Sentence-level pairing for long paragraphs** (#214 / #219)
   - Fixes the visual gap between the end of the source block and the start of the translation block in long paragraphs.
   - Translation still happens at the paragraph level so accuracy isn't compromised. When sentence counts match on both sides, we interleave them: "source 1 → translation 1 → source 2 → translation 2..."
