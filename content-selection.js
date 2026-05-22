@@ -221,6 +221,8 @@ var DVT_SEL = (function () {
     DVT.state.selectionPanel = panel;
 
     wireUpPanelEvents(panel, text);
+    // アイコンクリック時も即翻訳開始（コンテキストメニューと同じ動作）
+    runSelectionTranslate(panel, text, DVT.state.targetLang);
   }
 
   // ─── コンテキストメニューからの翻訳パネル表示 ──────────────────────

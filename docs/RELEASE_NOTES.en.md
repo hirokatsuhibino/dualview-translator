@@ -10,6 +10,12 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **Instant translation when clicking the mini icon on selection** (#232)
+  - Clicking the 🌐 mini icon that appears after text selection now starts translation immediately as the panel opens — no need to hit the "Translate" button.
+  - This used to be a 2-step flow: open panel → click "Translate". Now it's 1 click, matching the right-click context-menu translation behavior.
+
 ### Bug Fixes
 
 - **Fix outer vertical bar showing up next to source lines in paired mode** (#228)
