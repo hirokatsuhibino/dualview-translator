@@ -12,6 +12,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Bug Fixes
 
+- **Fix mini icon appearing far from the cursor on multi-line selections** (#240)
+  - When selecting text that spans multiple lines, `getBoundingClientRect()` returns the bounding box of the entire selection, so `right` reflects the longest line rather than the cursor position — making the icon appear offset to the right.
+  - Now uses `getClientRects()` to get per-line rects and picks the last one, which matches the cursor position.
+  - Falls back to `getBoundingClientRect()` in environments where `getClientRects()` returns an empty list (e.g. jsdom).
 - **Fix outer vertical bar showing up next to source lines in paired mode** (#228)
   - The PR #222 follow-up that forced an inline `border-left` on `.dvt-trans` also made the outer bar visible alongside the source (English) lines in sentence-pair mode.
   - In paired mode each `.dvt-pair-trans` already has its own inner bar, so the outer one is redundant — we now clear it inline.

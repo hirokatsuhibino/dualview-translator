@@ -142,6 +142,30 @@ var DVT_SEL = (function () {
   const MINI_BTN_SIZE = 36;
   const MINI_BTN_GAP = 4;
 
+  // Range の「カーソル位置」の矩形を返す。
+  // Selection が渡された場合は focusNode/focusOffset から collapsed range を作り
+  // その rect を使う（逆方向ドラッグ時に focus がドキュメント順 start 側にある場合の対応）。
+  // sel が無い・focusNode が無効の場合は getClientRects() の最終 rect、
+  // さらに空の場合は getBoundingClientRect() にフォールバックする。
+  function getRangeEndRect(range, sel) {
+    // 逆方向ドラッグ対応: Selection の focus 側から collapsed range を作り rect を取得
+    if (sel && sel.focusNode) {
+      try {
+        const focusRange = document.createRange();
+        focusRange.setStart(sel.focusNode, sel.focusOffset);
+        focusRange.collapse(true);
+        const focusRects = focusRange.getClientRects();
+        if (focusRects.length > 0) return focusRects[0];
+      } catch (_) {
+        // focusNode が detached など例外は無視してフォールバックへ
+      }
+    }
+    // フォールバック: ドキュメント順の末尾行 rect
+    const rects = range.getClientRects();
+    if (rects.length > 0) return rects[rects.length - 1];
+    return range.getBoundingClientRect();
+  }
+
   // rect の右下端基準でミニアイコンの top/left を決め、ビューポート内にクランプする
   function computeMiniBtnPosition(rect) {
     const top = rect.bottom + window.scrollY + MINI_BTN_GAP;
@@ -158,9 +182,12 @@ var DVT_SEL = (function () {
 
   function showSelectionMiniBtn(sel, text) {
     // クリック時にスクロール／リサイズで位置がずれないよう、Range を保持して
-    // クリック時点で再度 getBoundingClientRect() を呼べるようにする
+    // クリック時点で再度矩形を取得できるようにする
     const range = sel.getRangeAt(0).cloneRange();
-    const rect = range.getBoundingClientRect();
+    // 複数行選択では getBoundingClientRect() の right が全体外接矩形の右端になりカーソル位置と
+    // 大きくズレるため、末尾行の矩形（getRangeEndRect）を使う（#240）
+    // sel を渡すことで逆方向ドラッグ時も focus 位置基準で配置できる（#240）
+    const rect = getRangeEndRect(range, sel);
 
     // 翻訳アイコンだけの小さな角丸正方形ボタン
     const btn = document.createElement('button');
@@ -197,8 +224,8 @@ var DVT_SEL = (function () {
       ev.stopPropagation();
       removeSelectionMiniBtn();
       // クリック時点でスクロール・リサイズが発生している可能性があるため、
-      // 保持していた Range から rect を再取得する
-      const freshRect = range.getBoundingClientRect();
+      // 保持していた Range から末尾行の rect を再取得する（#240）
+      const freshRect = getRangeEndRect(range);
       // 選択が完全に解除されて Range が無効化された場合のフォールバック
       const safeRect = (freshRect.width === 0 && freshRect.height === 0) ? rect : freshRect;
       showSelectionPanelAtRect(safeRect, text);

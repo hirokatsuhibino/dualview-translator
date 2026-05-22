@@ -143,11 +143,23 @@ describe('選択翻訳 — ミニアイコン方式', () => {
     expect(jsCode).toMatch(/mousedown[\s\S]{0,200}ev\.button !== 0/);
   });
 
-  it('クリック時に Range から rect を再取得して位置ズレに対応している', () => {
+  it('getRangeEndRect ヘルパーが sel.focusNode を優先し getClientRects にフォールバックする', () => {
+    expect(jsCode).toContain('function getRangeEndRect');
+    // focus 優先ロジック
+    expect(jsCode).toContain('sel.focusNode');
+    expect(jsCode).toContain('focusRange.getClientRects()');
+    // フォールバック
+    expect(jsCode).toContain('range.getClientRects()');
     expect(jsCode).toContain('range.getBoundingClientRect()');
-    // 初期化時に1度、クリック時に再取得で計2回以上呼ばれることを確認
-    const matches = jsCode.match(/getBoundingClientRect\(\)/g) || [];
-    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('showSelectionMiniBtn が getRangeEndRect を sel 付きで呼んで初期位置を決めている', () => {
+    // sel を第 2 引数に渡して逆方向ドラッグに対応していることを確認
+    expect(jsCode).toMatch(/const rect = getRangeEndRect\(range,\s*sel\)/);
+  });
+
+  it('クリック時も getRangeEndRect で末尾行の rect を再取得している', () => {
+    expect(jsCode).toMatch(/const freshRect = getRangeEndRect\(range\)/);
   });
 
   it('アイコン要素に aria-hidden を付与してスクリーンリーダーでの二重読み上げを防いでいる', () => {
@@ -189,6 +201,86 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     sel.removeAllRanges();
     sel.addRange(range);
   }
+
+  // ─── Issue #240: focus 側 rect 優先（正方向ドラッグ） ──────────────
+  it('正方向ドラッグ時は Selection.focusNode 側 collapsed range の rect を基準にアイコンを配置する', () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world translation test';
+    document.body.appendChild(p);
+
+    selectTextOf(p, 0, 20);
+
+    // collapsed range（focus 側）は right=200 を返し、
+    // 全体 range は right=800（1行目末尾）を返すようモック
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      if (this.collapsed) {
+        // focus 側（正方向ドラッグ = 末尾寄り）: right=200
+        return [{ top: 20, bottom: 40, left: 0, right: 200, width: 200, height: 20 }];
+      }
+      // range 全体: right=800（1行目末尾）
+      return [
+        { top: 0, bottom: 20, left: 0, right: 800, width: 800, height: 20 },
+        { top: 20, bottom: 40, left: 0, right: 200, width: 200, height: 20 },
+      ];
+    };
+
+    try {
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+      const btn = document.querySelector('.dvt-sel-mini-btn');
+      expect(btn).toBeTruthy();
+
+      const btnLeft = parseFloat(btn.style.left);
+      const btnTop  = parseFloat(btn.style.top);
+
+      // focus 側 rect（right=200, bottom=40）基準: left ≈ 204, top ≈ 44
+      // getBoundingClientRect（right=800）基準だと left ≈ 804 になる（クランプで変わりうる）
+      // focus 側 rect を使っていれば left は 300 以下
+      expect(btnLeft).toBeLessThan(300);
+      expect(btnTop).toBeGreaterThanOrEqual(40);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
+
+  it('逆方向ドラッグ時は Selection.focusNode 側の rect を使ってアイコンを配置する', () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world translation test';
+    document.body.appendChild(p);
+
+    selectTextOf(p, 0, 20);
+
+    // focus 側（逆ドラッグ = 先頭寄り）の collapsed range rect をモック
+    // focusNode の getClientRects が right=50 の小さな rect を返すよう設定
+    const originalGetClientRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () {
+      // collapsed range（setStart + collapse）か否かをサイズで判別
+      // collapsed = width 0 のケースなので、代わりに 1 件だけ返してテスト
+      const isFocusRange = this.collapsed;
+      if (isFocusRange) {
+        // focus 側: right=50（カーソル位置）
+        return [{ top: 20, bottom: 40, left: 48, right: 50, width: 2, height: 20 }];
+      }
+      // range 全体: right=800（1行目末尾）
+      return [
+        { top: 0, bottom: 20, left: 0, right: 800, width: 800, height: 20 },
+        { top: 20, bottom: 40, left: 0, right: 200, width: 200, height: 20 },
+      ];
+    };
+
+    try {
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+      const btn = document.querySelector('.dvt-sel-mini-btn');
+      expect(btn).toBeTruthy();
+
+      const btnLeft = parseFloat(btn.style.left);
+      // focus 側 rect の right=50 基準: left ≈ 54
+      // range 末尾 rect（right=200）基準では left ≈ 204 になるので区別できる
+      expect(btnLeft).toBeLessThan(100);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+    }
+  });
 
   it('テキスト選択直後の mouseup でミニアイコンが生成される', () => {
     const p = document.createElement('p');
