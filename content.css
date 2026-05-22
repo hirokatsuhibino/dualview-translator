@@ -34,11 +34,13 @@
 }
 
 .dvt-trans-paired {
-  /* ペア配置時は各 .dvt-pair-trans が内側で縦バーを持つので、
-     外側 .dvt-trans の左枠線は冗長（原文行の左にも縦バーが見えて邪魔）。
-     border / padding-left は inline でも上書きしているが CSS でも整合させる。 */
+  /* ペア配置時は各 .dvt-pair-trans が内側で縦バー・背景を持つので、
+     外側 .dvt-trans の border / background は冗長
+     （原文行の左にも縦バーが見えたり、原文の裏にも翻訳色の背景が回り込んでしまう）。
+     inline でも上書きしているが CSS でも整合させる。 */
   border-left: none !important;
   padding-left: 0 !important;
+  background: none !important;
 }
 
 .dvt-pair {
@@ -65,6 +67,9 @@
   margin-top: 2px;
   padding-left: 8px;
   border-left: 2px solid rgba(245, 166, 35, 0.4);
+  /* 訳文行の視覚的区別。外側 .dvt-trans の背景をペアモードで解除した分、
+     ここで訳文行のみに薄い背景を付けて「翻訳である」ことを示す。 */
+  background: rgba(245, 166, 35, 0.07);
 }
 
 /* 個別リセットボタン（翻訳テキスト末尾の × ） */
@@ -683,6 +688,12 @@
     background: rgba(212,135,10,0.08) !important;
   }
 
+  /* ペア表示モードでは外側 .dvt-trans の装飾を解除し、訳文行のみに色を付ける */
+  .dvt-pair-trans {
+    border-left-color: rgba(212, 135, 10, 0.5) !important;
+    background: rgba(212, 135, 10, 0.08) !important;
+  }
+
   /* ── Selection Floating Panel ── */
   .dvt-sel-panel {
     background: #ffffff !important;
@@ -900,6 +911,10 @@
 .dvt-light .dvt-trans {
   border-left-color: #d4870a !important;
   background: rgba(212,135,10,0.08) !important;
+}
+.dvt-light .dvt-pair-trans {
+  border-left-color: rgba(212, 135, 10, 0.5) !important;
+  background: rgba(212, 135, 10, 0.08) !important;
 }
 .dvt-light .dvt-sel-panel {
   background: #ffffff !important;
