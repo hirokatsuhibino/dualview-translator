@@ -142,16 +142,27 @@ var DVT_SEL = (function () {
   const MINI_BTN_SIZE = 36;
   const MINI_BTN_GAP = 4;
 
-  // Range の「末尾行」の矩形を返す。
-  // getBoundingClientRect() は複数行選択時に全行を囲む外接矩形を返すため、
-  // 1 行目が長くて 2 行目が短い場合などに right が実際のカーソル位置より大きくなる。
-  // getClientRects() は行ごとの個別矩形を返すため、最後の矩形を使うとカーソル位置に近くなる。
-  function getRangeEndRect(range) {
-    const rects = range.getClientRects();
-    if (rects.length > 0) {
-      return rects[rects.length - 1];
+  // Range の「カーソル位置」の矩形を返す。
+  // Selection が渡された場合は focusNode/focusOffset から collapsed range を作り
+  // その rect を使う（逆方向ドラッグ時に focus がドキュメント順 start 側にある場合の対応）。
+  // sel が無い・focusNode が無効の場合は getClientRects() の最終 rect、
+  // さらに空の場合は getBoundingClientRect() にフォールバックする。
+  function getRangeEndRect(range, sel) {
+    // 逆方向ドラッグ対応: Selection の focus 側から collapsed range を作り rect を取得
+    if (sel && sel.focusNode) {
+      try {
+        const focusRange = document.createRange();
+        focusRange.setStart(sel.focusNode, sel.focusOffset);
+        focusRange.collapse(true);
+        const focusRects = focusRange.getClientRects();
+        if (focusRects.length > 0) return focusRects[0];
+      } catch (_) {
+        // focusNode が detached など例外は無視してフォールバックへ
+      }
     }
-    // jsdom など getClientRects() が空配列を返す環境ではフォールバック
+    // フォールバック: ドキュメント順の末尾行 rect
+    const rects = range.getClientRects();
+    if (rects.length > 0) return rects[rects.length - 1];
     return range.getBoundingClientRect();
   }
 
@@ -175,7 +186,8 @@ var DVT_SEL = (function () {
     const range = sel.getRangeAt(0).cloneRange();
     // 複数行選択では getBoundingClientRect() の right が全体外接矩形の右端になりカーソル位置と
     // 大きくズレるため、末尾行の矩形（getRangeEndRect）を使う（#240）
-    const rect = getRangeEndRect(range);
+    // sel を渡すことで逆方向ドラッグ時も focus 位置基準で配置できる（#240）
+    const rect = getRangeEndRect(range, sel);
 
     // 翻訳アイコンだけの小さな角丸正方形ボタン
     const btn = document.createElement('button');
