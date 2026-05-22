@@ -209,11 +209,13 @@ var DVT_PAGE = (function () {
     // （ホスト CSS で display:inline !important が当たると、CSS の display:none が負ける）
     origEl.style.setProperty('display', 'none', 'important');
     transEl.classList.add('dvt-trans-paired');
-    // ペア表示では各 .dvt-pair-trans 側に縦バーがあるため、外側 .dvt-trans の border-left は
-    // 原文行の左にも縦バーが見えてしまい邪魔になる。insertDualView で inline !important を
-    // 当てているので、ここで明示的に解除する。padding-left も外側装飾を抑えるため 0 に戻す。
+    // ペア表示では各 .dvt-pair-trans 側に縦バー・背景があるため、外側 .dvt-trans の
+    // border-left / background は冗長（原文行の左にも縦バーが見えたり、原文の裏にも
+    // 翻訳色の背景が回り込む）。insertDualView で border-left は inline !important を
+    // 当てているので明示的に解除し、background も同様に inline で透明化する。
     transEl.style.setProperty('border-left', 'none', 'important');
     transEl.style.setProperty('padding-left', '0', 'important');
+    transEl.style.setProperty('background', 'transparent', 'important');
     transEl.textContent = '';
     for (let i = 0; i < origSents.length; i++) {
       const pair = document.createElement('span');
@@ -231,6 +233,9 @@ var DVT_PAGE = (function () {
       tSent.style.setProperty('display', 'block', 'important');
       tSent.style.setProperty('border-left', '2px solid rgba(245, 166, 35, 0.4)', 'important');
       tSent.style.setProperty('padding-left', '8px', 'important');
+      // 訳文行の背景。外側 .dvt-trans の背景をペアモードで解除した分、
+      // 訳文行のみに薄い翻訳色を付けて視覚的区別を保つ。
+      tSent.style.setProperty('background', 'rgba(245, 166, 35, 0.07)', 'important');
       tSent.textContent = transSents[i];
       pair.appendChild(oSent);
       pair.appendChild(tSent);
