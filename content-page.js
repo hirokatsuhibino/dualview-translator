@@ -209,6 +209,11 @@ var DVT_PAGE = (function () {
     // （ホスト CSS で display:inline !important が当たると、CSS の display:none が負ける）
     origEl.style.setProperty('display', 'none', 'important');
     transEl.classList.add('dvt-trans-paired');
+    // ペア表示では各 .dvt-pair-trans 側に縦バーがあるため、外側 .dvt-trans の border-left は
+    // 原文行の左にも縦バーが見えてしまい邪魔になる。insertDualView で inline !important を
+    // 当てているので、ここで明示的に解除する。padding-left も外側装飾を抑えるため 0 に戻す。
+    transEl.style.setProperty('border-left', 'none', 'important');
+    transEl.style.setProperty('padding-left', '0', 'important');
     transEl.textContent = '';
     for (let i = 0; i < origSents.length; i++) {
       const pair = document.createElement('span');

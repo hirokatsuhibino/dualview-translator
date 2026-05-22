@@ -464,6 +464,12 @@ describe('DVT_PAGE (content-page)', () => {
       expect(pairs[0].querySelector('.dvt-pair-orig').textContent).toContain('first long sentence');
       expect(pairs[0].querySelector('.dvt-pair-trans').textContent).toContain('最初の長い文');
       expect(pairs[2].querySelector('.dvt-pair-trans').textContent).toContain('3番目の文');
+      // ペア表示モードでは外側 .dvt-trans の border-left を inline で解除する。
+      // 各ペア内側の .dvt-pair-trans が縦バーを持つため、外側の縦バーは原文行の左にも見えて邪魔になる。
+      // jsdom は border-left: none を border-left-style: none に正規化するため、
+      // style プロパティではなく getPropertyValue で検証する。
+      expect(trans.style.getPropertyValue('border-left-style')).toBe('none');
+      expect(trans.style.getPropertyValue('padding-left')).toBe('0px');
     });
 
     it('短い段落（閾値未満）はペア表示にしない', async () => {
