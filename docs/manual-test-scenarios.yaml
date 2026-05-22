@@ -952,7 +952,7 @@ suites:
       - id: SMI-002
         title: ミニアイコンクリックでフルパネルが展開し即翻訳が開始される
         priority: p0
-        related_prs: [232]
+        related_prs: [234]
         steps:
           - SMI-001 の状態でミニアイコンをクリックする
         expected:
