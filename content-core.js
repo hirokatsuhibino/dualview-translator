@@ -112,8 +112,28 @@ var DVT = (function () {
           // 後続文の開始文字を確認（空白を読み飛ばす）
           let j = i + 1;
           while (j < len && /\s/.test(text[j])) j++;
+          // Wikipedia 等の脚注番号 [数字] を検出してスキップ
+          // 連続脚注 "[10][11]" や "[10] [11]" にも対応
+          // 脚注は前の文への注釈なのでバッファに取り込んでから区切る
+          let footnoteEnd = -1;
+          while (text[j] === '[') {
+            let k = j + 1;
+            while (k < len && /\d/.test(text[k])) k++;
+            if (k < len && text[k] === ']' && k > j + 1) {
+              footnoteEnd = k;
+              j = k + 1;
+              while (j < len && /\s/.test(text[j])) j++;
+            } else {
+              break;
+            }
+          }
           const nextNonSpace = text[j];
           if (nextNonSpace && /[A-Z぀-ゟ゠-ヿ一-鿿]/.test(nextNonSpace)) {
+            if (footnoteEnd >= 0) {
+              // 脚注番号をバッファに取り込んでから区切る（例: "sentence. [10][11]" → 1文目末尾）
+              buf += text.slice(i + 1, footnoteEnd + 1);
+              i = footnoteEnd;
+            }
             parts.push(buf.trim());
             buf = '';
           }

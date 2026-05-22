@@ -95,6 +95,40 @@ describe('DVT (content-core)', () => {
       const out = DVT.splitSentences('A。  B。');
       expect(out).toEqual(['A。', 'B。']);
     });
+
+    it('英語の脚注番号 [n] を挟む文を正しく区切る', () => {
+      // Wikipedia等: ". [10] Next sentence." → 2文に分割
+      expect(DVT.splitSentences('First sentence. [10] Second sentence.'))
+        .toEqual(['First sentence. [10]', 'Second sentence.']);
+    });
+
+    it('脚注番号が複数桁でも正しく区切る', () => {
+      expect(DVT.splitSentences('One sentence. [123] Another sentence.'))
+        .toEqual(['One sentence. [123]', 'Another sentence.']);
+    });
+
+    it('[n] の後が小文字なら区切らない', () => {
+      // [n] 後が小文字の場合は文継続
+      expect(DVT.splitSentences('Some text. [1] continued text.'))
+        .toEqual(['Some text. [1] continued text.']);
+    });
+
+    it('連続脚注 [10][11] (空白なし) を正しく区切る', () => {
+      // Wikipedia 典型ケース: 連続する脚注が空白なしで並ぶ
+      expect(DVT.splitSentences('First sentence. [10][11] Second sentence.'))
+        .toEqual(['First sentence. [10][11]', 'Second sentence.']);
+    });
+
+    it('連続脚注 [10] [11] (空白あり) を正しく区切る', () => {
+      // 連続脚注の間に空白がある場合
+      expect(DVT.splitSentences('First sentence. [10] [11] Second sentence.'))
+        .toEqual(['First sentence. [10] [11]', 'Second sentence.']);
+    });
+
+    it('3つ以上の連続脚注 [1][2][3] にも対応', () => {
+      expect(DVT.splitSentences('First. [1][2][3] Second.'))
+        .toEqual(['First. [1][2][3]', 'Second.']);
+    });
   });
 
   describe('langMatches()', () => {
