@@ -2386,11 +2386,11 @@ suites:
           - 段落 A だけ undo した時点では clamp は解除されたまま（B の訳文が clamp で隠れない）
           - 段落 B も undo すると祖先の元の clamp / max-height / overflow が復元される
 
-  # ━━━━━ 選択翻訳の文ペア表示（#233） ━━━━━
+  # ━━━━━ 選択翻訳の文ペア表示（#233 / PR #236） ━━━━━
   - id: selection-paired-display
     title: 選択翻訳パネルの文ペア表示
-    description: "#233 で選択翻訳パネルもページ翻訳と同じ条件で文ペア表示に対応した"
-    related_prs: [233]
+    description: "Issue #233 で選択翻訳パネルもページ翻訳と同じ条件で文ペア表示に対応した（PR #236）"
+    related_prs: [236]
     scenarios:
       - id: SPP-001
         title: 長文を選択翻訳すると文ペア表示になり原文プレビューが消える

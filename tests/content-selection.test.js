@@ -468,17 +468,22 @@ describe('選択翻訳 — ミニアイコン jsdom 統合', () => {
     });
 
     it('文数不一致なら長文でもフォールバック表示になる', async () => {
-      // 原文 3 文 / 訳文 2 文 → アラインせず単一表示
-      const orig = 'One. Two. Three.';
-      const trans = 'これは長めの訳文ですがピリオドで文分割すると2文しかありません、なので両側の文数が一致せずフォールバックします。これでもう一文だけ。';
+      // 原文 1 文 / 訳文 2 文 を必ず生成して文数不一致を確実に発生させる。
+      // 原文はピリオドを含まない 1 文、訳文は句点 2 つの 80 字以上の日本語。
+      const orig = 'This is one single sentence without any period in the middle so it splits into exactly one sentence';
+      const trans = 'これは原文 1 文に対して訳文側が 2 文に分割される意図的なケースの最初の文です。そしてこれが二つ目の文で、訳文全体は 80 字を超える長さに調整されています。';
+      // sanity check: 文数不一致が確定する入力であることを担保
+      expect(DVT.splitSentences(orig).length).toBe(1);
+      expect(DVT.splitSentences(trans).length).toBe(2);
+      expect(trans.length).toBeGreaterThanOrEqual(80);
+
       const panel = await openPanelWith(orig, trans);
 
-      // 原文 3 文・訳文は splitSentences で 2 文以下になりうる → 同数でなければフォールバック
-      const origSents = DVT.splitSentences(orig);
-      const transSents = DVT.splitSentences(trans);
-      if (origSents.length !== transSents.length) {
-        expect(panel.querySelector('.dvt-pair')).toBeNull();
-      }
+      // 文数不一致なのでペア要素は一切生成されず、単一テキスト表示にフォールバック
+      expect(panel.querySelector('.dvt-pair')).toBeNull();
+      expect(panel.querySelector('.dvt-sel-trans-text').textContent).toContain(trans);
+      // ペア表示にならないので原文プレビュー欄は表示されたまま
+      expect(panel.querySelector('.dvt-sel-original').style.display).not.toBe('none');
     });
   });
 
