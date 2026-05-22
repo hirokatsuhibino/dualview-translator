@@ -233,9 +233,10 @@ var DVT_PAGE = (function () {
       tSent.style.setProperty('display', 'block', 'important');
       tSent.style.setProperty('border-left', '2px solid rgba(245, 166, 35, 0.4)', 'important');
       tSent.style.setProperty('padding-left', '8px', 'important');
-      // 訳文行の背景。外側 .dvt-trans の背景をペアモードで解除した分、
-      // 訳文行のみに薄い翻訳色を付けて視覚的区別を保つ。
-      tSent.style.setProperty('background', 'rgba(245, 166, 35, 0.07)', 'important');
+      // 訳文行の背景は CSS（.dvt-pair-trans / .dvt-light .dvt-pair-trans / @media prefers-color-scheme: light）
+      // に任せる。inline !important で固定するとライトテーマで色を上書きできなくなる
+      // （inline !important が CSS の !important より強いため）。背景は装飾なので
+      // reset-heavy サイトで多少薄まっても border-left だけで視覚的区別は保たれる。
       tSent.textContent = transSents[i];
       pair.appendChild(oSent);
       pair.appendChild(tSent);

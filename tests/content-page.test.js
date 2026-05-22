@@ -472,9 +472,11 @@ describe('DVT_PAGE (content-page)', () => {
       expect(trans.style.getPropertyValue('border-left-style')).toBe('none');
       expect(trans.style.getPropertyValue('padding-left')).toBe('0px');
       expect(trans.style.getPropertyValue('background-color')).toBe('transparent');
-      // 訳文行（.dvt-pair-trans）側には背景色が inline で当たる
+      // 訳文行（.dvt-pair-trans）の背景は CSS に任せる（inline で固定すると
+      // ライトテーマの CSS override が inline !important に負けてしまうため）
+      // → inline background が付いていないことを確認
       const pairTrans = pairs[0].querySelector('.dvt-pair-trans');
-      expect(pairTrans.style.getPropertyValue('background-color')).toBe('rgba(245, 166, 35, 0.07)');
+      expect(pairTrans.style.getPropertyValue('background-color')).toBe('');
     });
 
     it('短い段落（閾値未満）はペア表示にしない', async () => {

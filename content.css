@@ -688,6 +688,12 @@
     background: rgba(212,135,10,0.08) !important;
   }
 
+  /* ペア表示モードでは外側 .dvt-trans の装飾を解除し、訳文行のみに色を付ける */
+  .dvt-pair-trans {
+    border-left-color: rgba(212, 135, 10, 0.5) !important;
+    background: rgba(212, 135, 10, 0.08) !important;
+  }
+
   /* ── Selection Floating Panel ── */
   .dvt-sel-panel {
     background: #ffffff !important;
@@ -905,6 +911,10 @@
 .dvt-light .dvt-trans {
   border-left-color: #d4870a !important;
   background: rgba(212,135,10,0.08) !important;
+}
+.dvt-light .dvt-pair-trans {
+  border-left-color: rgba(212, 135, 10, 0.5) !important;
+  background: rgba(212, 135, 10, 0.08) !important;
 }
 .dvt-light .dvt-sel-panel {
   background: #ffffff !important;
