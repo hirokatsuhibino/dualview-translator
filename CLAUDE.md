@@ -132,6 +132,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - 元の `.dvt-orig` は `.dvt-orig-paired` クラスで CSS 非表示。undo 時の `restoreOriginalContent()` が `.dvt-orig` の子ノードを使うため、復元ロジックは変更不要
 - 文数不一致・インライン要素を含む・短い段落は従来の単一ペア表示にフォールバック
 - iOS / macOS の Share Extension（`safari/.../DualViewRenderer.swift`）にも同じロジックを移植済み。`SentenceSplitter.swift`（`DVT.splitSentences` の Swift ポート）で文分割し、訳文 80 字以上かつ両側文数一致のときに `.dvt-pair-paired` で交互表示する
+- 選択翻訳パネル（`content-selection.js`）の `runSelectionTranslate` でも同じ閾値（`PAIR_MIN_TRANS_LENGTH=80` / 両側 2 文以上同数）で `.dvt-pair` / `.dvt-pair-orig` / `.dvt-pair-trans` を組む。ペア表示時はパネル冒頭の `.dvt-sel-original`（最大 60 字の原文プレビュー）を `display:none` にして冗長を排除。再翻訳でフォールバックに戻った場合は元に戻す。読み上げボタンはペア表示時 `.dvt-pair-trans` のみを連結して読み上げる
 
 ### 動的コンテンツ監視
 

@@ -8,6 +8,9 @@ var DVT_SEL = (function () {
   const SVG_TRANSLATE = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 3l14 0M12 3v4M3 10h8m0 0-3 3m3-3-3-3M16 10h5M16 14l5 0M16 17l5 0"/></svg>';
   const SVG_COPY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
 
+  // 文ペア表示を発動する訳文の最小長さ（content-page.js と同じ閾値）
+  const PAIR_MIN_TRANS_LENGTH = 80;
+
   // 言語オプション定義
   const LANG_OPTIONS = [
     ['ja', '🇯🇵 日本語'], ['en', '🇺🇸 English'],
@@ -376,6 +379,25 @@ var DVT_SEL = (function () {
     return frag;
   }
 
+  // ─── 文ペア表示の試行 ──────────────────────────────────────────────
+  // 訳文が一定長を超え、原文・訳文を文分割した結果が 2 文以上 & 同数のときのみ
+  // 「原文1→訳1→原文2→訳2…」と交互配置する。条件を満たさなければ false を返し、
+  // 呼び出し側で従来表示にフォールバックする。
+  function tryRenderPaired(container, originalText, translatedText) {
+    if (translatedText.length < PAIR_MIN_TRANS_LENGTH) return false;
+    const origSents = DVT.splitSentences(originalText);
+    const transSents = DVT.splitSentences(translatedText);
+    if (origSents.length < 2 || origSents.length !== transSents.length) return false;
+
+    for (let i = 0; i < origSents.length; i++) {
+      const pair = h('div', { class: 'dvt-pair', 'data-dvt': 'true' });
+      pair.appendChild(h('div', { class: 'dvt-pair-orig', 'data-dvt': 'true' }, origSents[i]));
+      pair.appendChild(h('div', { class: 'dvt-pair-trans', 'data-dvt': 'true' }, transSents[i]));
+      container.appendChild(pair);
+    }
+    return true;
+  }
+
   // ─── 選択テキスト翻訳実行 ──────────────────────────────────────────
   async function runSelectionTranslate(panel, text, tl) {
     const btn = panel.querySelector('.dvt-sel-btn');
@@ -391,11 +413,22 @@ var DVT_SEL = (function () {
     const { text: translated, detectedLang } = await DVT.translate(text, tl);
 
     const isSameLang = DVT.langMatches(detectedLang, tl);
+    const original = panel.querySelector('.dvt-sel-original');
     if (isSameLang) {
       transText.textContent = '';
       transText.appendChild(h('span', { class: 'dvt-same-lang' }, t('sameLang', { lang: detectedLang })));
+      // 再翻訳でペア表示→同一言語に変わった場合に原文プレビューを復元
+      if (original) original.style.display = '';
     } else {
-      transText.textContent = translated;
+      transText.textContent = '';
+      const paired = tryRenderPaired(transText, text, translated);
+      if (paired) {
+        // ペア内に原文全文が再掲されるためプレビュー欄は冗長になる→非表示
+        if (original) original.style.display = 'none';
+      } else {
+        transText.textContent = translated;
+        if (original) original.style.display = '';
+      }
     }
 
     btn.disabled = false;
@@ -408,7 +441,15 @@ var DVT_SEL = (function () {
     const actions = panel.querySelector('.dvt-sel-actions');
     if (DVT.isSpeechSupported() && !actions.querySelector('.dvt-speak-btn')) {
       const speakBtn = DVT.createSpeakButton(
-        () => panel.querySelector('.dvt-sel-trans-text').textContent,
+        () => {
+          // ペア表示時は .dvt-pair-trans のみ連結（原文を読み上げない）
+          const transTextEl = panel.querySelector('.dvt-sel-trans-text');
+          const pairs = transTextEl.querySelectorAll('.dvt-pair-trans');
+          if (pairs.length > 0) {
+            return Array.from(pairs).map(p => p.textContent).join(' ');
+          }
+          return transTextEl.textContent;
+        },
         () => panel.querySelector('.dvt-sel-lang').value,
         'dvt-speak-btn-panel'
       );
