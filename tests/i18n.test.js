@@ -147,6 +147,9 @@ describe('DVT_I18N', () => {
       'undoElement', 'undoSummary',
       'engineApple', 'fallbackToApple',
       'translateBarMsg', 'translateBarMsgUnknown',
+      'welcomeTitle', 'welcomeLead', 'welcomePinHeading',
+      'welcomePinStep1', 'welcomePinStep2', 'welcomePinnedDone', 'welcomeStartHint',
+      'pinBannerText', 'pinBannerClose',
     ];
 
     for (const lang of langs) {

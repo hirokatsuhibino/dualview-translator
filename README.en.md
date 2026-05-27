@@ -169,6 +169,15 @@ https://apps.apple.com/app/dualview-translator/id6763488360
 
 The Safari Web Extension Xcode project lives under `safari/` if you want to build locally. Build instructions are in [safari/README.md](safari/README.md).
 
+### Pin it to your toolbar
+
+Pin the extension to your toolbar after installing, and you can open the popup in one click.
+
+1. Click the puzzle-piece (Extensions) icon at the top-right of your toolbar.
+2. Click the pin icon next to "DualView Translator" to keep it in view.
+
+A page walking you through these steps pops up automatically the first time you install. Browsers don't let extensions force-pin themselves, so you'll have to do this bit by hand (and you won't see the hint once it's pinned).
+
 ## How to use
 
 ### Selection translation (the easy one)

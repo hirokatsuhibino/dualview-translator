@@ -488,6 +488,38 @@
       margin: 0;
     }
 
+    /* ── ピン留め誘導バナー ── */
+    .dvt-pin-banner {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--accent-dim);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text);
+    }
+    .dvt-pin-banner.show { display: flex; }
+    .dvt-pin-banner svg {
+      width: 15px;
+      height: 15px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .dvt-pin-banner .dvt-pin-banner-text { flex: 1; line-height: 1.4; }
+    .dvt-pin-banner-close {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px 4px;
+      font-family: inherit;
+    }
+    .dvt-pin-banner-close:hover { color: var(--text); }
+
     /* ── Tab Bar ── */
     .dvt-tab-bar {
       display: flex;
@@ -731,6 +763,13 @@
       <div class="brand-name">DualView Translator <span class="version" id="appVersion"></span><span class="dev-badge" id="devBadge">dev</span></div>
       <div class="brand-sub" data-i18n="brandSub">原文と翻訳を並べて表示</div>
     </div>
+  </div>
+
+  <!-- ピン留め誘導バナー（未ピン留め時のみ表示） -->
+  <div class="dvt-pin-banner" id="pinBanner">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 4v6l3 4v2h-6v6h-2v-6H5v-2l3-4V4H7V2h10v2h-1z"/></svg>
+    <span class="dvt-pin-banner-text" data-i18n="pinBannerText">ツールバーにピン留めすると、ワンクリックで開けます。</span>
+    <button class="dvt-pin-banner-close" id="pinBannerClose" data-i18n-title="pinBannerClose" aria-label="閉じる">&times;</button>
   </div>
 
   <!-- タブバー -->

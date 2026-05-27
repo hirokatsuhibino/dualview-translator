@@ -104,6 +104,17 @@ async function detectAppleAvailability() {
 chrome.runtime.onInstalled.addListener(() => { detectAppleAvailability(); });
 chrome.runtime.onStartup?.addListener(() => { detectAppleAvailability(); });
 
+// ─── 初回インストール時にウェルカムページを開く ──────────────────────
+// ツールバーへのピン留めはブラウザ仕様上、開発者側から強制できないため、
+// インストール直後に手順を案内するページを開いてピン留めを誘導する。
+// reason === 'install' のときのみ（update / chrome_update では開かない）。
+function openWelcomeOnInstall(details) {
+  if (!details || details.reason !== 'install') return;
+  if (!chrome.tabs || typeof chrome.tabs.create !== 'function') return;
+  chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+}
+chrome.runtime.onInstalled.addListener(openWelcomeOnInstall);
+
 // ─── 設定ミラー（App Group 経由で Share Extension 等に共有） ──────────
 // chrome.storage.local の MIRRORED_KEYS が変更されたら Native ハンドラへ送信し、
 // `UserDefaults(suiteName: group.jp.co.orangesoft.dualview-translator)` に反映させる。
