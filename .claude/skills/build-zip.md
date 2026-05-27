@@ -46,6 +46,8 @@ Chrome Web Store / Firefox Add-ons への提出用。
 - `popup.html`
 - `popup-init.js`
 - `popup.js`
+- `welcome.html`
+- `welcome.js`
 - `icons/`
 - `_locales/`
 - `LICENSE`
@@ -63,6 +65,8 @@ zip -r dualview-translator-<VERSION>.zip \
   popup.html \
   popup-init.js \
   popup.js \
+  welcome.html \
+  welcome.js \
   icons/ \
   _locales/ \
   LICENSE
