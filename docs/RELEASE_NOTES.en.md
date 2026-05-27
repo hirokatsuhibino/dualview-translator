@@ -10,6 +10,14 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### New Features
+
+- **Nudge you to pin the extension to your toolbar on install** (#244)
+  - Opens a welcome page right after the first install, walking you through "puzzle-piece → pin icon."
+  - Adds a banner at the top of the popup that only shows up when the extension isn't pinned yet (dismiss it and it won't come back).
+  - Checks the pin state with `chrome.action.getUserSettings()`, so you won't see the nudge once it's pinned (browsers that don't support it, like Firefox, just keep showing the hint).
+  - Browsers don't let extensions force-pin themselves, so this is purely a UX nudge.
+
 ### Bug Fixes
 
 - **Fix mini icon appearing far from the cursor on multi-line selections** (#240)

@@ -2265,7 +2265,7 @@ suites:
           - 文ペア表示になっている段落の訳文末尾の × ボタンをクリック
         expected:
           - 段落全体が元の DOM 構造に戻る（原文のみ表示）
-          - `.dvt-pair` / `.dvt-orig` / `.dvt-trans` がいずれも残らない
+          - '`.dvt-pair` / `.dvt-orig` / `.dvt-trans` がいずれも残らない'
 
       - id: PAIR-006
         title: iOS Share Extension で長文段落が文ペア表示になる
@@ -2423,12 +2423,12 @@ suites:
         title: 短文選択は従来通り単一表示（原文プレビュー表示）
         priority: p1
         steps:
-          - "Hello world" など 1 文の短いテキストを選択する
+          - '"Hello world" など 1 文の短いテキストを選択する'
           - ミニアイコンをクリックしてパネルを開き、翻訳を実行する
         expected:
           - 訳文エリアには訳文が単一テキストとして表示される
           - パネル冒頭の原文プレビュー欄も表示される
-          - `.dvt-pair` クラスを持つ要素は生成されない
+          - '`.dvt-pair` クラスを持つ要素は生成されない'
 
       - id: SPP-003
         title: 文ペア表示中の読み上げは訳文のみ
@@ -2452,3 +2452,82 @@ suites:
         expected:
           - フォールバック時は原文プレビューが再表示される
           - ペア表示復帰時は原文プレビューが再び非表示になる
+
+  # ━━━━━ ピン留め誘導（ウェルカムページ + ポップアップバナー） ━━━━━
+  - id: pin-onboarding
+    title: ツールバーへのピン留め誘導
+    description: "Issue #244 / PR #245 で追加。初回インストール時のウェルカムページと、未ピン留め時のポップアップバナー"
+    related_prs: [245]
+    scenarios:
+
+      - id: PO-001
+        title: 初回インストール時にウェルカムページが開く
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 拡張が未インストールの状態
+        steps:
+          - 拡張を新規インストール（ストアまたは未パッケージ読み込み）する
+        expected:
+          - インストール直後に新規タブで welcome.html が開く
+          - ピン留め手順（パズルピース → ピンアイコン）が現在のUI言語で表示される
+          - 拡張のアップデート時（reason=update）には開かない
+
+      - id: PO-002
+        title: ウェルカムページのピン留め済み表示
+        priority: p2
+        environment: chrome
+        preconditions:
+          - 拡張をツールバーにピン留め済み
+        steps:
+          - welcome.html を直接開く（または再インストール後にピン留めしてから再表示）
+        expected:
+          - 「ピン留め済み」の完了メッセージが表示される
+          - ピン留め手順カードは非表示になる
+
+      - id: PO-003
+        title: 未ピン留め時にポップアップ上部へ誘導バナーが出る
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 拡張をツールバーにピン留めしていない状態
+        steps:
+          - パズルピースメニューから拡張のポップアップを開く
+        expected:
+          - ポップアップ上部にピン留め誘導バナーが表示される
+          - バナー文言が現在のUI言語で表示される
+
+      - id: PO-004
+        title: バナーを閉じると次回以降は表示されない
+        priority: p2
+        environment: chrome
+        preconditions:
+          - PO-003 のバナーが表示されている
+        steps:
+          - バナー右端の × ボタンをクリックする
+          - ポップアップを閉じて再度開く
+        expected:
+          - クリック直後にバナーが消える
+          - 再オープン後もバナーは表示されない（pinBannerDismissed が永続化される）
+
+      - id: PO-005
+        title: ピン留め済みならバナーを出さない
+        priority: p2
+        environment: chrome
+        preconditions:
+          - 拡張をツールバーにピン留め済み
+        steps:
+          - ツールバーのアイコンからポップアップを開く
+        expected:
+          - 誘導バナーは表示されない
+
+      - id: PO-006
+        title: getUserSettings 非対応環境での挙動
+        priority: p2
+        environment: safari-mac
+        description: "chrome.action.getUserSettings 非対応の Firefox / Safari でバナーが壊れないこと"
+        steps:
+          - ポップアップを開く
+        expected:
+          - バナーは表示されない（ピン留め状態を判定できないため）
+          - エラーやレイアウト崩れが起きない

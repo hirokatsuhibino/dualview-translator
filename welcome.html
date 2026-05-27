@@ -1,0 +1,190 @@
+<!-- Copyright (c) Orangesoft Inc -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DualView Translator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      color-scheme: light dark;
+      --bg: #0c0c18;
+      --bg2: #14141f;
+      --bg3: #1c1c2e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #e8950e;
+      --accent-dim: rgba(245,166,35,0.15);
+      --text: #e8e8f0;
+      --muted: rgba(232,232,240,0.6);
+      --ok: #4caf50;
+      --ok-dim: rgba(76,175,80,0.14);
+      --radius: 14px;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff;
+        --bg2: #f5f5f7;
+        --bg3: #ecedf0;
+        --border: rgba(0,0,0,0.1);
+        --accent: #d4870a;
+        --accent-dim: rgba(212,135,10,0.12);
+        --text: #1a1a2e;
+        --muted: rgba(26,26,46,0.6);
+        --ok: #2e7d32;
+        --ok-dim: rgba(46,125,50,0.12);
+      }
+    }
+
+    /* JSフォールバック: Firefox等でメディアクエリが効かない場合 */
+    :root.dvt-light {
+      --bg: #ffffff;
+      --bg2: #f5f5f7;
+      --bg3: #ecedf0;
+      --border: rgba(0,0,0,0.1);
+      --accent: #d4870a;
+      --accent-dim: rgba(212,135,10,0.12);
+      --text: #1a1a2e;
+      --muted: rgba(26,26,46,0.6);
+      --ok: #2e7d32;
+      --ok-dim: rgba(46,125,50,0.12);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 20px;
+    }
+
+    .container { width: 100%; max-width: 560px; }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .header img { width: 56px; height: 56px; flex-shrink: 0; }
+    .title { font-size: 24px; font-weight: 600; }
+    .lead { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card h2 svg { width: 20px; height: 20px; color: var(--accent); }
+
+    .steps { list-style: none; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 10px 0;
+    }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .steps .step-text { padding-top: 1px; }
+    .steps .icon-inline {
+      display: inline-flex;
+      vertical-align: middle;
+      width: 18px;
+      height: 18px;
+      margin: 0 2px;
+      color: var(--accent);
+    }
+
+    .pinned-done {
+      display: none;
+      background: var(--ok-dim);
+      border: 1px solid var(--ok);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      color: var(--text);
+      font-size: 15px;
+      align-items: center;
+      gap: 12px;
+    }
+    .pinned-done.show { display: flex; }
+    .pinned-done svg { width: 22px; height: 22px; color: var(--ok); flex-shrink: 0; }
+
+    .start-hint {
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    /* RTL（アラビア語）対応 */
+    [dir="rtl"] .steps li { flex-direction: row; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icons/icon128.png" alt="">
+      <div>
+        <div class="title" data-i18n="welcomeTitle">DualView Translator をインストールしました</div>
+      </div>
+    </div>
+    <p class="lead" data-i18n="welcomeLead">原文と翻訳を並べて表示するブラウザ翻訳拡張です。</p>
+
+    <!-- ピン留め済みの場合に表示 -->
+    <div class="pinned-done" id="pinnedDone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span data-i18n="welcomePinnedDone">ツールバーにピン留め済みです。アイコンをクリックしてすぐに使えます。</span>
+    </div>
+
+    <!-- ピン留め手順（未ピン留めの場合に表示） -->
+    <div class="card" id="pinSteps">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 4v6l3 4v2h-6v6h-2v-6H5v-2l3-4V4H7V2h10v2h-1z"/></svg>
+        <span data-i18n="welcomePinHeading">ツールバーにピン留めしましょう</span>
+      </h2>
+      <ol class="steps">
+        <li><span class="step-text">
+          <span data-i18n="welcomePinStep1">ツールバー右上のパズルピース（拡張機能）アイコンをクリックします。</span>
+        </span></li>
+        <li><span class="step-text">
+          <span data-i18n="welcomePinStep2">一覧の「DualView Translator」の横にあるピンアイコンをクリックして固定します。</span>
+        </span></li>
+      </ol>
+    </div>
+
+    <p class="start-hint" data-i18n="welcomeStartHint">ピン留めしたアイコンをクリックすると、翻訳パネルが開きます。</p>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="welcome.js"></script>
+</body>
+</html>

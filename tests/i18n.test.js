@@ -147,6 +147,9 @@ describe('DVT_I18N', () => {
       'undoElement', 'undoSummary',
       'engineApple', 'fallbackToApple',
       'translateBarMsg', 'translateBarMsgUnknown',
+      'welcomeTitle', 'welcomeLead', 'welcomePinHeading',
+      'welcomePinStep1', 'welcomePinStep2', 'welcomePinnedDone', 'welcomeStartHint',
+      'pinBannerText', 'pinBannerClose',
     ];
 
     for (const lang of langs) {
@@ -168,5 +171,41 @@ describe('t() グローバルヘルパー', () => {
   it('DVT_I18N.t と同じ結果を返す', () => {
     DVT_I18N.setLang('ja');
     expect(t('translateBtn')).toBe(DVT_I18N.t('translateBtn'));
+  });
+});
+
+// applyToDOM() の属性翻訳（#245 レビュー指摘: aria-label の i18n 対応）
+describe('applyToDOM() — 属性の翻訳', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('data-i18n-aria-label を現在のUI言語の aria-label に反映する', () => {
+    DVT_I18N.setLang('ja');
+    const btn = document.createElement('button');
+    btn.setAttribute('data-i18n-aria-label', 'pinBannerClose');
+    btn.setAttribute('aria-label', '');
+    document.body.appendChild(btn);
+
+    DVT_I18N.applyToDOM(document);
+    expect(btn.getAttribute('aria-label')).toBe(DVT_I18N.t('pinBannerClose'));
+  });
+
+  it('UI言語を切り替えると aria-label も追従する', () => {
+    const btn = document.createElement('button');
+    btn.setAttribute('data-i18n-aria-label', 'pinBannerClose');
+    document.body.appendChild(btn);
+
+    DVT_I18N.setLang('en');
+    DVT_I18N.applyToDOM(document);
+    const en = btn.getAttribute('aria-label');
+
+    DVT_I18N.setLang('ja');
+    DVT_I18N.applyToDOM(document);
+    const ja = btn.getAttribute('aria-label');
+
+    expect(en).toBe('Dismiss');
+    expect(ja).toBe('閉じる');
+    expect(en).not.toBe(ja);
   });
 });

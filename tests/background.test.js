@@ -12,6 +12,7 @@ let hasLLMApiKey;
 let isTranslateAvailable;
 let testApiKey;
 let isNetworkError;
+let openWelcomeOnInstall;
 // describe 横断で共有する background.js 全文
 let code;
 
@@ -56,6 +57,11 @@ beforeAll(() => {
     const combined = deepLMatch[0] + '\n' + testApiKeyMatch[0] + '\n return testApiKey;';
     testApiKey = new Function('fetch', combined)();
   }
+
+  // openWelcomeOnInstall を抽出（chrome をモックとして注入する）
+  const welcomeMatch = code.match(/function openWelcomeOnInstall\(details\)\s*\{[\s\S]*?\n\}/);
+  if (!welcomeMatch) throw new Error('background.test.js: openWelcomeOnInstall の正規表現抽出に失敗（background.js のフォーマット変更を確認）');
+  openWelcomeOnInstall = new Function('chrome', 'details', welcomeMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 });
 
 describe('getDeepLEndpoint()', () => {
@@ -374,5 +380,46 @@ describe('testApiKey()', () => {
       return testApiKey;
     `)(mockFetch);
     await expect(fn('deepl', 'invalid-key')).rejects.toThrow('APIキーが無効です');
+  });
+});
+
+describe('openWelcomeOnInstall()（ピン留め誘導・#244）', () => {
+  function makeChrome() {
+    const created = [];
+    return {
+      created,
+      tabs: { create: (opts) => created.push(opts) },
+      runtime: { getURL: (p) => 'chrome-extension://test/' + p },
+    };
+  }
+
+  it('reason==="install" のときウェルカムページを新規タブで開く', () => {
+    const mock = makeChrome();
+    openWelcomeOnInstall(mock, { reason: 'install' });
+    expect(mock.created).toHaveLength(1);
+    expect(mock.created[0].url).toContain('welcome.html');
+  });
+
+  it('reason==="update" のときは開かない', () => {
+    const mock = makeChrome();
+    openWelcomeOnInstall(mock, { reason: 'update' });
+    expect(mock.created).toHaveLength(0);
+  });
+
+  it('reason==="chrome_update" のときは開かない', () => {
+    const mock = makeChrome();
+    openWelcomeOnInstall(mock, { reason: 'chrome_update' });
+    expect(mock.created).toHaveLength(0);
+  });
+
+  it('details が無い場合も安全に何もしない', () => {
+    const mock = makeChrome();
+    openWelcomeOnInstall(mock, undefined);
+    expect(mock.created).toHaveLength(0);
+  });
+
+  it('chrome.tabs.create が使えない環境では何もしない（例外を投げない）', () => {
+    const mock = { tabs: {}, runtime: { getURL: (p) => p } };
+    expect(() => openWelcomeOnInstall(mock, { reason: 'install' })).not.toThrow();
   });
 });
