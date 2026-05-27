@@ -58,6 +58,15 @@
   chrome.storage.local.get(['pinBannerDismissed', 'pinBannerShownCount'], function(data) {
     if (data && data.pinBannerDismissed) return;
 
+    // 判定不可（非対応・取得失敗・reject 等）のフォールバック:
+    // 回数上限まで表示し、表示するたびにカウントを進める
+    function showWithCap() {
+      var count = (data && data.pinBannerShownCount) || 0;
+      if (count >= MAX_BANNER_SHOWS) return;
+      banner.classList.add('show');
+      chrome.storage.local.set({ pinBannerShownCount: count + 1 });
+    }
+
     // 検出可能な環境: ピン留め状態を直接見て判定（回数制限は不要）
     if (action && typeof action.getUserSettings === 'function') {
       var result;
@@ -68,20 +77,27 @@
       }
       if (result) {
         Promise.resolve(result).then(function(settings) {
-          // isOnToolbar === true（ピン留め済み）のときは出さない
-          if (settings && settings.isOnToolbar === false) {
-            banner.classList.add('show');
+          if (settings && settings.isOnToolbar === true) {
+            // ピン留め済み → 出さない
+            return;
           }
-        }).catch(function() {});
+          if (settings && settings.isOnToolbar === false) {
+            // 未ピン留め → 表示（判定できているので回数制限は不要）
+            banner.classList.add('show');
+            return;
+          }
+          // 期待した形が返らない → 判定不可としてフォールバック
+          showWithCap();
+        }).catch(function() {
+          // reject（部分対応・不安定実装）→ 判定不可としてフォールバック
+          showWithCap();
+        });
         return;
       }
       // result が falsy（取得不可）は非対応環境として下のフォールバックへ
     }
 
-    // 非対応環境: 回数上限まで表示し、表示するたびにカウントを進める
-    var count = (data && data.pinBannerShownCount) || 0;
-    if (count >= MAX_BANNER_SHOWS) return;
-    banner.classList.add('show');
-    chrome.storage.local.set({ pinBannerShownCount: count + 1 });
+    // 非対応環境
+    showWithCap();
   });
 })();

@@ -2525,7 +2525,7 @@ suites:
         title: getUserSettings 非対応環境では回数上限まで表示して止まる
         priority: p1
         environment: safari-mac
-        related_prs: [247]
+        related_prs: [248]
         description: "chrome.action.getUserSettings 非対応のブラウザでも誘導バナーを出すが、永続的に居座らないこと（#247）"
         preconditions:
           - chrome.action.getUserSettings 非対応のブラウザ（getUserSettings 実装前の古いバージョン等。Chrome 91+ / Firefox 116+ は対応のため再現しない）
@@ -2541,7 +2541,7 @@ suites:
         title: 非対応環境でも × ボタンで即・永続非表示にできる
         priority: p2
         environment: safari-mac
-        related_prs: [247]
+        related_prs: [248]
         preconditions:
           - getUserSettings 非対応のブラウザでバナーが表示されている
         steps:

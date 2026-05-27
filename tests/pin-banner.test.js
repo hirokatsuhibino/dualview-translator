@@ -83,6 +83,38 @@ describe('ピン留め誘導バナー（popup-init.js / #244）', () => {
     expect(s.pinBannerShownCount).toBeUndefined();
   });
 
+  it('getUserSettings が reject した場合も回数上限フォールバックで表示する（#248レビュー）', async () => {
+    globalThis.chrome.action = { getUserSettings: () => Promise.reject(new Error('not implemented')) };
+    loadScript('popup-init.js');
+    await flush();
+    expect(document.getElementById('pinBanner').classList.contains('show')).toBe(true);
+    const s = await globalThis.chrome.storage.local.get('pinBannerShownCount');
+    expect(s.pinBannerShownCount).toBe(1);
+  });
+
+  it('getUserSettings が想定外の値を返した場合もフォールバックで表示する（#248レビュー）', async () => {
+    globalThis.chrome.action = { getUserSettings: () => Promise.resolve(null) };
+    loadScript('popup-init.js');
+    await flush();
+    expect(document.getElementById('pinBanner').classList.contains('show')).toBe(true);
+    const s = await globalThis.chrome.storage.local.get('pinBannerShownCount');
+    expect(s.pinBannerShownCount).toBe(1);
+  });
+
+  it('reject フォールバックも回数上限(3回)で止まる（#248レビュー）', async () => {
+    globalThis.chrome.action = { getUserSettings: () => Promise.reject(new Error('flaky')) };
+    for (let i = 1; i <= 3; i++) {
+      setupDom();
+      loadScript('popup-init.js');
+      await flush();
+      expect(document.getElementById('pinBanner').classList.contains('show')).toBe(true);
+    }
+    setupDom();
+    loadScript('popup-init.js');
+    await flush();
+    expect(document.getElementById('pinBanner').classList.contains('show')).toBe(false);
+  });
+
   it('閉じるボタンでバナーを隠し、dismissed フラグを永続化する', async () => {
     globalThis.chrome.action = { getUserSettings: () => Promise.resolve({ isOnToolbar: false }) };
     loadScript('popup-init.js');
