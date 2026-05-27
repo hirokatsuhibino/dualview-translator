@@ -34,6 +34,9 @@ rm -f dualview-translator-*.zip
 Chrome Web Store / Firefox Add-ons への提出用。
 ファイル名: `dualview-translator-<VERSION>.zip`
 
+> **注記**: この一覧は「リリース時点の作業ツリー（= main マージ後）に存在する拡張本体ファイル」を前提とした提出仕様です。`/build-zip` はリリース準備時に main 上で実行するため、ここに挙げたファイルは全て存在している前提でよい。
+> `welcome.html` / `welcome.js` は #245（ツールバーへのピン留め誘導）で追加されるファイルで、#245 が main にマージされて初めて存在する。**#245 マージ前にこのコマンドを実行するとファイル不在で失敗する**ため、必ず #245 マージ後に実行すること。
+
 含めるファイル:
 - `manifest.json`
 - `background.js`
@@ -46,6 +49,8 @@ Chrome Web Store / Firefox Add-ons への提出用。
 - `popup.html`
 - `popup-init.js`
 - `popup.js`
+- `welcome.html`
+- `welcome.js`
 - `icons/`
 - `_locales/`
 - `LICENSE`
@@ -63,6 +68,8 @@ zip -r dualview-translator-<VERSION>.zip \
   popup.html \
   popup-init.js \
   popup.js \
+  welcome.html \
+  welcome.js \
   icons/ \
   _locales/ \
   LICENSE
