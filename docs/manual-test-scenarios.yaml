@@ -2456,8 +2456,8 @@ suites:
   # ━━━━━ ピン留め誘導（ウェルカムページ + ポップアップバナー） ━━━━━
   - id: pin-onboarding
     title: ツールバーへのピン留め誘導
-    description: "Issue #244 / PR で追加。初回インストール時のウェルカムページと、未ピン留め時のポップアップバナー"
-    related_prs: [244]
+    description: "Issue #244 / PR #245 で追加。初回インストール時のウェルカムページと、未ピン留め時のポップアップバナー"
+    related_prs: [245]
     scenarios:
 
       - id: PO-001
