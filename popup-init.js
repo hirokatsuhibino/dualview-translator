@@ -35,10 +35,10 @@
 })();
 
 // ピン留め誘導バナー: ツールバーに未ピン留めのときに表示する。
-// chrome.action.getUserSettings は Chrome 91+ のみ。
-//  - 検出可能: 未ピン留めなら表示、ピン留め済みなら非表示
-//  - 検出不可（古い Firefox / Safari 等）: ピン留め状態が分からないため表示するが、
-//    永続的に居座らないようポップアップ表示回数が MAX_BANNER_SHOWS に達したら止める
+// 判定可否は chrome.action.getUserSettings の有無で決まる（Chrome 91+ / Firefox 116+ 等で対応）。
+//  - 対応ブラウザ: 未ピン留めなら表示、ピン留め済みなら非表示
+//  - 非対応ブラウザ: ピン留め状態が分からないため表示するが、永続的に居座らないよう
+//    ポップアップ表示回数が MAX_BANNER_SHOWS に達したら止める
 // ×ボタンでの明示的非表示（pinBannerDismissed）はどの環境でも即・永続で効く。
 (function() {
   var MAX_BANNER_SHOWS = 3; // 非対応環境での最大表示回数

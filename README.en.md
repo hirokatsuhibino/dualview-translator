@@ -178,7 +178,7 @@ Pin the extension to your toolbar after installing, and you can open the popup i
 
 A page walking you through these steps pops up automatically the first time you install. Browsers don't let extensions force-pin themselves, so you'll have to do this bit by hand.
 
-There's also a little banner at the top of the popup nudging you to pin it. On browsers that can read the pin state (Chrome 91+ and friends), it disappears as soon as you pin. On browsers that can't (like Firefox), it stops showing after you've opened the popup a few times — and you can always dismiss it with the × button.
+There's also a little banner at the top of the popup nudging you to pin it. On browsers that can read the pin state (Chrome 91+, Firefox 116+, and friends), it disappears as soon as you pin. On older browsers that can't read it, the banner stops showing after you've opened the popup a few times — and you can always dismiss it with the × button.
 
 ## How to use
 

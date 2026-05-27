@@ -2526,9 +2526,9 @@ suites:
         priority: p1
         environment: safari-mac
         related_prs: [247]
-        description: "chrome.action.getUserSettings 非対応の Firefox / Safari でも誘導バナーを出すが、永続的に居座らないこと（#247）"
+        description: "chrome.action.getUserSettings 非対応のブラウザでも誘導バナーを出すが、永続的に居座らないこと（#247）"
         preconditions:
-          - getUserSettings 非対応のブラウザ（古い Firefox / Safari Web Extension 等）
+          - chrome.action.getUserSettings 非対応のブラウザ（getUserSettings 実装前の古いバージョン等。Chrome 91+ / Firefox 116+ は対応のため再現しない）
           - pinBannerDismissed / pinBannerShownCount が未設定の初期状態
         steps:
           - ポップアップを開く操作を 4 回繰り返す
