@@ -12,10 +12,11 @@ permalink: /RELEASE_NOTES.en.html
 
 ### New Features
 
-- **Nudge you to pin the extension to your toolbar on install** (#244)
+- **Nudge you to pin the extension to your toolbar on install** (#244 / #247)
   - Opens a welcome page right after the first install, walking you through "puzzle-piece → pin icon."
-  - Adds a banner at the top of the popup that only shows up when the extension isn't pinned yet (dismiss it and it won't come back).
-  - Checks the pin state with `chrome.action.getUserSettings()`, so you won't see the nudge once it's pinned (browsers that don't support it, like Firefox, just keep showing the hint).
+  - Adds a banner at the top of the popup that shows up when the extension isn't pinned yet (dismiss it and it won't come back).
+  - Checks the pin state with `chrome.action.getUserSettings()` (Chrome 91+), so the banner disappears once it's pinned.
+  - On browsers that can't read the pin state (older Firefox / Safari etc.), the banner still shows but stops after you've opened the popup a few times — so it never overstays its welcome.
   - Browsers don't let extensions force-pin themselves, so this is purely a UX nudge.
 
 ### Bug Fixes

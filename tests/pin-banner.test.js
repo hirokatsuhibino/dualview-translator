@@ -1,5 +1,5 @@
 // Copyright (c) Orangesoft Inc
-// popup-init.js のピン留め誘導バナー表示ロジックのテスト（#244）
+// popup-init.js のピン留め誘導バナー表示ロジックのテスト（#244 / #247）
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { loadScript } from './helpers.js';
 
@@ -51,11 +51,36 @@ describe('ピン留め誘導バナー（popup-init.js / #244）', () => {
     expect(document.getElementById('pinBanner').classList.contains('show')).toBe(false);
   });
 
-  it('chrome.action.getUserSettings 非対応環境（Firefox等）では表示せず例外も投げない', async () => {
+  it('非対応環境（getUserSettings 無し）でも表示し、例外を投げない（#247）', async () => {
     // chrome.action 自体が無い
     expect(() => loadScript('popup-init.js')).not.toThrow();
     await flush();
+    expect(document.getElementById('pinBanner').classList.contains('show')).toBe(true);
+  });
+
+  it('非対応環境では表示回数が上限(3回)に達すると出さなくなる（#247）', async () => {
+    // 1〜3 回目は表示され、カウントが進む
+    for (let i = 1; i <= 3; i++) {
+      setupDom();
+      loadScript('popup-init.js');
+      await flush();
+      expect(document.getElementById('pinBanner').classList.contains('show')).toBe(true);
+      const s = await globalThis.chrome.storage.local.get('pinBannerShownCount');
+      expect(s.pinBannerShownCount).toBe(i);
+    }
+    // 4 回目は上限到達で非表示
+    setupDom();
+    loadScript('popup-init.js');
+    await flush();
     expect(document.getElementById('pinBanner').classList.contains('show')).toBe(false);
+  });
+
+  it('検出可能な環境では回数カウントを進めない（#247）', async () => {
+    globalThis.chrome.action = { getUserSettings: () => Promise.resolve({ isOnToolbar: false }) };
+    loadScript('popup-init.js');
+    await flush();
+    const s = await globalThis.chrome.storage.local.get('pinBannerShownCount');
+    expect(s.pinBannerShownCount).toBeUndefined();
   });
 
   it('閉じるボタンでバナーを隠し、dismissed フラグを永続化する', async () => {
