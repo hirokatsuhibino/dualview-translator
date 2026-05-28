@@ -2522,12 +2522,31 @@ suites:
           - 誘導バナーは表示されない
 
       - id: PO-006
-        title: getUserSettings 非対応環境での挙動
+        title: getUserSettings 非対応環境では回数上限まで表示して止まる
+        priority: p1
+        environment: safari-mac
+        related_prs: [248]
+        description: "chrome.action.getUserSettings 非対応のブラウザでも誘導バナーを出すが、永続的に居座らないこと（#247）"
+        preconditions:
+          - chrome.action.getUserSettings 非対応のブラウザ（getUserSettings 実装前の古いバージョン等。Chrome 91+ / Firefox 116+ は対応のため再現しない）
+          - pinBannerDismissed / pinBannerShownCount が未設定の初期状態
+        steps:
+          - ポップアップを開く操作を 4 回繰り返す
+        expected:
+          - 1〜3 回目はバナーが表示される
+          - 4 回目以降はバナーが表示されない（pinBannerShownCount が上限 3 に到達）
+          - エラーやレイアウト崩れが起きない
+
+      - id: PO-007
+        title: 非対応環境でも × ボタンで即・永続非表示にできる
         priority: p2
         environment: safari-mac
-        description: "chrome.action.getUserSettings 非対応の Firefox / Safari でバナーが壊れないこと"
+        related_prs: [248]
+        preconditions:
+          - getUserSettings 非対応のブラウザでバナーが表示されている
         steps:
-          - ポップアップを開く
+          - バナー右端の × ボタンをクリックする
+          - ポップアップを閉じて再度開く
         expected:
-          - バナーは表示されない（ピン留め状態を判定できないため）
-          - エラーやレイアウト崩れが起きない
+          - クリック直後にバナーが消える
+          - 再オープン後も表示されない（pinBannerDismissed が永続化され、回数上限に関係なく出ない）
