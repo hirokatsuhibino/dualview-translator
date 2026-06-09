@@ -329,7 +329,8 @@ var DVT_PAGE = (function () {
 
   // ─── 翻訳可能な要素のフィルタリング ────────────────────────────────
   function filterTranslatableElements(container, selectors) {
-    return Array.from(container.querySelectorAll(selectors || PAGE_SELECTORS)).filter(el => {
+    // Shadow DOM 内（Hyvor Talk 等のコメント）も貫通して翻訳対象を集める。
+    return DVT.deepQuerySelectorAll(container, selectors || PAGE_SELECTORS).filter(el => {
       if (el.closest('[data-dvt]')) return false;
       if (el.dataset.dvtId) return false;
       const text = el.innerText?.trim();
@@ -386,6 +387,20 @@ var DVT_PAGE = (function () {
   // ─── 動的コンテンツ監視（MutationObserver） ────────────────────────
   let pageObserver = null;
   let observerDebounceTimer = null;
+  // 監視済み shadow root を記録し、同一 root の二重 observe を避ける
+  let observedShadowRoots = new WeakSet();
+
+  // 現存する全 open shadow root を pageObserver の監視対象に追加する。
+  // Hyvor Talk 等のコメントは shadow root 内で動的に増えるため、light DOM の
+  // subtree 監視だけでは捕捉できない変更を拾えるようにする。
+  function observeShadowRoots() {
+    if (!pageObserver) return;
+    DVT.forEachShadowRoot(document, (sr) => {
+      if (observedShadowRoots.has(sr)) return;
+      observedShadowRoots.add(sr);
+      pageObserver.observe(sr, { childList: true, subtree: true });
+    });
+  }
 
   function startPageObserver(tl) {
     if (pageObserver) return;
@@ -400,6 +415,8 @@ var DVT_PAGE = (function () {
       childList: true,
       subtree: true,
     });
+    // 既存の open shadow root も監視（後から出現する分は translateNewElements で追加）
+    observeShadowRoots();
   }
 
   function stopPageObserver() {
@@ -411,11 +428,15 @@ var DVT_PAGE = (function () {
       clearTimeout(observerDebounceTimer);
       observerDebounceTimer = null;
     }
+    // 次回 start 時に再構築するため監視済み記録をリセット
+    observedShadowRoots = new WeakSet();
   }
 
   // 未翻訳の新規要素のみ翻訳
   async function translateNewElements(tl) {
     if (!DVT.state.pageTranslateActive) return;
+    // 後から出現した shadow root（遅延ロードのコメント等）も監視対象に追加
+    observeShadowRoots();
     const elements = filterTranslatableElements(document);
     if (elements.length === 0) return;
     await runConcurrentTranslation(elements, tl, 'dvt-');
@@ -475,12 +496,23 @@ var DVT_PAGE = (function () {
     // 要約ブロックを全削除（ページ全体翻訳の #dvt-page-summary だけでなく、
     // 領域選択翻訳・右クリック翻訳由来の .dvt-summary もまとめて撤去する）。
     // ホストページが偶然 .dvt-summary を使っていても消さないよう [data-dvt="true"] でスコープ
-    document.querySelectorAll('[data-dvt="true"].dvt-summary').forEach(el => el.remove());
+    // Shadow DOM 内（Hyvor Talk 等）の要約ブロックも貫通して撤去
+    DVT.deepQuerySelectorAll(document, '[data-dvt="true"].dvt-summary').forEach(el => el.remove());
     // 翻訳済み要素は原文を復元、dvt-pending だけの要素もマークだけ削除（restoreOriginalContent が両方扱う）
-    document.querySelectorAll('[data-dvt-id]').forEach(el => {
+    // Shadow DOM 内の翻訳済み要素も対象にする
+    DVT.deepQuerySelectorAll(document, '[data-dvt-id]').forEach(el => {
       restoreOriginalContent(el);
     });
     DVT.showToast(t('toastReset'), false, TOAST_SHORT_DURATION_MS);
+  }
+
+  // Shadow DOM 内でのクリック/ホバーは event retargeting により e.target が
+  // shadow host になるため、composedPath() の先頭（実際のターゲット要素）を優先する。
+  // composed イベント（click/mousemove 等）でのみ shadow boundary を越える。
+  function eventTarget(e) {
+    const path = (typeof e.composedPath === 'function') ? e.composedPath() : null;
+    const t = (path && path.length) ? path[0] : e.target;
+    return (t && t.nodeType === 1) ? t : null; // 要素ノードのみ
   }
 
   // ─── 要素クリック選択翻訳 ────────────────────────────────────────────
@@ -508,10 +540,10 @@ var DVT_PAGE = (function () {
     hint.textContent = t(summarize ? 'regionHintSummarize' : 'regionHint');
     document.body.appendChild(hint);
 
-    // ホバー中の要素をハイライト
+    // ホバー中の要素をハイライト（Shadow DOM 内の要素も composedPath で取得）
     function onMousemove(e) {
-      const target = e.target;
-      if (target.closest('[data-dvt]')) return;
+      const target = eventTarget(e);
+      if (!target || target.closest('[data-dvt]')) return;
       if (target === highlightedEl) return;
       if (highlightedEl) highlightedEl.classList.remove('dvt-region-highlight');
       highlightedEl = target;
@@ -520,10 +552,10 @@ var DVT_PAGE = (function () {
 
     // クリックで要素を確定して翻訳（＆要約）
     function onClick(e) {
-      if (e.target.closest('[data-dvt]')) return;
+      const targetEl = eventTarget(e);
+      if (!targetEl || targetEl.closest('[data-dvt]')) return;
       e.preventDefault();
       e.stopPropagation();
-      const targetEl = e.target;
       exitRegionMode();
       if (summarize) {
         translateAndSummarizeClickedElement(targetEl);
@@ -576,7 +608,7 @@ var DVT_PAGE = (function () {
   function extractRegionElements(container) {
     if (!container || container === document.body) return null;
 
-    let elements = Array.from(container.querySelectorAll(REGION_SELECTORS)).filter(el => {
+    let elements = DVT.deepQuerySelectorAll(container, REGION_SELECTORS).filter(el => {
       if (el.closest('[data-dvt]')) return false;
       if (el.dataset.dvtId) return false;
       return el.innerText?.trim().length >= MIN_TEXT_LENGTH;

@@ -12,6 +12,11 @@ permalink: /RELEASE_NOTES.en.html
 
 ### New Features
 
+- **Translate comments rendered in Shadow DOM** (#252)
+  - Adds support for Web Components comment systems (open Shadow DOM) like Hyvor Talk. We found in real-world testing that lots of modern comment systems render straight into Shadow DOM rather than a cross-origin iframe like Disqus, so we handle that now.
+  - The content script walks `shadowRoot` recursively to find, watch, and restore translatable elements (`deepQuerySelectorAll`). Whole-page translation, region select, undo, and dynamic-content watching all pierce Shadow DOM.
+  - Region select uses `composedPath()` to highlight/translate the real element inside the shadow tree (not the host).
+  - Out of scope: auto-rule selector picking (you can't write a CSS selector that crosses a shadow boundary) and closed Shadow DOM (unreachable from JS by spec). Decoration CSS isn't applied inside shadow trees yet, but the feature works.
 - **Translate Disqus iframe comments** (#250)
   - The extension now injects its content script into `https://disqus.com/embed/comments/*` iframes too, so comment sections on Disqus-powered sites (carscoops, etc.) get translated.
   - Works with both **whole-page translation** and **region select (element pick)**. In region-select mode each frame enters picking independently, so you can click a Disqus comment to translate it — and confirming or canceling in any frame clears the mode everywhere.

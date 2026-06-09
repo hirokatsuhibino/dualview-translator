@@ -562,30 +562,25 @@ describe('DVT_PAGE (content-page)', () => {
   });
 
   describe('undoPageTranslate — 領域選択時の要約ブロックも撤去（#134）', () => {
-    const { readFileSync } = require('fs');
-    const { resolve } = require('path');
-    const code = readFileSync(resolve(__dirname, '..', 'content-page.js'), 'utf-8');
-
-    it('undoPageTranslate は ID 指定ではなくクラス指定で .dvt-summary 全削除する（拡張挿入要素に限定）', () => {
-      // ホストページの偶然の同名クラス汚染を避けるため [data-dvt="true"] でスコープ
-      expect(code).toMatch(/undoPageTranslate[\s\S]{0,400}querySelectorAll\([^)]*data-dvt[^)]*dvt-summary/);
-    });
-
-    it('undoPageTranslate 実行で document 上の .dvt-summary が消える（jsdom 統合）', () => {
-      // 領域選択翻訳の要約ブロック（ID なし）と data-dvt-id を持つ翻訳要素を仕込む
+    it('undoPageTranslate 実行で拡張挿入の .dvt-summary が消え、ホスト汚染分は残る（jsdom 統合）', () => {
+      // 領域選択翻訳の要約ブロック（data-dvt 付き）と data-dvt-id を持つ翻訳要素、
+      // さらにホストページが偶然 .dvt-summary を使っているケース（data-dvt なし）を仕込む
       document.body.innerHTML = `
         <div class="dvt-summary" data-dvt="true">
           <span class="dvt-badge dvt-badge-summary">要約</span>
           <div class="dvt-summary-text">サンプル要約</div>
         </div>
+        <div class="dvt-summary">ホストページが偶然使っている同名クラス</div>
         <p data-dvt-id="dvt-r-1">
           <span class="dvt-orig">Original</span>
           <span class="dvt-trans">翻訳</span>
         </p>
       `;
-      expect(document.querySelectorAll('.dvt-summary').length).toBe(1);
+      expect(document.querySelectorAll('.dvt-summary').length).toBe(2);
       DVT_PAGE.undoPageTranslate();
-      expect(document.querySelectorAll('.dvt-summary').length).toBe(0);
+      // data-dvt="true" の要約ブロックのみ削除され、ホスト汚染分は残る
+      expect(document.querySelectorAll('.dvt-summary').length).toBe(1);
+      expect(document.querySelector('.dvt-summary[data-dvt="true"]')).toBeNull();
       expect(document.querySelectorAll('[data-dvt-id]').length).toBe(0);
     });
   });

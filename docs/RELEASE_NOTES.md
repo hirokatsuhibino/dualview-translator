@@ -12,6 +12,11 @@ permalink: /RELEASE_NOTES.html
 
 ### 新機能
 
+- **Shadow DOM 内コメントの翻訳に対応**（#252）
+  - Hyvor Talk など Web Components（open Shadow DOM）型のコメントシステムを翻訳対象に追加。実機検証で carscoops の Disqus のような iframe 型ではなく Shadow DOM 直接描画型が多いと判明したため対応
+  - content script が `shadowRoot` を再帰的に辿って翻訳対象を抽出・監視・復元（`deepQuerySelectorAll`）。ページ全体翻訳・領域選択（要素選択翻訳）・undo・動的コンテンツ監視が Shadow DOM を貫通
+  - 領域選択は `composedPath()` で Shadow 内の実要素を正しくハイライト/翻訳
+  - スコープ外: 自動翻訳ルールのセレクタ選択（Shadow を貫通する CSS セレクタを作れないため）・closed Shadow DOM（仕様上 JS から到達不可）。Shadow 内では装飾 CSS が未適用（機能は動作）
 - **Disqus iframe 内コメントの翻訳に対応**（#250）
   - `https://disqus.com/embed/comments/*` の iframe 内にも content script を注入し、carscoops 等 Disqus 採用サイトのコメント欄を翻訳対象に追加
   - **ページ全体翻訳**と**領域選択（要素選択翻訳）**の両方に対応。領域選択では各フレームが独立にモードへ入り、Disqus コメント欄をクリックして翻訳できる（どのフレームで確定／キャンセルしても全フレームのモードが解除される）
