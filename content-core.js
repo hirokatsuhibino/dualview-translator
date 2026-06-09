@@ -81,6 +81,38 @@ var DVT = (function () {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // ─── Shadow DOM 貫通ユーティリティ ──────────────────────────────────
+  // Hyvor Talk 等の Web Components 型コメントは open Shadow DOM 内に描画される。
+  // 通常の querySelectorAll は shadow boundary を越えないため、open shadow root を
+  // 再帰的に辿るヘルパーを用意する（closed shadow root は shadowRoot===null で自然にスキップ）。
+  const SHADOW_MAX_DEPTH = 12; // 再帰の深さ上限（無限ループ・過剰探索の防止）
+
+  // root（Document / Element / ShadowRoot）配下の open shadow root を再帰的に列挙し、
+  // 各 shadow root に対して callback を呼ぶ。
+  function forEachShadowRoot(root, callback, _depth = 0) {
+    if (_depth > SHADOW_MAX_DEPTH || !root || typeof root.querySelectorAll !== 'function') return;
+    let all;
+    try { all = root.querySelectorAll('*'); } catch (e) { return; }
+    for (const el of all) {
+      const sr = el.shadowRoot;
+      if (sr) {
+        callback(sr);
+        forEachShadowRoot(sr, callback, _depth + 1);
+      }
+    }
+  }
+
+  // light DOM + 配下の全 open shadow root を貫通して selector にマッチする要素を返す。
+  function deepQuerySelectorAll(root, selector) {
+    const results = [];
+    if (!root || typeof root.querySelectorAll !== 'function') return results;
+    try { root.querySelectorAll(selector).forEach(el => results.push(el)); } catch (e) { /* 不正セレクタ等 */ }
+    forEachShadowRoot(root, (sr) => {
+      try { sr.querySelectorAll(selector).forEach(el => results.push(el)); } catch (e) { /* noop */ }
+    });
+    return results;
+  }
+
   // テキストを文単位に分割する。
   // - CJK の文末記号（`。` / `．` / `！` / `？`）の直後で常に分割
   //   （読点 `、` は文の途切れではないので分割対象に含めない）
@@ -599,6 +631,8 @@ var DVT = (function () {
     langMatches,
     escapeHtml,
     splitSentences,
+    deepQuerySelectorAll,
+    forEachShadowRoot,
     showToast,
     updateToast,
     getLangDisplayName,

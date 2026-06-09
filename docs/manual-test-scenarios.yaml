@@ -2663,3 +2663,70 @@ suites:
     known_limitations:
       - "iframe 内では選択テキスト翻訳・コンテキストメニュー翻訳・翻訳バー・自動翻訳ルールは動作しない（対応はページ全体翻訳と領域選択のみ）"
       - "OpenWeb (SpotIM) / Facebook Comments / livefyre 等の他コメントシステムは未対応"
+
+  - id: shadow-dom
+    title: Shadow DOM 内コメントの翻訳
+    description: "PR で追加（#252）。Hyvor Talk 等 open Shadow DOM 型コメントを翻訳対象にする"
+    related_prs: [253]
+    scenarios:
+      - id: SD-001
+        title: Hyvor Talk コメントがページ全体翻訳で翻訳される
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 翻訳エンジンが Google Translate に設定済み
+          - Hyvor Talk コメントを含むページ（例 hyvor.com のブログ記事）を開く
+          - 記事下部までスクロールしてコメントを描画させる
+        steps:
+          - ポップアップを開き翻訳先を日本語にしてページ全体翻訳ボタンを押す
+          - コメント欄まで再度スクロールする
+        expected:
+          - 記事本文に加え Shadow DOM 内のコメント本文も原文と訳文が並んで表示される
+          - 元に戻すボタンで本文・コメント両方が原文に戻る
+        known_limitations:
+          - "Shadow DOM 内では content.css が適用されないため訳文の色・区切り線等の装飾は付かない（テキストは表示される）"
+
+      - id: SD-002
+        title: 領域選択で Shadow DOM 内コメントをクリック翻訳できる
+        priority: p1
+        environment: chrome
+        description: "composedPath() で shadow host ではなく実要素を確定する"
+        preconditions:
+          - Hyvor Talk コメントを含むページを開きコメントを描画させる
+        steps:
+          - ポップアップまたは Ctrl+Shift+R で領域選択モードに入る
+          - Shadow DOM 内のコメント要素にカーソルを合わせる
+          - コメント要素をクリックする
+        expected:
+          - ホバー時に shadow host 全体ではなく個々のコメント要素がハイライトされる
+          - クリックしたコメントが翻訳され原文と訳文が並ぶ
+
+      - id: SD-003
+        title: 遅延ロード／返信追加された Shadow 内コメントにも追従する
+        priority: p2
+        environment: chrome
+        description: "MutationObserver が shadow root を監視し新規コメントを翻訳"
+        preconditions:
+          - Hyvor Talk コメントを含むページでページ全体翻訳が有効
+        steps:
+          - ページ翻訳を有効にした状態で新しいコメントを投稿する、または「もっと見る」で追加コメントを読み込む
+        expected:
+          - 追加されたコメントも自動的に翻訳される（500ms デバウンス後）
+
+      - id: SD-004
+        title: 自動翻訳ルールは Shadow DOM 内要素を対象にできない（仕様）
+        priority: p2
+        environment: chrome
+        description: "生成 CSS セレクタが shadow を貫通できないためルールのセレクタ選択は対象外"
+        preconditions:
+          - Hyvor Talk コメントを含むページを開く
+        steps:
+          - ルールタブのセレクタ選択（領域ピッカー）で Shadow 内コメントを選ぼうとする
+        expected:
+          - shadow host までしか選べない、または生成セレクタが機能しないことを確認（仕様どおり）
+        known_issue: true
+
+    known_limitations:
+      - "closed Shadow DOM は JS から到達不可のため翻訳できない"
+      - "Shadow DOM 内は content.css 非適用のため装飾なし（機能は動作）"
+      - "言語検出（翻訳バー）は Shadow 内テキストを収集しない"

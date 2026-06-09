@@ -108,6 +108,17 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - セキュリティ: 受信メッセージを `__dvt_relay: true` シグネチャ + 自フレーム送信遮断（`event.source === window`）+ 許可 action リスト（`translatePage` / `translatePageAndSummarize` / `undoPage` / `togglePageTranslate` / `enterRegionMode` / `exitRegionMode`）に限定する。`__dvt_relay` は公開値で postMessage 自体は任意フレームから送れるため、**トップフレームでは postMessage 由来の翻訳系アクションを一切実行しない**（子 iframe のみ実行。トップへの正規 postMessage は子からの `__dvtReady` / `__dvtRegionExitBroadcast` のみ）。これによりホストページが自前で作った子 iframe からトップへ postMessage してページ翻訳を操作する攻撃を防ぐ
 - スコープ: ページ全体翻訳 + 領域選択（要素選択翻訳）。選択テキスト翻訳・コンテキストメニュー翻訳・翻訳バー・自動翻訳ルールは iframe 対象外（OpenWeb / Facebook Comments 等の他コメントシステムも未対応）
 
+### Shadow DOM 貫通翻訳（Hyvor Talk 等の Web Components 型コメント対応）
+
+- Hyvor Talk のようなコメントシステムは cross-origin iframe ではなく **open Shadow DOM** にコメントを直接描画する。通常の `querySelectorAll` は shadow boundary を越えないため、専用の貫通ヘルパーを使う
+- **`DVT.deepQuerySelectorAll(root, selector)` / `DVT.forEachShadowRoot(root, cb)`**（`content-core.js`）: light DOM + 配下の全 open shadow root を再帰的に辿る。`SHADOW_MAX_DEPTH`（12）で再帰深さを制限。closed shadow root は `el.shadowRoot === null` で自然にスキップ
+- **翻訳対象抽出**: `filterTranslatableElements` / `extractRegionElements` を `DVT.deepQuerySelectorAll` 化し、shadow 内コメントも翻訳対象に含める
+- **動的監視**: `startPageObserver` が `observeShadowRoots()` で現存する全 open shadow root も `observe`。`translateNewElements`（デバウンス後）で後から出現した shadow root も監視対象に追加し、遅延ロードのコメントに追従。`observedShadowRoots`（WeakSet）で二重 observe を防ぐ
+- **undo / 復元**: `undoPageTranslate` の `[data-dvt-id]` / `.dvt-summary` 収集を `DVT.deepQuerySelectorAll` 化し、shadow 内の翻訳済み要素も復元
+- **領域選択**: `enterRegionMode` の mousemove / click ハンドラで `eventTarget(e)`（`event.composedPath()[0]` を優先）を使い、retargeting で host になってしまう問題を回避して shadow 内の実要素をハイライト/翻訳
+- **対象外**: 自動翻訳ルールのセレクタ選択（`enterSelectorPickMode`／生成 CSS セレクタは shadow を貫通できず機能しない）、言語検出（`content-bar.js`／shadow 内テキスト未収集）、closed shadow root（JS から到達不可）
+- **既知の制約**: 翻訳結果の表示制御は inline style（`setProperty('display','block','important')` 等）で行うため shadow 内でも機能は動作するが、`content.css` は shadow boundary を越えないため装飾（訳文の色・区切り線等）は未適用。shadow root への style 注入は follow-up
+
 ### 要約エンジン（LLM）
 
 - **Claude**: `api.anthropic.com/v1/messages`（model: claude-haiku-4-5-20251001）
