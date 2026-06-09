@@ -89,12 +89,18 @@ var DVT = (function () {
 
   // root（Document / Element / ShadowRoot）配下の open shadow root を再帰的に列挙し、
   // 各 shadow root に対して callback を呼ぶ。
+  // querySelectorAll('*') で全要素の NodeList を確保すると大規模 DOM で高コストなため、
+  // TreeWalker で要素を逐次走査して shadow host を見つける（NodeList を生成しない）。
   function forEachShadowRoot(root, callback, _depth = 0) {
-    if (_depth > SHADOW_MAX_DEPTH || !root || typeof root.querySelectorAll !== 'function') return;
-    let all;
-    try { all = root.querySelectorAll('*'); } catch (e) { return; }
-    for (const el of all) {
-      const sr = el.shadowRoot;
+    if (_depth > SHADOW_MAX_DEPTH || !root) return;
+    // ShadowRoot/DocumentFragment は createTreeWalker を持たないため owner document 経由で生成する
+    const doc = (root.nodeType === 9 /* Document */) ? root : (root.ownerDocument || document);
+    let walker;
+    try {
+      walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    } catch (e) { return; }
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const sr = node.shadowRoot;
       if (sr) {
         callback(sr);
         forEachShadowRoot(sr, callback, _depth + 1);
