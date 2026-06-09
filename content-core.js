@@ -376,18 +376,102 @@ var DVT = (function () {
     });
   });
 
+  // ─── フレーム間メッセージリレー（Disqus等の cross-origin iframe 対応） ──
+  // トップフレームの content script が popup/background から「ページ翻訳開始」等を受けた際、
+  // 配下iframe（例: Disqus コメント欄）に window.postMessage で同じ指示を伝播する。
+  // iframe 内の content script は manifest.json の Disqus 専用エントリで注入される。
+  const FRAME_RELAY_SIG = '__dvt_relay';
+  const FRAME_RELAY_READY = '__dvtReady';
+  const FRAME_RELAY_ALLOWED = new Set([
+    'translatePage',
+    'translatePageAndSummarize',
+    'undoPage',
+    'togglePageTranslate',
+  ]);
+
+  function relayToChildFrames(action, payload) {
+    // トップフレームのみが配下iframeへ送信する（多重リレー防止）
+    if (window.top !== window.self) return;
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach((iframe) => {
+      try {
+        iframe.contentWindow?.postMessage(
+          { [FRAME_RELAY_SIG]: true, action, payload },
+          '*'
+        );
+      } catch (_e) {
+        // cross-origin の contentWindow.postMessage は仕様上許可されているが、
+        // 環境差異で稀に失敗するケースを握りつぶす
+      }
+    });
+  }
+
+  // iframe 側: 起動時にトップフレームへ ready を通知（遅延ロード対策）
+  if (window.top !== window.self) {
+    try {
+      window.parent.postMessage(
+        { [FRAME_RELAY_SIG]: true, action: FRAME_RELAY_READY },
+        '*'
+      );
+    } catch (_e) { /* noop */ }
+  }
+
+  // 全フレーム共通: postMessage 受信ハンドラ
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    // 拡張独自シグネチャ + 既知action のみ受理（任意ページからの模倣を遮断）
+    if (!data || data[FRAME_RELAY_SIG] !== true || typeof data.action !== 'string') return;
+    // 自フレーム内のスクリプトからの postMessage は無視（ホストページの模倣を遮断）。
+    // 正規ルートは「親 → 子iframe」または「子 → 親」のみで、event.source は必ず別 window。
+    if (event.source === window) return;
+    const action = data.action;
+
+    // iframe からの ready 通知: トップフレームがアクティブ状態を共有する
+    if (action === FRAME_RELAY_READY && window.top === window.self) {
+      if (state.pageTranslateActive && event.source) {
+        try {
+          event.source.postMessage(
+            { [FRAME_RELAY_SIG]: true, action: 'translatePage', payload: { lang: state.targetLang } },
+            '*'
+          );
+        } catch (_e) { /* noop */ }
+      }
+      return;
+    }
+
+    if (!FRAME_RELAY_ALLOWED.has(action)) return;
+    const payload = data.payload || {};
+    if (typeof DVT_PAGE === 'undefined') return; // 念のためのガード
+    if (action === 'translatePage') {
+      DVT_PAGE.translatePage(payload.lang);
+    } else if (action === 'translatePageAndSummarize') {
+      DVT_PAGE.translatePageAndSummarize(payload.lang);
+    } else if (action === 'undoPage') {
+      DVT_PAGE.undoPageTranslate();
+    } else if (action === 'togglePageTranslate') {
+      if (state.pageTranslateActive) {
+        DVT_PAGE.undoPageTranslate();
+      } else {
+        DVT_PAGE.translatePage(payload.lang);
+      }
+    }
+  });
+
   // ─── メッセージリスナー（popup / background からの指示） ─────────────
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === 'translatePage') {
       DVT_PAGE.translatePage(msg.lang);
+      relayToChildFrames('translatePage', { lang: msg.lang });
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
     if (msg.action === 'translatePageAndSummarize') {
       DVT_PAGE.translatePageAndSummarize(msg.lang);
+      relayToChildFrames('translatePageAndSummarize', { lang: msg.lang });
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
     if (msg.action === 'undoPage') {
       DVT_PAGE.undoPageTranslate();
+      relayToChildFrames('undoPage', {});
       sendResponse({ ok: true });
     }
     if (msg.action === 'enterRegionMode') {
@@ -422,21 +506,23 @@ var DVT = (function () {
     if (msg.action === 'togglePageTranslate') {
       if (state.pageTranslateActive) {
         DVT_PAGE.undoPageTranslate();
+        relayToChildFrames('undoPage', {});
       } else {
         DVT_PAGE.translatePage(msg.lang);
+        relayToChildFrames('translatePage', { lang: msg.lang });
       }
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
     if (msg.action === 'keyboardTranslateSelection') {
       const sel = window.getSelection();
       const text = sel?.toString().trim();
-      if (text && text.length > 1) {
+      if (text && text.length > 1 && typeof DVT_SEL !== 'undefined') {
         DVT_SEL.showContextMenuPanel(text);
       }
       sendResponse({ ok: true });
     }
     if (msg.action === 'contextMenuTranslate') {
-      DVT_SEL.showContextMenuPanel(msg.text);
+      if (typeof DVT_SEL !== 'undefined') DVT_SEL.showContextMenuPanel(msg.text);
       sendResponse({ ok: true });
     }
     if (msg.action === 'contextMenuTranslateElement') {

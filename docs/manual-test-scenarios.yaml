@@ -2550,3 +2550,70 @@ suites:
         expected:
           - クリック直後にバナーが消える
           - 再オープン後も表示されない（pinBannerDismissed が永続化され、回数上限に関係なく出ない）
+
+  - id: disqus-iframe
+    title: Disqus iframe 内コメントのページ翻訳
+    description: "PR #250 で追加。cross-origin iframe（disqus.com）にも content script を注入し、ページ全体翻訳で Disqus コメントも訳すこと"
+    related_prs: [250]
+    scenarios:
+      - id: DI-001
+        title: Disqus コメント欄がページ全体翻訳で翻訳される
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 翻訳エンジンが Google Translate に設定済み
+          - 対象URL https://www.carscoops.com/2026/06/rivian-doesnt-care-how-much-you-like-interior-buttons-voice-control-is-better/ を開く
+          - ページ末尾までスクロールして Disqus コメント欄をロードする
+        steps:
+          - ポップアップを開き、翻訳先言語を日本語にしてページ全体翻訳ボタンを押す
+          - Disqus コメント欄まで再度スクロールする
+        expected:
+          - 記事本文と Disqus コメント欄の両方に原文と訳文が並んで表示される
+          - 元に戻すボタンで両方とも原文表示に戻る
+
+      - id: DI-002
+        title: ページ翻訳中に遅延ロードされた Disqus iframe にも追従する
+        priority: p1
+        environment: chrome
+        description: "iframe 起動時の __dvtReady → トップフレームからの状態同期が機能すること"
+        preconditions:
+          - Disqus コメント欄が遅延ロードされる記事ページを開く（Disqus が画面外）
+        steps:
+          - 上端付近にいる状態でページ全体翻訳を発火する
+          - 記事を最後までスクロールして Disqus コメント欄を初めて表示させる
+        expected:
+          - Disqus iframe ロード完了後、自動的にコメントも翻訳済み状態で表示される
+          - ページ翻訳ボタンを再度押して停止すると Disqus 側も原文に戻る
+
+      - id: DI-003
+        title: 同一フレーム内からの postMessage 偽装が遮断される
+        priority: p1
+        environment: chrome
+        description: "拡張シグネチャ + 自フレーム送信ガード + 許可 action リストによる模倣遮断（セキュリティ）"
+        preconditions:
+          - 任意のサイトを開いてページ翻訳をしていない状態
+        steps:
+          - "DevTools コンソールで以下を実行: window.postMessage({ __dvt_relay: true, action: 'translatePage', payload: { lang: 'ja' } }, '*')"
+          - "同じく無効 action でも試す: window.postMessage({ __dvt_relay: true, action: 'eval', payload: { code: 'alert(1)' } }, '*')"
+          - "シグネチャなしでも試す: window.postMessage({ action: 'translatePage', payload: { lang: 'ja' } }, '*')"
+        expected:
+          - "いずれも何も起きない（自フレーム送信は event.source === window ガードで遮断）"
+          - DevTools コンソールに例外やエラーが出ない
+
+      - id: DI-004
+        title: iframe 内では翻訳バー・選択翻訳パネルが出ない
+        priority: p2
+        environment: chrome
+        description: "manifest.json で iframe 側には i18n / core / page のみ注入"
+        preconditions:
+          - Disqus コメント欄を含むページを開く
+        steps:
+          - Disqus iframe 内のテキストを選択する
+          - Disqus iframe 内をホバーする
+        expected:
+          - 選択翻訳のミニアイコン・パネルは表示されない（iframe 内では content-selection.js が読み込まれない）
+          - 翻訳バーも iframe 内には表示されない
+
+    known_limitations:
+      - "iframe 内では要素選択翻訳・選択テキスト翻訳・コンテキストメニュー翻訳・翻訳バー・自動翻訳ルールは動作しない（ページ全体翻訳のみ）"
+      - "OpenWeb (SpotIM) / Facebook Comments / livefyre 等の他コメントシステムは未対応"

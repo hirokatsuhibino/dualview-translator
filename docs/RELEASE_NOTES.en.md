@@ -12,6 +12,11 @@ permalink: /RELEASE_NOTES.en.html
 
 ### New Features
 
+- **Translate Disqus iframe comments with whole-page translate** (#250)
+  - The extension now injects its content script into `https://disqus.com/embed/comments/*` iframes too, so comment sections on Disqus-powered sites (carscoops, etc.) get picked up by whole-page translation.
+  - The top frame forwards translate start/stop to child iframes via `window.postMessage` — no extra permissions needed.
+  - A custom signature plus an allow-list of actions block any other page from impersonating the extension.
+  - Scope: **whole-page translation only**. Element / selection translation, the translate bar, and auto-rules are out of scope for now (and so are other comment platforms like OpenWeb or Facebook Comments).
 - **Nudge you to pin the extension to your toolbar on install** (#244 / #247)
   - Opens a welcome page right after the first install, walking you through "puzzle-piece → pin icon."
   - Adds a banner at the top of the popup (dismiss it and it won't come back).

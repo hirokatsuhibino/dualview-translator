@@ -95,6 +95,15 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - 「設定」タブに翻訳・要約それぞれのヒット率をバー付きで表示（未アクセス時は非表示）
 - `clearCache()` 実行時にヒット率統計もリセット
 
+### フレーム間メッセージリレー（Disqus iframe 対応）
+
+- Disqus などの cross-origin iframe コメント欄を翻訳するため、`manifest.json` に `https://disqus.com/embed/comments/*` 用の content_scripts エントリ（`all_frames: true`）を追加
+- iframe 内には `i18n.js` / `content-core.js` / `content-page.js` のみ注入（翻訳バーと選択翻訳は iframe では発火させない）
+- トップフレームの `content-core.js` が `chrome.runtime.onMessage` で `translatePage` / `translatePageAndSummarize` / `undoPage` / `togglePageTranslate` を受けたとき、`relayToChildFrames()` で配下 iframe に `window.postMessage` で同じ指示を伝播
+- iframe 側は起動時に親へ `__dvtReady` を送り、トップフレームでページ翻訳がアクティブなら現状態を返してもらうことで、遅延ロード iframe にも追従できる
+- セキュリティ: 受信側は `__dvt_relay: true` シグネチャ + 許可 action リスト（`translatePage` / `translatePageAndSummarize` / `undoPage` / `togglePageTranslate`）でフィルタし、任意ページからの模倣を遮断
+- スコープ: ページ全体翻訳のみ。要素選択翻訳・選択翻訳・翻訳バー・自動翻訳ルールは iframe 対象外（OpenWeb / Facebook Comments 等の他コメントシステムも未対応）
+
 ### 要約エンジン（LLM）
 
 - **Claude**: `api.anthropic.com/v1/messages`（model: claude-haiku-4-5-20251001）
