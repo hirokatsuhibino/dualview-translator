@@ -31,6 +31,9 @@
       "matches": [
         "<all_urls>"
       ],
+      "exclude_matches": [
+        "https://disqus.com/embed/comments/*"
+      ],
       "js": [
         "i18n.js",
         "content-core.js",
@@ -43,6 +46,21 @@
       ],
       "run_at": "document_end",
       "all_frames": false
+    },
+    {
+      "matches": [
+        "https://disqus.com/embed/comments/*"
+      ],
+      "js": [
+        "i18n.js",
+        "content-core.js",
+        "content-page.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "background": {

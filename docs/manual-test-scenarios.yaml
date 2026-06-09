@@ -2550,3 +2550,116 @@ suites:
         expected:
           - クリック直後にバナーが消える
           - 再オープン後も表示されない（pinBannerDismissed が永続化され、回数上限に関係なく出ない）
+
+  - id: disqus-iframe
+    title: Disqus iframe 内コメントのページ翻訳
+    description: "PR #251 で追加。cross-origin iframe（disqus.com）にも content script を注入し、ページ全体翻訳で Disqus コメントも訳すこと（Issue #250）"
+    related_prs: [251]
+    scenarios:
+      - id: DI-001
+        title: Disqus コメント欄がページ全体翻訳で翻訳される
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 翻訳エンジンが Google Translate に設定済み
+          - 対象URL https://www.carscoops.com/2026/06/rivian-doesnt-care-how-much-you-like-interior-buttons-voice-control-is-better/ を開く
+          - ページ末尾までスクロールして Disqus コメント欄をロードする
+        steps:
+          - ポップアップを開き、翻訳先言語を日本語にしてページ全体翻訳ボタンを押す
+          - Disqus コメント欄まで再度スクロールする
+        expected:
+          - 記事本文と Disqus コメント欄の両方に原文と訳文が並んで表示される
+          - 元に戻すボタンで両方とも原文表示に戻る
+
+      - id: DI-002
+        title: ページ翻訳中に遅延ロードされた Disqus iframe にも追従する
+        priority: p1
+        environment: chrome
+        description: "iframe 起動時の __dvtReady → トップフレームからの状態同期が機能すること"
+        preconditions:
+          - Disqus コメント欄が遅延ロードされる記事ページを開く（Disqus が画面外）
+        steps:
+          - 上端付近にいる状態でページ全体翻訳を発火する
+          - 記事を最後までスクロールして Disqus コメント欄を初めて表示させる
+        expected:
+          - Disqus iframe ロード完了後、自動的にコメントも翻訳済み状態で表示される
+          - ページ翻訳ボタンを再度押して停止すると Disqus 側も原文に戻る
+
+      - id: DI-003
+        title: 同一フレーム内からの postMessage 偽装が遮断される
+        priority: p1
+        environment: chrome
+        description: "拡張シグネチャ + 自フレーム送信ガード + 許可 action リストによる模倣遮断（セキュリティ）"
+        preconditions:
+          - 任意のサイトを開いてページ翻訳をしていない状態
+        steps:
+          - "DevTools コンソールで以下を実行: window.postMessage({ __dvt_relay: true, action: 'translatePage', payload: { lang: 'ja' } }, '*')"
+          - "同じく無効 action でも試す: window.postMessage({ __dvt_relay: true, action: 'eval', payload: { code: 'alert(1)' } }, '*')"
+          - "シグネチャなしでも試す: window.postMessage({ action: 'translatePage', payload: { lang: 'ja' } }, '*')"
+        expected:
+          - "いずれも何も起きない（自フレーム送信は event.source === window ガードで遮断）"
+          - DevTools コンソールに例外やエラーが出ない
+
+      - id: DI-004
+        title: iframe 内では翻訳バー・選択翻訳パネルが出ない
+        priority: p2
+        environment: chrome
+        description: "manifest.json で iframe 側には i18n / core / page のみ注入"
+        preconditions:
+          - Disqus コメント欄を含むページを開く
+        steps:
+          - Disqus iframe 内のテキストを選択する
+          - Disqus iframe 内をホバーする
+        expected:
+          - 選択翻訳のミニアイコン・パネルは表示されない（iframe 内では content-selection.js が読み込まれない）
+          - 翻訳バーも iframe 内には表示されない
+
+      - id: DI-005
+        title: 領域選択で Disqus iframe 内のコメントをクリック翻訳できる
+        priority: p1
+        environment: chrome
+        description: "PR #251。enterRegionMode をトップ→子 iframe にリレーし、各フレーム独立にモードへ入る"
+        preconditions:
+          - 翻訳エンジンが Google Translate に設定済み
+          - Disqus コメント欄を含むページ（carscoops 等）を開き末尾までスクロール
+        steps:
+          - ポップアップまたは Ctrl+Shift+R で領域選択モードに入る
+          - Disqus iframe 内のコメント要素にカーソルを合わせる
+          - コメント要素をクリックする
+        expected:
+          - iframe 内でもホバー要素がハイライト（.dvt-region-highlight）される
+          - クリックしたコメントが翻訳され原文と訳文が並んで表示される
+          - 確定後、トップフレーム側のクロスヘアカーソルとヒントも解除される（全フレームのモード解除）
+
+      - id: DI-006
+        title: 領域選択を iframe 内でクリック確定すると全フレームのモードが解除される
+        priority: p1
+        environment: chrome
+        description: "dvt-region-exit → window.top 経由のブロードキャストによるフレーム間解除同期"
+        preconditions:
+          - Disqus コメント欄を含むページを開く
+        steps:
+          - 領域選択モードに入る（トップ・iframe 両方がクロスヘア＋ヒント表示になる）
+          - Disqus iframe 内のコメントをクリックして確定する
+        expected:
+          - クリックした iframe のモードが解除される
+          - トップフレームおよび他の iframe のクロスヘアカーソル・ヒントも同時に解除される
+          - 二度目のホバーでハイライトが付かない（モードが残っていない）
+
+      - id: DI-007
+        title: 領域選択中の Escape でどのフレームからでも全フレーム解除される
+        priority: p1
+        environment: chrome
+        description: "Escape による解除も全フレームに伝播すること"
+        preconditions:
+          - Disqus コメント欄を含むページを開く
+        steps:
+          - 領域選択モードに入る
+          - Disqus iframe 内にカーソルがある状態で Escape キーを押す
+        expected:
+          - iframe・トップ両方のクロスヘアカーソルとヒントが解除される
+          - 翻訳は実行されない
+
+    known_limitations:
+      - "iframe 内では選択テキスト翻訳・コンテキストメニュー翻訳・翻訳バー・自動翻訳ルールは動作しない（対応はページ全体翻訳と領域選択のみ）"
+      - "OpenWeb (SpotIM) / Facebook Comments / livefyre 等の他コメントシステムは未対応"

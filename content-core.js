@@ -11,6 +11,9 @@ var DVT = (function () {
     selectionPanel: null,
     selectionMiniBtn: null,
     pageTranslateActive: false,
+    // ページ全体翻訳のモード: 'translate'（翻訳のみ）/ 'summarize'（翻訳＆要約）/ null（非アクティブ）。
+    // 遅延ロード iframe の __dvtReady 応答で同じモードを再現するために保持する。
+    pageTranslateMode: null,
     translateBar: null,
     lastContextMenuTarget: null,
     regionMode: false,
@@ -376,22 +379,153 @@ var DVT = (function () {
     });
   });
 
+  // ─── フレーム間メッセージリレー（Disqus等の cross-origin iframe 対応） ──
+  // トップフレームの content script が popup/background から「ページ翻訳開始」等を受けた際、
+  // 配下iframe（例: Disqus コメント欄）に window.postMessage で同じ指示を伝播する。
+  // iframe 内の content script は manifest.json の Disqus 専用エントリで注入される。
+  const FRAME_RELAY_SIG = '__dvt_relay';
+  const FRAME_RELAY_READY = '__dvtReady';
+  // iframe を跨いで「ユーザーが領域選択を確定/キャンセルした」ことをトップに通知する内部アクション
+  const FRAME_RELAY_REGION_EXIT_BROADCAST = '__dvtRegionExitBroadcast';
+  const FRAME_RELAY_ALLOWED = new Set([
+    'translatePage',
+    'translatePageAndSummarize',
+    'undoPage',
+    'togglePageTranslate',
+    'enterRegionMode',
+    'exitRegionMode',
+  ]);
+
+  function relayToChildFrames(action, payload) {
+    // トップフレームのみが配下iframeへ送信する（多重リレー防止）
+    if (window.top !== window.self) return;
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach((iframe) => {
+      try {
+        iframe.contentWindow?.postMessage(
+          { [FRAME_RELAY_SIG]: true, action, payload },
+          '*'
+        );
+      } catch (_e) {
+        // cross-origin の contentWindow.postMessage は仕様上許可されているが、
+        // 環境差異で稀に失敗するケースを握りつぶす
+      }
+    });
+  }
+
+  // iframe 側: 起動時にトップフレームへ ready を通知（遅延ロード対策）
+  if (window.top !== window.self) {
+    try {
+      window.parent.postMessage(
+        { [FRAME_RELAY_SIG]: true, action: FRAME_RELAY_READY },
+        '*'
+      );
+    } catch (_e) { /* noop */ }
+  }
+
+  // 全フレーム共通: postMessage 受信ハンドラ
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    // 拡張独自シグネチャ + action が文字列のメッセージのみ受理
+    if (!data || data[FRAME_RELAY_SIG] !== true || typeof data.action !== 'string') return;
+    // 自フレーム内のスクリプトからの postMessage は無視。
+    // 正規ルートは「親 → 子iframe」または「子 → 親」のみで、event.source は必ず別 window。
+    if (event.source === window) return;
+    const action = data.action;
+    const isTop = (window.top === window.self);
+
+    // ── トップフレーム専用ハンドラ ──────────────────────────────────────
+    // 重要(セキュリティ): トップフレームでは postMessage 由来の翻訳系アクション
+    // （translatePage / undoPage / enterRegionMode 等）を一切実行しない。
+    // ホストページが自前で作った子 iframe（about:blank 等）から window.top へ
+    // postMessage すると event.source は別 window になり source ガードを通過するため、
+    // トップで実行を許すと任意ページからページ翻訳の開始/停止を操作できてしまう。
+    // トップへの正規 postMessage は子 iframe からの ready / 領域選択解除通知のみ。
+    if (isTop) {
+      // iframe からの ready 通知: ページ翻訳がアクティブなら現在のモードで起動させる。
+      // 要約モード（translatePageAndSummarize）で開始済みなら遅延ロード iframe も同じモードで起動する。
+      if (action === FRAME_RELAY_READY) {
+        if (state.pageTranslateActive && event.source) {
+          const readyAction = state.pageTranslateMode === 'summarize'
+            ? 'translatePageAndSummarize'
+            : 'translatePage';
+          try {
+            event.source.postMessage(
+              { [FRAME_RELAY_SIG]: true, action: readyAction, payload: { lang: state.targetLang } },
+              '*'
+            );
+          } catch (_e) { /* noop */ }
+        }
+      } else if (action === FRAME_RELAY_REGION_EXIT_BROADCAST) {
+        // iframe で領域選択が確定/キャンセルされた: 自分を解除し全フレームへ再ブロードキャスト
+        if (typeof DVT_PAGE !== 'undefined') DVT_PAGE.exitRegionMode(true);
+        relayToChildFrames('exitRegionMode', {});
+      }
+      return;
+    }
+
+    // ── 子 iframe 専用: トップからリレーされた翻訳系アクションを実行 ──────
+    if (!FRAME_RELAY_ALLOWED.has(action)) return;
+    const payload = data.payload || {};
+    if (typeof DVT_PAGE === 'undefined') return; // 念のためのガード
+    if (action === 'translatePage') {
+      DVT_PAGE.translatePage(payload.lang);
+    } else if (action === 'translatePageAndSummarize') {
+      DVT_PAGE.translatePageAndSummarize(payload.lang);
+    } else if (action === 'undoPage') {
+      DVT_PAGE.undoPageTranslate();
+    } else if (action === 'togglePageTranslate') {
+      if (state.pageTranslateActive) {
+        DVT_PAGE.undoPageTranslate();
+      } else {
+        DVT_PAGE.translatePage(payload.lang);
+      }
+    } else if (action === 'enterRegionMode') {
+      DVT_PAGE.enterRegionMode(payload.mode);
+    } else if (action === 'exitRegionMode') {
+      // リレー由来の解除（再ブロードキャストしない）
+      DVT_PAGE.exitRegionMode(true);
+    }
+  });
+
+  // 領域選択モードの解除（ユーザーのクリック確定 / Escape）を全フレームへ伝播する。
+  // content-page の exitRegionMode が dispatch する 'dvt-region-exit' を受けて起動。
+  document.addEventListener('dvt-region-exit', () => {
+    if (window.top === window.self) {
+      // 自分がトップ: 自身は解除済みなので子 iframe にのみ解除を伝播
+      relayToChildFrames('exitRegionMode', {});
+    } else {
+      // 自分が iframe: トップに通知し、トップ経由で全フレームへ伝播してもらう
+      try {
+        window.top.postMessage(
+          { [FRAME_RELAY_SIG]: true, action: FRAME_RELAY_REGION_EXIT_BROADCAST },
+          '*'
+        );
+      } catch (_e) { /* noop */ }
+    }
+  });
+
   // ─── メッセージリスナー（popup / background からの指示） ─────────────
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === 'translatePage') {
       DVT_PAGE.translatePage(msg.lang);
+      relayToChildFrames('translatePage', { lang: msg.lang });
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
     if (msg.action === 'translatePageAndSummarize') {
       DVT_PAGE.translatePageAndSummarize(msg.lang);
+      relayToChildFrames('translatePageAndSummarize', { lang: msg.lang });
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
     if (msg.action === 'undoPage') {
       DVT_PAGE.undoPageTranslate();
+      relayToChildFrames('undoPage', {});
       sendResponse({ ok: true });
     }
     if (msg.action === 'enterRegionMode') {
       DVT_PAGE.enterRegionMode(msg.mode);
+      // Disqus 等の子 iframe にも領域選択モードを伝播（どのフレームでクリックしても確定できる）
+      relayToChildFrames('enterRegionMode', { mode: msg.mode });
       sendResponse({ ok: true });
     }
     if (msg.action === 'enterSelectorPickMode') {
@@ -422,21 +556,23 @@ var DVT = (function () {
     if (msg.action === 'togglePageTranslate') {
       if (state.pageTranslateActive) {
         DVT_PAGE.undoPageTranslate();
+        relayToChildFrames('undoPage', {});
       } else {
         DVT_PAGE.translatePage(msg.lang);
+        relayToChildFrames('translatePage', { lang: msg.lang });
       }
       sendResponse({ ok: true, active: state.pageTranslateActive });
     }
     if (msg.action === 'keyboardTranslateSelection') {
       const sel = window.getSelection();
       const text = sel?.toString().trim();
-      if (text && text.length > 1) {
+      if (text && text.length > 1 && typeof DVT_SEL !== 'undefined') {
         DVT_SEL.showContextMenuPanel(text);
       }
       sendResponse({ ok: true });
     }
     if (msg.action === 'contextMenuTranslate') {
-      DVT_SEL.showContextMenuPanel(msg.text);
+      if (typeof DVT_SEL !== 'undefined') DVT_SEL.showContextMenuPanel(msg.text);
       sendResponse({ ok: true });
     }
     if (msg.action === 'contextMenuTranslateElement') {
