@@ -482,7 +482,15 @@ var DVT_PAGE = (function () {
 
   // ─── 要素クリック選択翻訳 ────────────────────────────────────────────
   // mode: 'translate' = 翻訳のみ, 'summarize' = 翻訳＆要約
+  // 現在アクティブな領域選択モードの解除関数（cross-frame 同期用に module レベルで保持）。
+  // iframe 対応のため content-core 側から exitRegionMode() を外部呼び出しできるようにする。
+  let activeRegionExit = null;
+
   function enterRegionMode(mode) {
+    // 既存の領域選択モードが残っていれば先に解除（多重起動・フレーム間競合防止）。
+    // fromRelay=true 扱いで他フレームへの再ブロードキャストは抑制する。
+    if (activeRegionExit) activeRegionExit(true);
+
     const summarize = (mode === 'summarize');
     DVT.state.regionMode = true;
     // Firefox 対策: ポップアップ閉鎖直後はページ document に focus が戻らず
@@ -525,7 +533,9 @@ var DVT_PAGE = (function () {
       if (e.key === 'Escape') exitRegionMode();
     }
 
-    function exitRegionMode() {
+    // fromRelay: 他フレームからのリレー由来の解除なら true（再ブロードキャストしない）
+    function exitRegionMode(fromRelay) {
+      if (!DVT.state.regionMode) return; // 二重解除のガード（idempotent）
       DVT.state.regionMode = false;
       document.body.style.cursor = '';
       if (highlightedEl) {
@@ -536,13 +546,25 @@ var DVT_PAGE = (function () {
       document.removeEventListener('mousemove', onMousemove);
       document.removeEventListener('click', onClick, true);
       window.removeEventListener('keydown', onKeydown, true);
+      activeRegionExit = null;
+      // ユーザー操作（クリック / Escape）由来の解除のみ他フレームへ伝播。
+      // content-core がこのイベントを受けて全フレームに exitRegionMode をブロードキャストする。
+      if (!fromRelay) {
+        try { document.dispatchEvent(new CustomEvent('dvt-region-exit')); } catch (e) {}
+      }
     }
 
+    activeRegionExit = exitRegionMode;
     document.addEventListener('mousemove', onMousemove);
     document.addEventListener('click', onClick, true);
     // Firefox 対策: document への keydown はサイト側で stopPropagation される
     // ことがあるため window の capture phase で受ける
     window.addEventListener('keydown', onKeydown, true);
+  }
+
+  // 外部（content-core のフレーム間リレー）から領域選択モードを解除する。
+  function exitRegionModeExternal(fromRelay) {
+    if (activeRegionExit) activeRegionExit(fromRelay);
   }
 
   // ─── 領域内要素の抽出（共通処理） ────────────────────────────────────
@@ -860,5 +882,5 @@ var DVT_PAGE = (function () {
     window.addEventListener('keydown', onKeyDown, true);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement };
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement };
 })();

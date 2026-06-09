@@ -841,4 +841,62 @@ describe('DVT_PAGE (content-page)', () => {
       }
     });
   });
+
+  describe('enterRegionMode / exitRegionMode — フレーム間解除同期（#250）', () => {
+    beforeEach(() => {
+      // 直前のテストが残した領域選択モードを正規ルートで解除（window リスナーも除去する）
+      DVT_PAGE.exitRegionMode(true);
+      document.body.replaceChildren();
+    });
+    afterEach(() => {
+      DVT_PAGE.exitRegionMode(true);
+    });
+
+    it('enterRegionMode で regionMode が true になり crosshair カーソルとヒントが出る', () => {
+      DVT_PAGE.enterRegionMode('translate');
+      expect(DVT.state.regionMode).toBe(true);
+      expect(document.body.style.cursor).toBe('crosshair');
+      expect(document.querySelector('.dvt-region-hint')).not.toBeNull();
+    });
+
+    it('Escape キーで領域選択モードが解除され dvt-region-exit が発火する（ユーザー操作）', () => {
+      const onExit = vi.fn();
+      document.addEventListener('dvt-region-exit', onExit);
+      DVT_PAGE.enterRegionMode('translate');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(DVT.state.regionMode).toBe(false);
+      expect(document.querySelector('.dvt-region-hint')).toBeNull();
+      // ユーザー操作由来なので他フレームへ伝播するためのイベントが発火
+      expect(onExit).toHaveBeenCalledTimes(1);
+      document.removeEventListener('dvt-region-exit', onExit);
+    });
+
+    it('外部 exitRegionMode(true)（リレー由来）では dvt-region-exit を再発火しない', () => {
+      const onExit = vi.fn();
+      document.addEventListener('dvt-region-exit', onExit);
+      DVT_PAGE.enterRegionMode('translate');
+      DVT_PAGE.exitRegionMode(true); // リレー由来
+      expect(DVT.state.regionMode).toBe(false);
+      // 再ブロードキャストを防ぐためイベントは発火しない（無限ループ防止）
+      expect(onExit).not.toHaveBeenCalled();
+      document.removeEventListener('dvt-region-exit', onExit);
+    });
+
+    it('exitRegionMode は二重呼び出しに対して idempotent', () => {
+      DVT_PAGE.enterRegionMode('translate');
+      DVT_PAGE.exitRegionMode(true);
+      // 2回目は何も起きずクラッシュしない
+      expect(() => DVT_PAGE.exitRegionMode(true)).not.toThrow();
+      expect(DVT.state.regionMode).toBe(false);
+    });
+
+    it('enterRegionMode を多重起動しても前のモードのヒントが残らない', () => {
+      DVT_PAGE.enterRegionMode('translate');
+      DVT_PAGE.enterRegionMode('summarize');
+      // ヒントは1つだけ
+      expect(document.querySelectorAll('.dvt-region-hint').length).toBe(1);
+      expect(DVT.state.regionMode).toBe(true);
+      DVT_PAGE.exitRegionMode(true);
+    });
+  });
 });

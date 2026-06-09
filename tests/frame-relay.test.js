@@ -6,16 +6,21 @@ import { loadScript } from './helpers.js';
 describe('frame relay (postMessage受信)', () => {
   let translatePage, translatePageAndSummarize, undoPageTranslate;
 
+  let enterRegionMode, exitRegionMode;
+
   beforeAll(() => {
     // DVT_PAGE を事前にモックしておく（content-core.js のガード `typeof DVT_PAGE !== 'undefined'` を通すため）
     translatePage = vi.fn();
     translatePageAndSummarize = vi.fn();
     undoPageTranslate = vi.fn();
+    enterRegionMode = vi.fn();
+    exitRegionMode = vi.fn();
     globalThis.DVT_PAGE = {
       translatePage,
       translatePageAndSummarize,
       undoPageTranslate,
-      enterRegionMode: vi.fn(),
+      enterRegionMode,
+      exitRegionMode,
       enterSelectorPickMode: vi.fn(),
       translateElement: vi.fn(),
       translateAndSummarizeElement: vi.fn(),
@@ -27,6 +32,8 @@ describe('frame relay (postMessage受信)', () => {
     translatePage.mockClear();
     translatePageAndSummarize.mockClear();
     undoPageTranslate.mockClear();
+    enterRegionMode.mockClear();
+    exitRegionMode.mockClear();
   });
 
   function send(data) {
@@ -59,10 +66,20 @@ describe('frame relay (postMessage受信)', () => {
     expect(translatePage).not.toHaveBeenCalled();
   });
 
+  it('シグネチャ付き enterRegionMode で DVT_PAGE.enterRegionMode が呼ばれる', () => {
+    send({ __dvt_relay: true, action: 'enterRegionMode', payload: { mode: 'translate' } });
+    expect(enterRegionMode).toHaveBeenCalledWith('translate');
+  });
+
+  it('シグネチャ付き exitRegionMode で DVT_PAGE.exitRegionMode(true) が呼ばれる（リレー由来）', () => {
+    send({ __dvt_relay: true, action: 'exitRegionMode', payload: {} });
+    expect(exitRegionMode).toHaveBeenCalledWith(true);
+  });
+
   it('許可リスト外の action は無視される（任意関数の呼び出しを遮断）', () => {
-    send({ __dvt_relay: true, action: 'enterRegionMode', payload: {} });
     send({ __dvt_relay: true, action: 'eval', payload: { code: 'alert(1)' } });
     send({ __dvt_relay: true, action: '__proto__' });
+    send({ __dvt_relay: true, action: 'enterSelectorPickMode', payload: {} });
     expect(translatePage).not.toHaveBeenCalled();
     expect(translatePageAndSummarize).not.toHaveBeenCalled();
     expect(undoPageTranslate).not.toHaveBeenCalled();
@@ -105,6 +122,27 @@ describe('frame relay (postMessage受信)', () => {
       source: window,
     }));
     expect(translatePage.mock.calls.length).toBe(before);
+  });
+
+  it('dvt-region-exit イベントで子 iframe に exitRegionMode がブロードキャストされる（トップフレーム）', () => {
+    // トップフレーム想定（jsdom では window.top === window.self）。
+    // 子 iframe を1つ用意し、contentWindow.postMessage が呼ばれることを検証する。
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    const postSpy = vi.fn();
+    // contentWindow は read-only なので postMessage だけ差し替え
+    Object.defineProperty(iframe, 'contentWindow', {
+      configurable: true,
+      get: () => ({ postMessage: postSpy }),
+    });
+
+    document.dispatchEvent(new CustomEvent('dvt-region-exit'));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ __dvt_relay: true, action: 'exitRegionMode' }),
+      '*'
+    );
+    iframe.remove();
   });
 });
 

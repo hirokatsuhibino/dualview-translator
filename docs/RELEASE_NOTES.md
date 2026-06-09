@@ -12,11 +12,12 @@ permalink: /RELEASE_NOTES.html
 
 ### 新機能
 
-- **Disqus iframe 内コメントのページ翻訳に対応**（#250）
-  - `https://disqus.com/embed/comments/*` の iframe 内にも content script を注入し、carscoops 等 Disqus 採用サイトのコメント欄をページ全体翻訳の対象に追加
-  - トップフレームの content script が `window.postMessage` で配下 iframe に翻訳開始／停止を伝播（追加 permission なし）
-  - 拡張独自シグネチャ + 許可 action リストで外部ページからの模倣を遮断
-  - スコープ: **ページ全体翻訳のみ**。要素選択翻訳・選択テキスト翻訳・翻訳バー・自動翻訳ルールは対象外（OpenWeb / Facebook Comments 等の他コメントシステムも今回は非対応）
+- **Disqus iframe 内コメントの翻訳に対応**（#250）
+  - `https://disqus.com/embed/comments/*` の iframe 内にも content script を注入し、carscoops 等 Disqus 採用サイトのコメント欄を翻訳対象に追加
+  - **ページ全体翻訳**と**領域選択（要素選択翻訳）**の両方に対応。領域選択では各フレームが独立にモードへ入り、Disqus コメント欄をクリックして翻訳できる（どのフレームで確定／キャンセルしても全フレームのモードが解除される）
+  - トップフレームの content script が `window.postMessage` で配下 iframe に指示を伝播（追加 permission なし）
+  - 拡張独自シグネチャ + 自フレーム送信遮断 + 許可 action リストで外部ページからの模倣を遮断
+  - スコープ外: 選択テキスト翻訳・コンテキストメニュー翻訳・翻訳バー・自動翻訳ルール（OpenWeb / Facebook Comments 等の他コメントシステムも今回は非対応）
 - **インストール時にツールバーへのピン留めを誘導**（#244 / #247）
   - 初回インストール直後にウェルカムページを開き、「パズルピース → ピンアイコン」の手順を案内
   - ポップアップ上部に誘導バナーを追加（閉じると次回以降は非表示）

@@ -382,11 +382,15 @@ var DVT = (function () {
   // iframe 内の content script は manifest.json の Disqus 専用エントリで注入される。
   const FRAME_RELAY_SIG = '__dvt_relay';
   const FRAME_RELAY_READY = '__dvtReady';
+  // iframe を跨いで「ユーザーが領域選択を確定/キャンセルした」ことをトップに通知する内部アクション
+  const FRAME_RELAY_REGION_EXIT_BROADCAST = '__dvtRegionExitBroadcast';
   const FRAME_RELAY_ALLOWED = new Set([
     'translatePage',
     'translatePageAndSummarize',
     'undoPage',
     'togglePageTranslate',
+    'enterRegionMode',
+    'exitRegionMode',
   ]);
 
   function relayToChildFrames(action, payload) {
@@ -439,6 +443,13 @@ var DVT = (function () {
       return;
     }
 
+    // iframe で領域選択が確定/キャンセルされた通知: トップが自分を解除し全フレームへ再ブロードキャスト
+    if (action === FRAME_RELAY_REGION_EXIT_BROADCAST && window.top === window.self) {
+      if (typeof DVT_PAGE !== 'undefined') DVT_PAGE.exitRegionMode(true);
+      relayToChildFrames('exitRegionMode', {});
+      return;
+    }
+
     if (!FRAME_RELAY_ALLOWED.has(action)) return;
     const payload = data.payload || {};
     if (typeof DVT_PAGE === 'undefined') return; // 念のためのガード
@@ -454,6 +465,28 @@ var DVT = (function () {
       } else {
         DVT_PAGE.translatePage(payload.lang);
       }
+    } else if (action === 'enterRegionMode') {
+      DVT_PAGE.enterRegionMode(payload.mode);
+    } else if (action === 'exitRegionMode') {
+      // リレー由来の解除（再ブロードキャストしない）
+      DVT_PAGE.exitRegionMode(true);
+    }
+  });
+
+  // 領域選択モードの解除（ユーザーのクリック確定 / Escape）を全フレームへ伝播する。
+  // content-page の exitRegionMode が dispatch する 'dvt-region-exit' を受けて起動。
+  document.addEventListener('dvt-region-exit', () => {
+    if (window.top === window.self) {
+      // 自分がトップ: 自身は解除済みなので子 iframe にのみ解除を伝播
+      relayToChildFrames('exitRegionMode', {});
+    } else {
+      // 自分が iframe: トップに通知し、トップ経由で全フレームへ伝播してもらう
+      try {
+        window.top.postMessage(
+          { [FRAME_RELAY_SIG]: true, action: FRAME_RELAY_REGION_EXIT_BROADCAST },
+          '*'
+        );
+      } catch (_e) { /* noop */ }
     }
   });
 
@@ -476,6 +509,8 @@ var DVT = (function () {
     }
     if (msg.action === 'enterRegionMode') {
       DVT_PAGE.enterRegionMode(msg.mode);
+      // Disqus 等の子 iframe にも領域選択モードを伝播（どのフレームでクリックしても確定できる）
+      relayToChildFrames('enterRegionMode', { mode: msg.mode });
       sendResponse({ ok: true });
     }
     if (msg.action === 'enterSelectorPickMode') {
