@@ -154,8 +154,9 @@ describe('トップフレーム: postMessage 由来の翻訳アクションは�
     expect(undoPageTranslate).not.toHaveBeenCalled();
   });
 
-  it('__dvtReady: ページ翻訳がアクティブなら送信元に現状態を返す', () => {
+  it('__dvtReady: 翻訳モードがアクティブなら translatePage を返す', () => {
     DVT.state.pageTranslateActive = true;
+    DVT.state.pageTranslateMode = 'translate';
     DVT.state.targetLang = 'ja';
     const source = { postMessage: vi.fn() };
     send({ __dvt_relay: true, action: '__dvtReady' }, source);
@@ -164,6 +165,21 @@ describe('トップフレーム: postMessage 由来の翻訳アクションは�
       '*'
     );
     DVT.state.pageTranslateActive = false;
+    DVT.state.pageTranslateMode = null;
+  });
+
+  it('__dvtReady: 要約モードがアクティブなら translatePageAndSummarize を返す（late iframe もモード一致）', () => {
+    DVT.state.pageTranslateActive = true;
+    DVT.state.pageTranslateMode = 'summarize';
+    DVT.state.targetLang = 'en';
+    const source = { postMessage: vi.fn() };
+    send({ __dvt_relay: true, action: '__dvtReady' }, source);
+    expect(source.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ __dvt_relay: true, action: 'translatePageAndSummarize', payload: { lang: 'en' } }),
+      '*'
+    );
+    DVT.state.pageTranslateActive = false;
+    DVT.state.pageTranslateMode = null;
   });
 
   it('__dvtReady: ページ翻訳が非アクティブなら何も返さない', () => {

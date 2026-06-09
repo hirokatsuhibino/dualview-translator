@@ -2553,8 +2553,8 @@ suites:
 
   - id: disqus-iframe
     title: Disqus iframe 内コメントのページ翻訳
-    description: "PR #250 で追加。cross-origin iframe（disqus.com）にも content script を注入し、ページ全体翻訳で Disqus コメントも訳すこと"
-    related_prs: [250]
+    description: "PR #251 で追加。cross-origin iframe（disqus.com）にも content script を注入し、ページ全体翻訳で Disqus コメントも訳すこと（Issue #250）"
+    related_prs: [251]
     scenarios:
       - id: DI-001
         title: Disqus コメント欄がページ全体翻訳で翻訳される
@@ -2618,7 +2618,7 @@ suites:
         title: 領域選択で Disqus iframe 内のコメントをクリック翻訳できる
         priority: p1
         environment: chrome
-        description: "PR #250。enterRegionMode をトップ→子 iframe にリレーし、各フレーム独立にモードへ入る"
+        description: "PR #251。enterRegionMode をトップ→子 iframe にリレーし、各フレーム独立にモードへ入る"
         preconditions:
           - 翻訳エンジンが Google Translate に設定済み
           - Disqus コメント欄を含むページ（carscoops 等）を開き末尾までスクロール

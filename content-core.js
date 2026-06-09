@@ -11,6 +11,9 @@ var DVT = (function () {
     selectionPanel: null,
     selectionMiniBtn: null,
     pageTranslateActive: false,
+    // ページ全体翻訳のモード: 'translate'（翻訳のみ）/ 'summarize'（翻訳＆要約）/ null（非アクティブ）。
+    // 遅延ロード iframe の __dvtReady 応答で同じモードを再現するために保持する。
+    pageTranslateMode: null,
     translateBar: null,
     lastContextMenuTarget: null,
     regionMode: false,
@@ -439,12 +442,16 @@ var DVT = (function () {
     // トップで実行を許すと任意ページからページ翻訳の開始/停止を操作できてしまう。
     // トップへの正規 postMessage は子 iframe からの ready / 領域選択解除通知のみ。
     if (isTop) {
-      // iframe からの ready 通知: ページ翻訳がアクティブなら現状態を共有する
+      // iframe からの ready 通知: ページ翻訳がアクティブなら現在のモードで起動させる。
+      // 要約モード（translatePageAndSummarize）で開始済みなら遅延ロード iframe も同じモードで起動する。
       if (action === FRAME_RELAY_READY) {
         if (state.pageTranslateActive && event.source) {
+          const readyAction = state.pageTranslateMode === 'summarize'
+            ? 'translatePageAndSummarize'
+            : 'translatePage';
           try {
             event.source.postMessage(
-              { [FRAME_RELAY_SIG]: true, action: 'translatePage', payload: { lang: state.targetLang } },
+              { [FRAME_RELAY_SIG]: true, action: readyAction, payload: { lang: state.targetLang } },
               '*'
             );
           } catch (_e) { /* noop */ }

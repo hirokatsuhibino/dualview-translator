@@ -429,6 +429,7 @@ var DVT_PAGE = (function () {
     }
 
     DVT.state.pageTranslateActive = true;
+    DVT.state.pageTranslateMode = 'translate';
     DVT.state.targetLang = tl;
 
     const elements = filterTranslatableElements(document);
@@ -448,6 +449,7 @@ var DVT_PAGE = (function () {
     }
 
     DVT.state.pageTranslateActive = true;
+    DVT.state.pageTranslateMode = 'summarize';
     DVT.state.targetLang = tl;
 
     const elements = filterTranslatableElements(document);
@@ -465,6 +467,7 @@ var DVT_PAGE = (function () {
 
   function undoPageTranslate() {
     DVT.state.pageTranslateActive = false;
+    DVT.state.pageTranslateMode = null;
     // 動的コンテンツ監視を停止
     stopPageObserver();
     // 翻訳・要約 DOM が消える前に進行中の読み上げを停止
