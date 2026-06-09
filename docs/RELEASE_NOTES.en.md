@@ -10,6 +10,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.8.0 (2026-06-09)
+
 ### New Features
 
 - **Translate comments rendered in Shadow DOM** (#252)

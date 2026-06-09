@@ -10,6 +10,10 @@ permalink: /RELEASE_NOTES.html
 
 ## 未リリース
 
+---
+
+## v1.8.0（2026-06-09）
+
 ### 新機能
 
 - **Shadow DOM 内コメントの翻訳に対応**（#252）
