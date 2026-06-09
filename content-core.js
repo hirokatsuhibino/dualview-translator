@@ -423,33 +423,41 @@ var DVT = (function () {
   // 全フレーム共通: postMessage 受信ハンドラ
   window.addEventListener('message', (event) => {
     const data = event.data;
-    // 拡張独自シグネチャ + 既知action のみ受理（任意ページからの模倣を遮断）
+    // 拡張独自シグネチャ + action が文字列のメッセージのみ受理
     if (!data || data[FRAME_RELAY_SIG] !== true || typeof data.action !== 'string') return;
-    // 自フレーム内のスクリプトからの postMessage は無視（ホストページの模倣を遮断）。
+    // 自フレーム内のスクリプトからの postMessage は無視。
     // 正規ルートは「親 → 子iframe」または「子 → 親」のみで、event.source は必ず別 window。
     if (event.source === window) return;
     const action = data.action;
+    const isTop = (window.top === window.self);
 
-    // iframe からの ready 通知: トップフレームがアクティブ状態を共有する
-    if (action === FRAME_RELAY_READY && window.top === window.self) {
-      if (state.pageTranslateActive && event.source) {
-        try {
-          event.source.postMessage(
-            { [FRAME_RELAY_SIG]: true, action: 'translatePage', payload: { lang: state.targetLang } },
-            '*'
-          );
-        } catch (_e) { /* noop */ }
+    // ── トップフレーム専用ハンドラ ──────────────────────────────────────
+    // 重要(セキュリティ): トップフレームでは postMessage 由来の翻訳系アクション
+    // （translatePage / undoPage / enterRegionMode 等）を一切実行しない。
+    // ホストページが自前で作った子 iframe（about:blank 等）から window.top へ
+    // postMessage すると event.source は別 window になり source ガードを通過するため、
+    // トップで実行を許すと任意ページからページ翻訳の開始/停止を操作できてしまう。
+    // トップへの正規 postMessage は子 iframe からの ready / 領域選択解除通知のみ。
+    if (isTop) {
+      // iframe からの ready 通知: ページ翻訳がアクティブなら現状態を共有する
+      if (action === FRAME_RELAY_READY) {
+        if (state.pageTranslateActive && event.source) {
+          try {
+            event.source.postMessage(
+              { [FRAME_RELAY_SIG]: true, action: 'translatePage', payload: { lang: state.targetLang } },
+              '*'
+            );
+          } catch (_e) { /* noop */ }
+        }
+      } else if (action === FRAME_RELAY_REGION_EXIT_BROADCAST) {
+        // iframe で領域選択が確定/キャンセルされた: 自分を解除し全フレームへ再ブロードキャスト
+        if (typeof DVT_PAGE !== 'undefined') DVT_PAGE.exitRegionMode(true);
+        relayToChildFrames('exitRegionMode', {});
       }
       return;
     }
 
-    // iframe で領域選択が確定/キャンセルされた通知: トップが自分を解除し全フレームへ再ブロードキャスト
-    if (action === FRAME_RELAY_REGION_EXIT_BROADCAST && window.top === window.self) {
-      if (typeof DVT_PAGE !== 'undefined') DVT_PAGE.exitRegionMode(true);
-      relayToChildFrames('exitRegionMode', {});
-      return;
-    }
-
+    // ── 子 iframe 専用: トップからリレーされた翻訳系アクションを実行 ──────
     if (!FRAME_RELAY_ALLOWED.has(action)) return;
     const payload = data.payload || {};
     if (typeof DVT_PAGE === 'undefined') return; // 念のためのガード

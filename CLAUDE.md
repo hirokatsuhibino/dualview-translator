@@ -105,7 +105,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
   - 解除同期は `content-page.js` の `exitRegionMode` が dispatch する `dvt-region-exit` カスタムイベントを `content-core.js` が受けて行う（疎結合）
   - 確定/キャンセルが起きたフレームから `window.top` 経由で全フレームへ `exitRegionMode` をブロードキャスト（`__dvtRegionExitBroadcast` 内部アクション）
   - `exitRegionMode(fromRelay)`: `fromRelay=true`（リレー由来）のときは `dvt-region-exit` を再発火せず無限ループを防ぐ。二重解除に対して idempotent
-- セキュリティ: 受信側は `__dvt_relay: true` シグネチャ + 自フレーム送信遮断（`event.source === window`）+ 許可 action リスト（`translatePage` / `translatePageAndSummarize` / `undoPage` / `togglePageTranslate` / `enterRegionMode` / `exitRegionMode`）でフィルタし、任意ページからの模倣を遮断
+- セキュリティ: 受信メッセージを `__dvt_relay: true` シグネチャ + 自フレーム送信遮断（`event.source === window`）+ 許可 action リスト（`translatePage` / `translatePageAndSummarize` / `undoPage` / `togglePageTranslate` / `enterRegionMode` / `exitRegionMode`）に限定する。`__dvt_relay` は公開値で postMessage 自体は任意フレームから送れるため、**トップフレームでは postMessage 由来の翻訳系アクションを一切実行しない**（子 iframe のみ実行。トップへの正規 postMessage は子からの `__dvtReady` / `__dvtRegionExitBroadcast` のみ）。これによりホストページが自前で作った子 iframe からトップへ postMessage してページ翻訳を操作する攻撃を防ぐ
 - スコープ: ページ全体翻訳 + 領域選択（要素選択翻訳）。選択テキスト翻訳・コンテキストメニュー翻訳・翻訳バー・自動翻訳ルールは iframe 対象外（OpenWeb / Facebook Comments 等の他コメントシステムも未対応）
 
 ### 要約エンジン（LLM）
