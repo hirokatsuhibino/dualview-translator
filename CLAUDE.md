@@ -165,6 +165,37 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - `filterTranslatableElements()` が `data-dvt-id` 付きの既翻訳要素を除外するため二重翻訳なし
 - `undoPageTranslate()` 時に `stopPageObserver()` で監視を停止
 
+### ビューポート優先＋遅延翻訳（Issue #256）
+
+長いページで DOM 順に全要素を翻訳すると、ユーザーが見ている箇所の訳文が出るまで待たされるため、
+ページ全体翻訳は「見えている部分から先に翻訳し、画面外はスクロールで近づいたときに翻訳する」方式で動く。
+
+- `runConcurrentTranslation(elements, tl, idPrefix, { lazy })` の `lazy: true` で有効化
+- 対象要素を `IntersectionObserver`（`rootMargin` = 画面高 × `LAZY_ROOT_MARGIN_RATIO`(1.5)）に登録し、
+  交差した要素だけを翻訳キューへ投入。同一コールバック内の要素は `viewportDistance()` の昇順（画面内 → 下方向 → 上方向）に並べ替える
+- 上方向（既読領域）は `LAZY_UPWARD_PENALTY`(2) 倍のペナルティを掛けて後回しにする
+- 翻訳ワーカーは初回バッチ・スクロール由来を問わず共通プール（`CONCURRENCY`(6)）で `pumpLazyWorkers()` が起動
+- 要素数が `LAZY_MIN_ELEMENTS`(30) 未満、または `IntersectionObserver` 非対応環境では
+  従来どおり全件即時翻訳（順序だけビューポート優先）にフォールバック
+- トーストは初回バッチの進捗のみ表示し、未翻訳分が残る場合は `toastDoneLazy`（「残り N 件はスクロール時」）で畳む。
+  以降のスクロール由来の翻訳はトーストを出さない
+- 進捗カウントは `processed`（処理済み＝進捗表示の分子・残件計算用）と `translated`（実際に訳文を挿入した数＝完了トーストの件数）を分けて持つ。
+  キュー投入から実行までの間に DOM から外れた／テキストが消えた要素は `translateOneElement` がスキップし、
+  そのとき `data-dvt-id="dvt-pending"` を解放して要素が復活したときに再翻訳できるようにする
+- `undoPageTranslate()` / ページ翻訳解除時に `stopLazyTranslation()` で Observer と待機キューを破棄。
+  進行中ワーカーは `isLazyAborted()` を見て次のループで抜ける
+
+**適用範囲**
+
+| モード | 遅延翻訳 |
+|---|---|
+| ページ全体翻訳 / 翻訳バー | ✅ 有効 |
+| MutationObserver 由来の新規要素 | ✅ 有効（既存の `lazyState` に追加 observe） |
+| ページ全体翻訳＆要約 | ❌ 無効（全訳文を結合して LLM に渡すため全件翻訳が必要） |
+| 領域選択 / 右クリック / 自動翻訳ルール / 選択テキスト翻訳 | ❌ 無効（範囲が明示された少数要素のため） |
+
+**既知の制約**: `display:none` の要素（タブ UI の裏側など）は交差しないため、表示されるまで翻訳されない。
+
 ## コーディングルール
 
 - コメントは日本語で書く（コードは英語可）

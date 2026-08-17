@@ -58,6 +58,37 @@ if (typeof document !== 'undefined' && !('ontouchstart' in document.documentElem
   });
 }
 
+// IntersectionObserver のモック（ビューポート優先の遅延翻訳テスト用・Issue #256）
+// jsdom には未実装。実 API は observe 直後に非同期でコールバックを発火するが、
+// テストを決定的にするため自動発火はせず、テスト側から trigger() で明示的に交差させる。
+globalThis.__ioInstances = [];
+class MockIntersectionObserver {
+  constructor(callback, options = {}) {
+    this.callback = callback;
+    this.options = options;
+    this.observed = new Set();
+    this.disconnected = false;
+    globalThis.__ioInstances.push(this);
+  }
+  observe(el) { this.observed.add(el); }
+  unobserve(el) { this.observed.delete(el); }
+  disconnect() { this.observed.clear(); this.disconnected = true; }
+  takeRecords() { return []; }
+  // 指定要素（省略時は observe 中の全要素）を intersecting としてコールバックへ渡す
+  trigger(elements) {
+    const targets = elements || [...this.observed];
+    const entries = targets.map(el => ({
+      target: el,
+      isIntersecting: true,
+      boundingClientRect: el.getBoundingClientRect(),
+    }));
+    this.callback(entries, this);
+  }
+}
+globalThis.IntersectionObserver = MockIntersectionObserver;
+globalThis.window.IntersectionObserver = MockIntersectionObserver;
+globalThis.__resetIOInstances = () => { globalThis.__ioInstances.length = 0; };
+
 // Web Speech API のモック（読み上げ機能のテスト用）
 // jsdom には未実装なので最低限の挙動を提供する。
 // テスト側からは globalThis.__speakLog で呼び出し履歴を検査できる。

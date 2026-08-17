@@ -2730,3 +2730,145 @@ suites:
       - "closed Shadow DOM は JS から到達不可のため翻訳できない"
       - "Shadow DOM 内は content.css 非適用のため装飾なし（機能は動作）"
       - "言語検出（翻訳バー）は Shadow 内テキストを収集しない"
+
+  - id: viewport-lazy-translate
+    title: ビューポート優先＋遅延翻訳
+    description: "Issue #256。ページ全体翻訳を画面内優先にし、画面外はスクロール時に翻訳する"
+    related_prs: [257]
+    scenarios:
+      - id: VL-001
+        title: 表示中の箇所から先に訳文が出る
+        priority: p0
+        environment: chrome
+        description: "従来は DOM 順（ページ先頭から）に翻訳していたため、下部を見ていると待たされた"
+        preconditions:
+          - 翻訳エンジンが Google Translate に設定済み
+          - 段落・見出しが 30 個以上ある長い記事（例 英語版 Wikipedia の長文記事）を開く
+        steps:
+          - ページの中ほど〜下部までスクロールする
+          - ポップアップを開き翻訳先を日本語にしてページ全体翻訳ボタンを押す
+          - スクロール位置を動かさずに画面を観察する
+        expected:
+          - 画面に表示されている段落から先にスピナー→訳文が現れる
+          - ページ先頭から順番に埋まっていく挙動にはならない
+          - 画面内の訳文が出るまでの体感待ち時間が数秒以内
+
+      - id: VL-002
+        title: 画面外の段落がスクロールで自動翻訳される
+        priority: p0
+        environment: chrome
+        preconditions:
+          - VL-001 の状態（ページ全体翻訳が有効・初回バッチ完了）
+        steps:
+          - ページを下方向にゆっくりスクロールする
+          - さらに上方向にスクロールして通過済みの領域に戻る
+        expected:
+          - 近づいた段落が順次翻訳され、未翻訳のまま残る箇所がない
+          - 上方向に戻った領域も翻訳されている（下方向より優先度は低い）
+          - スクロール中に画面がカクつかない
+
+      - id: VL-003
+        title: 完了トーストに残件数が表示される
+        priority: p1
+        environment: chrome
+        description: "未翻訳分が残っていることをユーザーに明示し「翻訳漏れ」と誤解させない"
+        preconditions:
+          - 段落が 30 個以上あり、大半が画面外にある長い記事を開く
+        steps:
+          - ページ先頭でページ全体翻訳を実行する
+          - トーストの表示を最後まで観察する
+        expected:
+          - 進捗中は「x / y 翻訳中…」が更新される
+          - 初回バッチ完了時に「✓ n 件翻訳（残り m 件はスクロール時）」が表示される
+          - スクロールで追加翻訳される間はトーストが再表示されない（うるさくない）
+
+      - id: VL-004
+        title: 短いページは従来どおり全件即時翻訳
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 段落・見出しが 30 個未満の短いページを開く
+        steps:
+          - ページ全体翻訳を実行する
+        expected:
+          - 全段落が一度に翻訳される
+          - 完了トーストは「✓ n 件翻訳完了」（残件表示なし）
+
+      - id: VL-005
+        title: 翻訳＆要約モードは全件翻訳される
+        priority: p0
+        environment: chrome
+        description: "全訳文を結合して LLM に渡すため、遅延翻訳を有効にすると要約が欠落する"
+        preconditions:
+          - Claude または Gemini の API キーが設定済み
+          - 段落が 30 個以上ある長い記事を開く
+        steps:
+          - ポップアップから「ページ全体を翻訳＆要約」を実行する
+          - 完了後にページ全体をスクロールして確認する
+        expected:
+          - スクロールを待たずに全段落が翻訳される
+          - ページ先頭に要約ブロックが挿入され、記事全体の内容を反映している
+
+      - id: VL-006
+        title: リセット後はスクロールしても翻訳されない
+        priority: p0
+        environment: chrome
+        description: "Observer と待機キューを破棄しないと、リセット後もスクロールで翻訳が復活する"
+        preconditions:
+          - 長い記事でページ全体翻訳が有効
+        steps:
+          - 「翻訳をリセット」を実行する
+          - 未翻訳だった下部までスクロールする
+        expected:
+          - 訳文が一切挿入されない
+          - 「翻訳をリセットしました」トーストの後に翻訳中トーストが出ない
+          - 原文の DOM 構造が壊れていない
+
+      - id: VL-007
+        title: display:none の要素は表示されるまで翻訳されない（仕様）
+        priority: p2
+        environment: chrome
+        description: "IntersectionObserver は非表示要素と交差しないため、遅延翻訳の本質的な制約"
+        preconditions:
+          - タブ UI やアコーディオンで一部コンテンツが非表示のページを開く
+        steps:
+          - ページ全体翻訳を実行する
+          - 非表示だったタブ／アコーディオンを開く
+        expected:
+          - 開いた直後は未翻訳だが、表示されると自動的に翻訳される
+        known_issue: true
+
+      - id: VL-008
+        title: DeepL APIキー未設定で中断しても再翻訳できる
+        priority: p1
+        environment: chrome
+        description: "中断時に data-dvt-id=dvt-pending が残ると、キー設定後も再翻訳できなくなる回帰があった"
+        preconditions:
+          - 翻訳エンジンを DeepL に設定し、APIキーは未入力にする
+        steps:
+          - ページ全体翻訳を実行する（APIキー未設定の警告トーストが出る）
+          - 設定タブで DeepL の APIキーを入力する
+          - 再度ページ全体翻訳を実行する
+        expected:
+          - 1 回目は翻訳されず警告トーストのみ
+          - 2 回目は正常に全段落が翻訳される（pending マークが残らない）
+
+      - id: VL-009
+        title: 翻訳待ちの要素が消えても件数がズレず、復活すれば再翻訳できる
+        priority: p2
+        environment: chrome
+        description: "PR #257 レビュー対応。スキップ時に dvt-pending が残ると要素が復活しても再翻訳できなくなる"
+        preconditions:
+          - 段落が 30 個以上あり、スクロールで DOM が差し替わる SPA（例 X / Twitter のタイムライン）を開く
+        steps:
+          - ページ全体翻訳を実行する
+          - 翻訳待ちの領域が画面に入る直前に、その要素が仮想スクロールで DOM から外れるように素早くスクロールする
+          - 同じ領域まで戻る
+        expected:
+          - 完了トーストの件数が実際に訳文が付いた数と一致する（消えた要素を数えない）
+          - 戻ってきた領域が再描画されたら、その要素も翻訳される（未翻訳のまま固まらない）
+
+    known_limitations:
+      - "display:none の要素は表示されるまで翻訳されない"
+      - "IntersectionObserver 非対応環境では従来どおり全件即時翻訳になる"
+      - "領域選択 / 右クリック翻訳 / 自動翻訳ルール / 選択テキスト翻訳は遅延翻訳の対象外"

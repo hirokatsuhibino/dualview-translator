@@ -10,6 +10,22 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Improvements
+
+- **Whole-page translation now fills in what you're looking at first** (#256)
+  - It used to translate in DOM order (from the top of the page), so on long pages with lots of elements you'd sit and wait for the part you were actually reading.
+  - Now an `IntersectionObserver` prioritizes elements that are on screen or close to it (up to 1.5 screens ahead), and everything else gets translated as you scroll toward it.
+  - Elements translated in the same pass are ordered "on screen → below → above," so it follows the direction you read.
+  - Skipping off-screen content also cuts down on translation API calls.
+  - If anything is still untranslated when the first batch finishes, the toast says "N more on scroll" so you know nothing got dropped.
+  - Pages with fewer than 30 elements, translate-and-summarize mode, region select, right-click translation, and auto-rules all still translate everything up front.
+  - Falls back to the old behavior on browsers without `IntersectionObserver`.
+  - Known limitation: elements hidden with `display:none` (the back side of a tab UI, say) won't be translated until they're shown.
+
+### Bug Fixes
+
+- Fixed a case where running page translation with DeepL selected but no API key left an in-progress marker (`data-dvt-id="dvt-pending"`) on the target elements, so you couldn't re-translate them even after setting the key (found while working on #256).
+
 ---
 
 ## v1.8.0 (2026-06-09)
