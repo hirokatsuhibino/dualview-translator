@@ -350,9 +350,15 @@ var DVT_PAGE = (function () {
   // 遅延翻訳では要素がキューに入ってから実行されるまでに時間が空くため、
   // DOM から外れた要素・テキストが消えた要素はスキップする。
   async function translateOneElement(el, tl, idPrefix) {
-    if (!el || !el.isConnected) return false;
-    const originalText = el.innerText?.trim();
-    if (!originalText) return false;
+    if (!el) return false;
+    const originalText = el.isConnected ? el.innerText?.trim() : '';
+    if (!originalText) {
+      // スキップする場合は runConcurrentTranslation が予約した処理中マークを解放する。
+      // 残したままだと filterTranslatableElements が除外し続けるため、要素が
+      // 再描画・再挿入されたり本文が入り直しても二度と翻訳されなくなる。
+      if (el.dataset && el.dataset.dvtId === 'dvt-pending') delete el.dataset.dvtId;
+      return false;
+    }
 
     insertDualView(el, idPrefix);
     const { text: result, detectedLang } = await DVT.translate(originalText, tl);
@@ -423,24 +429,28 @@ var DVT_PAGE = (function () {
     const queue = lazy ? sortByViewportDistance(elements) : [...elements];
     const total = queue.length;
     const toast = DVT.showToast(t('toastTranslating', { done: 0, total }), true);
-    let done = 0;
+    // processed: キューから取り出して処理した数（進捗表示の分子）
+    // translated: 実際に訳文を挿入した数（完了トーストの件数）
+    // DOM から外れた要素・テキストが消えた要素はスキップされるため両者は一致しない
+    let processed = 0;
+    let translated = 0;
 
     async function worker() {
       while (queue.length > 0) {
         const el = queue.shift();
         if (!el) break;
 
-        await translateOneElement(el, tl, idPrefix);
+        if (await translateOneElement(el, tl, idPrefix)) translated++;
 
-        done++;
-        DVT.updateToast(toast, t('toastTranslating', { done, total }));
+        processed++;
+        DVT.updateToast(toast, t('toastTranslating', { done: processed, total }));
       }
     }
 
     const workers = Array.from({ length: CONCURRENCY }, () => worker());
     await Promise.all(workers);
 
-    DVT.updateToast(toast, t('toastDone', { count: done }));
+    DVT.updateToast(toast, t('toastDone', { count: translated }));
     setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
   }
 
@@ -473,7 +483,10 @@ var DVT_PAGE = (function () {
       workers: 0,
       tl,
       idPrefix,
-      done: 0,
+      // processed: 処理済み（スキップ含む）/ translated: 実際に訳文を挿入した数。
+      // 残件数はスキップ分を差し引くため processed 基準で算出する。
+      processed: 0,
+      translated: 0,
       total: elements.length,
       // 初回バッチ（画面内＋先読み範囲）の進捗のみトーストで見せる。
       // 以降のスクロール由来の翻訳は静かに進める。
@@ -529,11 +542,11 @@ var DVT_PAGE = (function () {
         const el = state.queue.shift();
         if (!el) break;
 
-        await translateOneElement(el, state.tl, state.idPrefix);
+        if (await translateOneElement(el, state.tl, state.idPrefix)) state.translated++;
 
-        state.done++;
+        state.processed++;
         if (!state.toastClosed) {
-          DVT.updateToast(state.toast, t('toastTranslating', { done: state.done, total: state.total }));
+          DVT.updateToast(state.toast, t('toastTranslating', { done: state.processed, total: state.total }));
         }
       }
     } finally {
@@ -542,10 +555,12 @@ var DVT_PAGE = (function () {
       // 「スクロールで自動翻訳される」ことを明示して混乱を防ぐ。
       if (state.workers === 0 && !state.toastClosed) {
         state.toastClosed = true;
-        const remaining = Math.max(0, state.total - state.done);
+        // 残件はまだ交差していない要素の数。スキップした要素は今後も翻訳されないため
+        // translated ではなく processed を引く。
+        const remaining = Math.max(0, state.total - state.processed);
         DVT.updateToast(state.toast, remaining > 0
-          ? t('toastDoneLazy', { count: state.done, remaining })
-          : t('toastDone', { count: state.done }));
+          ? t('toastDoneLazy', { count: state.translated, remaining })
+          : t('toastDone', { count: state.translated }));
         const toast = state.toast;
         setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
       }

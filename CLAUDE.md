@@ -179,6 +179,9 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
   従来どおり全件即時翻訳（順序だけビューポート優先）にフォールバック
 - トーストは初回バッチの進捗のみ表示し、未翻訳分が残る場合は `toastDoneLazy`（「残り N 件はスクロール時」）で畳む。
   以降のスクロール由来の翻訳はトーストを出さない
+- 進捗カウントは `processed`（処理済み＝進捗表示の分子・残件計算用）と `translated`（実際に訳文を挿入した数＝完了トーストの件数）を分けて持つ。
+  キュー投入から実行までの間に DOM から外れた／テキストが消えた要素は `translateOneElement` がスキップし、
+  そのとき `data-dvt-id="dvt-pending"` を解放して要素が復活したときに再翻訳できるようにする
 - `undoPageTranslate()` / ページ翻訳解除時に `stopLazyTranslation()` で Observer と待機キューを破棄。
   進行中ワーカーは `isLazyAborted()` を見て次のループで抜ける
 

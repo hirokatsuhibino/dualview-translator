@@ -1109,6 +1109,75 @@ describe('DVT_PAGE (content-page)', () => {
       });
     });
 
+    describe('スキップされた要素の扱い（PR #257 レビュー対応）', () => {
+      it('DOM から外れた要素はスキップされ dvt-pending が解放される', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        // 交差通知の後、実際に処理されるまでの間に DOM から外れたケース
+        const detached = els[1];
+        detached.remove();
+
+        io.trigger(els.slice(0, 3));
+        await flush();
+
+        // 残り 2 件だけ翻訳され、外れた要素にはマークが残らない
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(2);
+        expect(detached.dataset.dvtId).toBeUndefined();
+        expect(detached.querySelector('.dvt-trans')).toBeFalsy();
+      });
+
+      it('テキストが空になった要素もスキップされ、後から本文が入れば再翻訳できる', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        const emptied = els[0];
+        emptied.textContent = '';
+
+        io.trigger([emptied]);
+        await flush();
+
+        expect(emptied.dataset.dvtId).toBeUndefined();
+
+        // 本文が入り直せば filterTranslatableElements の対象に戻る
+        emptied.textContent = 'Content restored with enough text to translate';
+        const stillTranslatable = Array.from(document.querySelectorAll('p'))
+          .filter(el => !el.dataset.dvtId);
+        expect(stillTranslatable).toContain(emptied);
+      });
+
+      it('完了トーストの件数はスキップ分を含まない実翻訳数になる', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        els[0].remove();
+        els[1].remove();
+        io.trigger(els.slice(0, 5));
+        await flush();
+
+        const toast = document.querySelector('.dvt-toast .dvt-toast-msg');
+        // 5 件処理して 3 件翻訳、残り 35 件（40 - 処理済み 5）はスクロール待ち
+        expect(toast.textContent).toBe(DVT_I18N.t('toastDoneLazy', { count: 3, remaining: 35 }));
+      });
+
+      it('即時翻訳パスでもスキップ分を除いた件数が完了トーストに出る', async () => {
+        const els = buildParagraphs(5);
+        // translatePage の await 中に 1 件が DOM から外れるケースを再現するため、
+        // filterTranslatableElements 通過後・翻訳前に取り除く
+        const promise = DVT_PAGE.translatePage('ja');
+        els[0].remove();
+        await promise;
+
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(4);
+        const toast = document.querySelector('.dvt-toast .dvt-toast-msg');
+        expect(toast.textContent).toBe(DVT_I18N.t('toastDone', { count: 4 }));
+        expect(els[0].dataset.dvtId).toBeUndefined();
+      });
+    });
+
     describe('DeepL APIキー未設定時の pending マーク解放', () => {
       it('中断時に dvt-pending が残らず、キー設定後に再翻訳できる', async () => {
         chrome.storage.local.set({ translateEngine: 'deepl', deeplApiKey: '' });
