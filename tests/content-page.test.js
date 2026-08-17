@@ -894,4 +894,231 @@ describe('DVT_PAGE (content-page)', () => {
       DVT_PAGE.exitRegionMode(true);
     });
   });
+
+  describe('ビューポート優先＋遅延翻訳（Issue #256）', () => {
+    // 指定した rect を返すように getBoundingClientRect を差し替える
+    function stubRect(el, top, height = 20) {
+      el.getBoundingClientRect = () => ({
+        top, bottom: top + height, left: 0, right: 100,
+        width: 100, height, x: 0, y: top, toJSON: () => ({}),
+      });
+      return el;
+    }
+
+    // 翻訳対象になる長さの p 要素を n 個生成し、上から順に rect を割り当てる
+    function buildParagraphs(n, startTop = 0, gap = 100) {
+      document.body.textContent = '';
+      const els = [];
+      for (let i = 0; i < n; i++) {
+        const p = document.createElement('p');
+        p.textContent = `Paragraph number ${i} with enough text to translate`;
+        document.body.appendChild(p);
+        els.push(stubRect(p, startTop + i * gap));
+      }
+      return els;
+    }
+
+    // 並列ワーカーの await（sendMessage コールバック → Promise 解決）を消化する
+    async function flush() {
+      for (let i = 0; i < 4; i++) await Promise.resolve();
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    // jsdom は innerText を完全サポートしないため textContent で代用して
+    // translatePage パイプラインを実走させる（他 describe と同じ手法）
+    let innerTextDescriptor;
+
+    beforeEach(() => {
+      innerTextDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerText');
+      Object.defineProperty(HTMLElement.prototype, 'innerText', {
+        configurable: true,
+        get() { return this.textContent; },
+        set(v) { this.textContent = v; },
+      });
+
+      globalThis.__resetIOInstances();
+      DVT_PAGE._stopLazyTranslation();
+      DVT.state.pageTranslateActive = false;
+      DVT.state.pageTranslateMode = null;
+      chrome.storage.local.set({ translateEngine: 'google', deeplApiKey: '' });
+    });
+
+    afterEach(() => {
+      // MutationObserver / IntersectionObserver を次のテストに持ち越さない
+      if (DVT.state.pageTranslateActive) DVT_PAGE.undoPageTranslate();
+      if (innerTextDescriptor) {
+        Object.defineProperty(HTMLElement.prototype, 'innerText', innerTextDescriptor);
+      } else {
+        delete HTMLElement.prototype.innerText;
+      }
+      DVT_PAGE._stopLazyTranslation();
+      DVT.state.pageTranslateActive = false;
+      DVT.state.pageTranslateMode = null;
+      document.querySelectorAll('.dvt-toast').forEach(el => el.remove());
+    });
+
+    describe('viewportDistance — 優先度の算出', () => {
+      const vh = window.innerHeight;
+
+      it('画面内の要素は距離 0', () => {
+        expect(DVT_PAGE._viewportDistance({ top: 10, bottom: 30 })).toBe(0);
+        // 上端が画面外にはみ出していても一部が見えていれば 0
+        expect(DVT_PAGE._viewportDistance({ top: -5, bottom: 15 })).toBe(0);
+      });
+
+      it('画面下の要素は画面下端からの距離', () => {
+        expect(DVT_PAGE._viewportDistance({ top: vh + 100, bottom: vh + 120 })).toBe(100);
+      });
+
+      it('画面上（通過済み）の要素はペナルティで後回しになる', () => {
+        const above = DVT_PAGE._viewportDistance({ top: -120, bottom: -100 });
+        const below = DVT_PAGE._viewportDistance({ top: vh + 100, bottom: vh + 120 });
+        // 同じ 100px の距離でも上方向のほうが大きい値（＝優先度が低い）
+        expect(above).toBeGreaterThan(below);
+      });
+
+      it('sortByViewportDistance は 画面内 → 下 → 上 の順に並べる', () => {
+        const above = stubRect(document.createElement('p'), -500);
+        const inView = stubRect(document.createElement('p'), 10);
+        const below = stubRect(document.createElement('p'), vh + 50);
+        const sorted = DVT_PAGE._sortByViewportDistance([above, below, inView]);
+        expect(sorted).toEqual([inView, below, above]);
+      });
+
+      it('元の配列を破壊しない', () => {
+        const a = stubRect(document.createElement('p'), vh + 50);
+        const b = stubRect(document.createElement('p'), 10);
+        const input = [a, b];
+        DVT_PAGE._sortByViewportDistance(input);
+        expect(input).toEqual([a, b]);
+      });
+    });
+
+    describe('translatePage — 遅延翻訳の起動', () => {
+      it('要素数が閾値以上なら IntersectionObserver に全要素が登録され、即時翻訳は走らない', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+
+        expect(globalThis.__ioInstances.length).toBe(1);
+        const io = globalThis.__ioInstances[0];
+        expect(io.observed.size).toBe(els.length);
+        // 交差前は 1 件も翻訳されていない
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(0);
+        // ただし二重翻訳防止マークは全要素に付いている
+        expect(els.every(el => el.dataset.dvtId === 'dvt-pending')).toBe(true);
+      });
+
+      it('rootMargin に画面高ベースの先読みマージンが設定される', async () => {
+        buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+        const margin = parseInt(io.options.rootMargin, 10);
+        expect(margin).toBeGreaterThan(window.innerHeight);
+      });
+
+      it('交差した要素だけが翻訳され、残りは observe されたまま', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        io.trigger(els.slice(0, 3));
+        await flush();
+
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(3);
+        expect(els[0].querySelector('.dvt-trans').textContent).toContain('mock translation');
+        // 交差済みの 3 件は unobserve、残りは監視継続
+        expect(io.observed.size).toBe(els.length - 3);
+      });
+
+      it('スクロール相当の追加交差でも翻訳が継続する', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        io.trigger(els.slice(0, 2));
+        await flush();
+        io.trigger(els.slice(2, 5));
+        await flush();
+
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(5);
+      });
+
+      it('遅延翻訳中に追加された少数の新規要素は同じ Observer に相乗りする', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+        io.trigger(els.slice(0, 2));
+        await flush();
+
+        // MutationObserver が拾う新規要素（1 件だけ = 閾値未満）
+        const added = document.createElement('p');
+        added.textContent = 'Newly added paragraph with enough text to translate';
+        stubRect(added, 50);
+        document.body.appendChild(added);
+        // startPageObserver のデバウンス（500ms）を待つ
+        await new Promise(r => setTimeout(r, 700));
+
+        // 新しい Observer は作られず、既存 Observer の監視対象に追加される
+        expect(globalThis.__ioInstances.length).toBe(1);
+        expect(io.observed.has(added)).toBe(true);
+        // 相乗りなので即時翻訳もされない（交差するまで待つ）
+        expect(added.querySelector('.dvt-trans')).toBeFalsy();
+      });
+
+      it('要素数が閾値未満なら Observer を使わず全件即時翻訳する', async () => {
+        const els = buildParagraphs(5);
+        await DVT_PAGE.translatePage('ja');
+
+        expect(globalThis.__ioInstances.length).toBe(0);
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(els.length);
+      });
+
+      it('翻訳＆要約モードでは遅延翻訳を使わない（全訳文を LLM に渡すため）', async () => {
+        chrome.storage.local.set({ claudeApiKey: '', geminiApiKey: '' });
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePageAndSummarize('ja');
+
+        expect(globalThis.__ioInstances.length).toBe(0);
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(els.length);
+      });
+    });
+
+    describe('遅延翻訳の停止', () => {
+      it('undoPageTranslate で Observer が disconnect され、pending マークも解除される', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        DVT_PAGE.undoPageTranslate();
+
+        expect(io.disconnected).toBe(true);
+        expect(els.some(el => el.dataset.dvtId)).toBe(false);
+      });
+
+      it('undoPageTranslate 後に交差しても翻訳されない', async () => {
+        const els = buildParagraphs(40);
+        await DVT_PAGE.translatePage('ja');
+        const io = globalThis.__ioInstances[0];
+
+        DVT_PAGE.undoPageTranslate();
+        // disconnect 済みの Observer を無理やり発火させてもワーカーは走らない
+        io.trigger(els.slice(0, 3));
+        await flush();
+
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(0);
+      });
+    });
+
+    describe('DeepL APIキー未設定時の pending マーク解放', () => {
+      it('中断時に dvt-pending が残らず、キー設定後に再翻訳できる', async () => {
+        chrome.storage.local.set({ translateEngine: 'deepl', deeplApiKey: '' });
+        const els = buildParagraphs(3);
+
+        await DVT_PAGE.translatePage('ja');
+
+        expect(document.querySelectorAll('.dvt-trans').length).toBe(0);
+        expect(els.some(el => el.dataset.dvtId)).toBe(false);
+      });
+    });
+  });
 });

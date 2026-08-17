@@ -8,6 +8,14 @@ var DVT_PAGE = (function () {
   // ─── 定数 ─────────────────────────────────────────────────────────────────
   const MIN_TEXT_LENGTH = 4;                // 翻訳対象とする最小テキスト長
   const CONCURRENCY = 6;                    // 並列翻訳ワーカー数
+  // ─── ビューポート優先の遅延翻訳（Issue #256） ─────────────────────
+  // 要素数がこの値未満なら遅延せず全件即時翻訳する（少数要素では効果より複雑さが勝る）
+  const LAZY_MIN_ELEMENTS = 30;
+  // 画面高の何倍先まで先読みして翻訳するか（IntersectionObserver の rootMargin）
+  const LAZY_ROOT_MARGIN_RATIO = 1.5;
+  // 上方向（既にスクロールで通過した領域）の優先度ペナルティ。
+  // 読者は下方向へ読み進めるため、同じ距離なら下側を先に翻訳する。
+  const LAZY_UPWARD_PENALTY = 2;
   // 文ペア表示（原文1→訳1→原文2→訳2…）を有効にする訳文長の閾値。
   // 短い段落で適用するとレイアウトが過剰になるため、視覚的な分離が問題になる長文のみに限定する。
   // 日本語は1文あたり30字前後のため、3文程度の段落（≒90字）を境界として 80 字を採用。
@@ -338,8 +346,49 @@ var DVT_PAGE = (function () {
     });
   }
 
+  // ─── 1要素の翻訳と反映 ────────────────────────────────────────────
+  // 遅延翻訳では要素がキューに入ってから実行されるまでに時間が空くため、
+  // DOM から外れた要素・テキストが消えた要素はスキップする。
+  async function translateOneElement(el, tl, idPrefix) {
+    if (!el || !el.isConnected) return false;
+    const originalText = el.innerText?.trim();
+    if (!originalText) return false;
+
+    insertDualView(el, idPrefix);
+    const { text: result, detectedLang } = await DVT.translate(originalText, tl);
+    applyTranslation(el, result, detectedLang, tl);
+    return true;
+  }
+
+  // ─── ビューポート距離の算出 ────────────────────────────────────────
+  // 画面内は 0、下方向は画面下端からの距離、上方向はペナルティ付きの距離を返す。
+  // この値の昇順に翻訳することで、ユーザーが見ている箇所から訳文が埋まる。
+  function viewportDistance(rect) {
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (rect.bottom >= 0 && rect.top <= vh) return 0;
+    if (rect.top > vh) return rect.top - vh;
+    return (0 - rect.bottom) * LAZY_UPWARD_PENALTY;
+  }
+
+  // 要素をビューポートからの距離順に並べ替える（元配列は破壊しない）
+  function sortByViewportDistance(elements) {
+    return [...elements]
+      .map(el => ({ el, d: viewportDistance(el.getBoundingClientRect()) }))
+      .sort((a, b) => a.d - b.d)
+      .map(x => x.el);
+  }
+
+  function supportsIntersectionObserver() {
+    return typeof IntersectionObserver === 'function';
+  }
+
   // ─── 並列翻訳ワーカー ──────────────────────────────────────────────
-  async function runConcurrentTranslation(elements, tl, idPrefix) {
+  // options.lazy: true でビューポート優先＋遅延翻訳を有効にする（ページ全体翻訳系のみ）。
+  //   要約モードは全訳文を結合して LLM に渡すため全件翻訳が必要で lazy 不可。
+  //   領域選択・右クリック翻訳はユーザーが範囲を明示した少数要素なので lazy 不要。
+  async function runConcurrentTranslation(elements, tl, idPrefix, options = {}) {
+    const { lazy = false } = options;
+
     // 二重翻訳防止: 最初のawaitより前に全要素を処理中マークで確保する。
     // filterTranslatableElements / extractRegionElements は data-dvt-id が設定された
     // 要素を除外するため、並走する別の翻訳処理が同じ要素を重複取得しない。
@@ -352,36 +401,167 @@ var DVT_PAGE = (function () {
     });
     if (engineConfig.translateEngine === 'deepl' && !engineConfig.deeplApiKey) {
       DVT.showToast(t('deeplApiKeyMissing'), false, 4000);
+      // 予約した処理中マークを解放し、APIキー設定後の再翻訳を可能にする
+      elements.forEach(el => {
+        if (el.dataset.dvtId === 'dvt-pending') delete el.dataset.dvtId;
+      });
       return;
     }
 
-    const toast = DVT.showToast(t('toastTranslating', { done: 0, total: elements.length }), true);
-    let done = 0;
+    // 遅延翻訳が使える条件を満たすなら Observer に委譲して即座に戻る。
+    // 既に遅延翻訳が動いている間は、要素数が閾値未満でも（MutationObserver 由来の
+    // 数件の新規要素など）同じ Observer に相乗りさせる。個別に即時翻訳すると
+    // スクロールのたびに進捗トーストが出て煩わしいため。
+    if (lazy && supportsIntersectionObserver()
+      && (elements.length >= LAZY_MIN_ELEMENTS || isLazyActiveFor(tl, idPrefix))) {
+      scheduleLazyTranslation(elements, tl, idPrefix);
+      return;
+    }
 
-    const queue = [...elements];
+    // 全件即時翻訳。lazy 指定時（要素数が閾値未満 / IO 非対応のフォールバック）は
+    // 順序だけビューポート優先にする。
+    const queue = lazy ? sortByViewportDistance(elements) : [...elements];
+    const total = queue.length;
+    const toast = DVT.showToast(t('toastTranslating', { done: 0, total }), true);
+    let done = 0;
 
     async function worker() {
       while (queue.length > 0) {
         const el = queue.shift();
         if (!el) break;
 
-        const originalText = el.innerText.trim();
-        insertDualView(el, idPrefix);
-
-        const { text: result, detectedLang } = await DVT.translate(originalText, tl);
-        applyTranslation(el, result, detectedLang, tl);
+        await translateOneElement(el, tl, idPrefix);
 
         done++;
-        DVT.updateToast(toast, t('toastTranslating', { done, total: elements.length }));
-        if (done >= elements.length) {
-          DVT.updateToast(toast, t('toastDone', { count: done }));
-          setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
-        }
+        DVT.updateToast(toast, t('toastTranslating', { done, total }));
       }
     }
 
     const workers = Array.from({ length: CONCURRENCY }, () => worker());
     await Promise.all(workers);
+
+    DVT.updateToast(toast, t('toastDone', { count: done }));
+    setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
+  }
+
+  // ─── 遅延翻訳（IntersectionObserver） ──────────────────────────────
+  // 現在アクティブな遅延翻訳の状態。ページ翻訳の解除まで生存する。
+  let lazyState = null;
+
+  // 同じ翻訳先・ID プレフィックスの遅延翻訳が既に動いているか
+  function isLazyActiveFor(tl, idPrefix) {
+    return !!lazyState && lazyState.tl === tl && lazyState.idPrefix === idPrefix;
+  }
+
+  // 遅延翻訳の対象要素を登録する。既存の遅延翻訳が同条件で動いていれば
+  // （MutationObserver 由来の新規要素など）そこへ追加する。
+  function scheduleLazyTranslation(elements, tl, idPrefix) {
+    if (isLazyActiveFor(tl, idPrefix)) {
+      lazyState.total += elements.length;
+      elements.forEach(el => lazyState.observer.observe(el));
+      return;
+    }
+
+    stopLazyTranslation();
+
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    const rootMargin = Math.max(1, Math.round(vh * LAZY_ROOT_MARGIN_RATIO));
+
+    const state = {
+      observer: null,
+      queue: [],
+      workers: 0,
+      tl,
+      idPrefix,
+      done: 0,
+      total: elements.length,
+      // 初回バッチ（画面内＋先読み範囲）の進捗のみトーストで見せる。
+      // 以降のスクロール由来の翻訳は静かに進める。
+      toast: DVT.showToast(t('toastTranslating', { done: 0, total: elements.length }), true),
+      toastClosed: false,
+    };
+    lazyState = state;
+
+    state.observer = new IntersectionObserver((entries) => {
+      // 停止済み / 別の遅延翻訳に差し替わった後の遅延コールバックは無視する
+      if (lazyState !== state || !DVT.state.pageTranslateActive) return;
+      const hits = entries.filter(e => e.isIntersecting);
+      if (hits.length === 0) return;
+      // 同一コールバック内の要素はビューポートに近い順に翻訳する
+      hits.sort((a, b) => viewportDistance(a.boundingClientRect) - viewportDistance(b.boundingClientRect));
+      hits.forEach(e => {
+        state.observer.unobserve(e.target);
+        state.queue.push(e.target);
+      });
+      pumpLazyWorkers(state);
+    }, { rootMargin: `${rootMargin}px 0px` });
+
+    elements.forEach(el => state.observer.observe(el));
+  }
+
+  // 停止済み / 差し替え済みの遅延翻訳かどうか
+  function isLazyAborted(state) {
+    return lazyState !== state || !DVT.state.pageTranslateActive;
+  }
+
+  // 空きワーカー分だけ翻訳ループを起動する
+  function pumpLazyWorkers(state) {
+    // 中断済みなら起動しない。lazyWorker は最初の await の前に return し得るため
+    // （その場合 finally の workers-- も同期実行される）、ここで弾かないと
+    // while 条件が永久に成立して同期無限ループになる。
+    if (isLazyAborted(state)) return;
+    while (state.workers < CONCURRENCY && state.queue.length > 0) {
+      state.workers++;
+      lazyWorker(state);
+    }
+  }
+
+  async function lazyWorker(state) {
+    try {
+      while (state.queue.length > 0) {
+        // ページ翻訳が解除された / 別の遅延翻訳に差し替わった場合は打ち切る。
+        // 待機中の要素も破棄して pump 側の再起動を防ぐ。
+        if (isLazyAborted(state)) {
+          state.queue.length = 0;
+          return;
+        }
+
+        const el = state.queue.shift();
+        if (!el) break;
+
+        await translateOneElement(el, state.tl, state.idPrefix);
+
+        state.done++;
+        if (!state.toastClosed) {
+          DVT.updateToast(state.toast, t('toastTranslating', { done: state.done, total: state.total }));
+        }
+      }
+    } finally {
+      state.workers--;
+      // 初回バッチが尽きた時点でトーストを畳む。未翻訳分が残っていれば
+      // 「スクロールで自動翻訳される」ことを明示して混乱を防ぐ。
+      if (state.workers === 0 && !state.toastClosed) {
+        state.toastClosed = true;
+        const remaining = Math.max(0, state.total - state.done);
+        DVT.updateToast(state.toast, remaining > 0
+          ? t('toastDoneLazy', { count: state.done, remaining })
+          : t('toastDone', { count: state.done }));
+        const toast = state.toast;
+        setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
+      }
+    }
+  }
+
+  // 遅延翻訳を停止して Observer と待機キューを破棄する
+  function stopLazyTranslation() {
+    if (!lazyState) return;
+    if (lazyState.observer) lazyState.observer.disconnect();
+    lazyState.queue.length = 0;
+    if (!lazyState.toastClosed) {
+      lazyState.toastClosed = true;
+      lazyState.toast.remove();
+    }
+    lazyState = null;
   }
 
   // ─── 動的コンテンツ監視（MutationObserver） ────────────────────────
@@ -439,7 +619,9 @@ var DVT_PAGE = (function () {
     observeShadowRoots();
     const elements = filterTranslatableElements(document);
     if (elements.length === 0) return;
-    await runConcurrentTranslation(elements, tl, 'dvt-');
+    // 要約モードでは全訳文を結合して LLM に渡すため遅延翻訳は使えない
+    const lazy = DVT.state.pageTranslateMode !== 'summarize';
+    await runConcurrentTranslation(elements, tl, 'dvt-', { lazy });
   }
 
   // ─── ページ全体翻訳 ────────────────────────────────────────────────
@@ -456,9 +638,11 @@ var DVT_PAGE = (function () {
     const elements = filterTranslatableElements(document);
     if (elements.length === 0) return;
 
-    await runConcurrentTranslation(elements, tl, 'dvt-');
+    // ビューポート優先＋遅延翻訳: 見えている箇所から訳文を埋め、
+    // 画面外はスクロールで近づいたときに翻訳する（Issue #256）
+    await runConcurrentTranslation(elements, tl, 'dvt-', { lazy: true });
 
-    // 翻訳完了後、動的コンテンツの監視を開始
+    // 翻訳開始後、動的コンテンツの監視を開始
     startPageObserver(tl);
   }
 
@@ -491,6 +675,8 @@ var DVT_PAGE = (function () {
     DVT.state.pageTranslateMode = null;
     // 動的コンテンツ監視を停止
     stopPageObserver();
+    // 遅延翻訳の Observer / 待機キューを破棄（進行中ワーカーも次のループで抜ける）
+    stopLazyTranslation();
     // 翻訳・要約 DOM が消える前に進行中の読み上げを停止
     DVT.stopSpeak();
     // 要約ブロックを全削除（ページ全体翻訳の #dvt-page-summary だけでなく、
@@ -917,5 +1103,5 @@ var DVT_PAGE = (function () {
     window.addEventListener('keydown', onKeyDown, true);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement };
+  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
 })();

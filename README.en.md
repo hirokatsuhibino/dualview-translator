@@ -198,6 +198,7 @@ There's also a little banner at the top of the popup nudging you to pin it. On b
 4. Translations get inserted under each paragraph and heading
 5. "Reset translations" undoes everything (per-element undo via the × button)
 
+> What's on screen gets translated first, and off-screen content is translated as you scroll toward it — so even on long pages you don't wait around for the part you're reading.
 > Lazy-loaded content gets translated automatically as it appears.
 
 ### Element selection translation
