@@ -167,6 +167,26 @@ describe('APIキー入力欄（popup）', () => {
     expect(msg.hidden).toBe(true);
   });
 
+  it.each([
+    ['Firefox', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0', true],
+    ['Chrome', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36', false],
+  ])('%s: 「アクセスを許可」の後にポップアップを閉じるか（Firefox のみ閉じる）', async (_name, ua, shouldClose) => {
+    const uaSpy = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(ua);
+    const closeSpy = vi.spyOn(window, 'close').mockImplementation(() => {});
+    try {
+      permissionGranted = false;
+      typeKey('deeplApiKey', `close-test-${shouldClose}:fx`);
+      await flush();
+      msgFor('deeplApiKey').querySelector('.dvt-api-key-grant').click();
+      expect(chrome.permissions.request).toHaveBeenCalledTimes(1); // 要求は閉じる前（同期区間内）に出す
+      await flush();
+      expect(closeSpy).toHaveBeenCalledTimes(shouldClose ? 1 : 0);
+    } finally {
+      uaSpy.mockRestore();
+      closeSpy.mockRestore();
+    }
+  });
+
   it('権限があればテストを送り、background の noPermission 応答にも「アクセスを許可」ボタンを付ける', async () => {
     testApiKeyResponse = { ok: false, errorCode: 'noPermission', errorParams: { host: 'api.anthropic.com' } };
     typeKey('claudeApiKey', 'sk-ant-test');

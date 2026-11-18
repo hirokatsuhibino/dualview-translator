@@ -26,7 +26,7 @@ permalink: /RELEASE_NOTES.en.html
 
 - **Fixed valid API keys being reported as "Invalid"** (#262)
   - On Firefox, if access to DeepL / Claude / Gemini (host_permissions) was switched off, requests just failed and you'd get a vague "Invalid." Now when a request fails we check the permission and tell you exactly what's wrong — e.g. "Access to api-free.deepl.com isn't allowed" — and how to fix it.
-  - If the permission is missing, the popup now says so as soon as it opens, with an "Allow access" button under the field. Firefox closes the popup when its permission prompt shows up, so that button is the only thing that asks — reopen the popup and you'll see the result.
+  - If the permission is missing, the popup now says so as soon as it opens, with an "Allow access" button under the field. Firefox closes the popup when its permission prompt shows up, so that button is the only thing that asks — reopen the popup and you'll see the result. On Firefox we close the popup right after asking, so the prompt's buttons respond on the first click.
   - If a full-width character or similar sneaks into the key field, the browser refuses to send the request and you'd see "Invalid." We now warn you as you type, with the exact position (e.g. position 27: "テ" U+30C6), and quietly strip spaces, full-width spaces, and zero-width characters.
   - Added a show/hide button to the API key fields.
   - The reason a test failed (bad key, disallowed character, missing permission, can't connect, quota hit, rate limited) now stays under the field instead of hiding in a tooltip that vanished after 3 seconds. Translation and summary failures show the same messages.

@@ -182,6 +182,11 @@ function toggleLLMSettings() {
 // 残して表示する。以前はボタンが「無効」になるだけで、理由は 3 秒で消える title にしか出なかった。
 const apiTestButtons = [];
 
+// Firefox のポップアップか（許可ダイアログ後にポップアップを自分で閉じるかの判定）
+function isFirefoxPopup() {
+  return typeof navigator !== 'undefined' && /\bFirefox\//.test(navigator.userAgent || '');
+}
+
 // host 権限の有無。判定できない環境（permissions API 無し・例外）では null を返し、案内を出さない
 function checkHostPermission(origin) {
   if (!origin) return Promise.resolve(null);
@@ -251,6 +256,11 @@ function setupApiKeyTest(btnId, inputId, engine) {
             if (granted === true && currentOrigin() === origin) showMessage('', null);
           })
           .catch(() => {});
+        // Firefox は許可ダイアログ表示中もポップアップが残り、ダイアログへの最初のクリックが
+        // 「ポップアップを閉じる」操作に使われて拒否/許可が 2 回押さないと効かない。
+        // 要求を出した直後にこちらで閉じておく（結果は開き直したときの権限確認で反映される）。
+        // Chrome 等では閉じると要求が取り消され得るため Firefox に限る
+        if (isFirefoxPopup()) setTimeout(() => window.close(), 0);
       },
     });
   }
