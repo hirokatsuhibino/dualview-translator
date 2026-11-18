@@ -1635,5 +1635,28 @@ var DVT_APIKEY = (() => {
     return (res && res.error) || '';
   }
 
-  return { normalizeApiKey, findInvalidKeyChar, originFor, formatApiError };
+  // permissions.request / contains を Promise で呼ぶ。
+  // Firefox の chrome.* 互換 API はコールバック式で Promise を返さないことがあるため、
+  // browser.* があればそれを使い、無ければコールバックを Promise 化する（戻り値が thenable ならそれも待つ）。
+  // ※ request はユーザー操作の同期区間内で呼ぶ必要があるので、この関数内でも await を挟まずに呼び出している
+  function callPermissions(method, details) {
+    const b = typeof browser !== 'undefined' ? browser : null;
+    if (b && b.permissions && typeof b.permissions[method] === 'function') {
+      return Promise.resolve(b.permissions[method](details));
+    }
+    const c = typeof chrome !== 'undefined' ? chrome : null;
+    if (!c || !c.permissions || typeof c.permissions[method] !== 'function') {
+      return Promise.reject(new Error('permissions API unavailable'));
+    }
+    return new Promise((resolve, reject) => {
+      const ret = c.permissions[method](details, (value) => {
+        const err = c.runtime && c.runtime.lastError;
+        if (err) reject(new Error(err.message || String(err)));
+        else resolve(value);
+      });
+      if (ret && typeof ret.then === 'function') ret.then(resolve, reject);
+    });
+  }
+
+  return { normalizeApiKey, findInvalidKeyChar, originFor, formatApiError, callPermissions };
 })();

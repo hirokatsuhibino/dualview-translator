@@ -126,8 +126,9 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - **共通ヘルパー `DVT_APIKEY`**（`i18n.js` 末尾）: `normalizeApiKey`（空白・全角スペース・ゼロ幅文字を全位置から除去）/ `findInvalidKeyChar`（印字可能 ASCII 以外を `{ pos, char, cp }` で返す）/ `originFor(engine, apiKey)` / `formatApiError(res)`。popup と content script の両方で使うため `i18n.js` に置く
 - **background.js にも同じ `normalizeApiKey` / `findInvalidKeyChar` がある**（Service Worker から `i18n.js` を読めないため）。片方を変えたらもう片方も揃える。一致は `tests/api-key-diagnostics.test.js` で検証
 - `fetchApi(origin, apiKey, url, init)`: DeepL / Claude / Gemini への fetch は必ずこれを通す。送信前に不正文字を検査（`invalidChars`）し、network error 時は `chrome.permissions.contains` で権限を確認して `noPermission` / `network` の code を付ける。**元の TypeError に code を付けて投げ直す**ので Apple オフラインフォールバック（`isNetworkError`）は従来どおり動く。permissions API が無い・例外の環境では「権限あり」とみなす
-- HTTP ステータスも `invalidKey`（DeepL 403 / Claude 401 / Gemini 400）・`quota`（DeepL 456）・`rateLimit`（429）に分類。失敗応答は `errorResponse(err)` で `{ ok:false, error, errorCode, errorParams }` を返し、UI 側は `DVT_APIKEY.formatApiError(res)` で UI 言語の文言にする（code が無ければ生メッセージ）
-- popup のテストボタンは、Firefox で host 権限が未許可の場合に備えて **クリックの同期区間内で `chrome.permissions.request`** を呼んでから `testApiKey` を送る（await を挟むとユーザー操作扱いが外れる）。理由は入力欄の下の `.dvt-api-key-msg`（`aria-live="polite"`）に残し、👁 ボタンで表示/非表示を切り替えられる
+- **permissions API はコールバック/Promise 両対応で呼ぶ**: Firefox の `chrome.*` 互換 API はコールバック式で Promise を返さないことがあるため、`browser.*` があればそれを使い、無ければコールバックを Promise 化する（popup は `DVT_APIKEY.callPermissions`、background は `hasHostPermission` 内に同等実装）
+- HTTP ステータスも `invalidKey`（DeepL 403 / Claude 401 / Gemini は `API_KEY_INVALID` のときのみ。400 の地域・課金条件エラーは詳細メッセージを残す）・`quota`（DeepL 456）・`rateLimit`（429）に分類。失敗応答は `errorResponse(err)` で `{ ok:false, error, errorCode, errorParams }` を返し、UI 側は `DVT_APIKEY.formatApiError(res)` で UI 言語の文言にする（code が無ければ生メッセージ）
+- popup のテストボタンは、Firefox で host 権限が未許可の場合に備えて **クリックの同期区間内で `chrome.permissions.request`** を呼んでから `testApiKey` を送る（await を挟むとユーザー操作扱いが外れる）。テスト中にキーを編集したら世代番号を進めて古い応答・3 秒リセットタイマーを無視する。理由は入力欄の下の `.dvt-api-key-msg`（`aria-live="polite"`）に残し、👁 ボタンで表示/非表示を切り替えられる
 
 ### 要約エンジン（LLM）
 

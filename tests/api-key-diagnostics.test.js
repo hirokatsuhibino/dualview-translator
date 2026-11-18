@@ -30,7 +30,7 @@ const BG_DECLS = [
   'API_KEY_STRIP_RE', 'CLAUDE_SUMMARY_MODEL', 'CLAUDE_ORIGIN', 'GEMINI_ORIGIN',
   'normalizeApiKey', 'findInvalidKeyChar', 'apiError', 'errorResponse',
   'hasHostPermission', 'fetchApi', 'isNetworkError',
-  'getDeepLEndpoint', 'getDeepLOrigin', 'deepLHttpError', 'testApiKey',
+  'getDeepLEndpoint', 'getDeepLOrigin', 'deepLHttpError', 'isGeminiKeyInvalid', 'testApiKey',
 ];
 
 // 抽出した宣言を fetch / chrome を引数に取る関数として同一 realm で評価する
@@ -43,7 +43,8 @@ const bgFactory = vm.runInThisContext(
 const loadBackground = ({ fetch, chrome }) => bgFactory(fetch, chrome);
 
 const okResponse = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
-const statusResponse = (status) => () => Promise.resolve({ ok: false, status, json: () => Promise.resolve({}) });
+const statusResponse = (status, body = {}) => () => Promise.resolve({ ok: false, status, json: () => Promise.resolve(body) });
+const geminiKeyInvalidBody = { error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT', details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'API_KEY_INVALID' }] } };
 // Firefox で host 権限が無いとき / オフラインのときに fetch が投げるエラー
 const firefoxNetworkError = () => Promise.reject(new TypeError('NetworkError when attempting to fetch resource.'));
 
@@ -149,6 +150,42 @@ describe('DVT_APIKEY（i18n.js）', () => {
   });
 });
 
+describe('DVT_APIKEY.callPermissions()', () => {
+  let savedChrome;
+  beforeEach(() => { savedChrome = globalThis.chrome; });
+  afterEach(() => { globalThis.chrome = savedChrome; delete globalThis.browser; });
+
+  it('コールバック式（Firefox の chrome.*）でもコールバックが呼ばれるまで待つ', async () => {
+    let cbRef;
+    globalThis.chrome = { runtime: {}, permissions: { request: vi.fn((_d, cb) => { cbRef = cb; return undefined; }) } };
+    let settled = false;
+    const p = DVT_APIKEY.callPermissions('request', { origins: ['https://api.deepl.com/*'] }).then(v => { settled = true; return v; });
+    await Promise.resolve();
+    expect(settled).toBe(false); // ダイアログ回答前に解決しない
+    cbRef(true);
+    await expect(p).resolves.toBe(true);
+  });
+
+  it('Promise を返す実装（Chrome MV3）にも対応', async () => {
+    globalThis.chrome = { runtime: {}, permissions: { contains: vi.fn(() => Promise.resolve(false)) } };
+    await expect(DVT_APIKEY.callPermissions('contains', { origins: ['x'] })).resolves.toBe(false);
+  });
+
+  it('browser.* があればそちらを優先する', async () => {
+    globalThis.browser = { permissions: { request: vi.fn(() => Promise.resolve(true)) } };
+    globalThis.chrome = { runtime: {}, permissions: { request: vi.fn() } };
+    await expect(DVT_APIKEY.callPermissions('request', { origins: ['x'] })).resolves.toBe(true);
+    expect(globalThis.chrome.permissions.request).not.toHaveBeenCalled();
+  });
+
+  it('lastError があれば reject、API が無ければ reject', async () => {
+    globalThis.chrome = { runtime: { lastError: { message: 'denied' } }, permissions: { request: (_d, cb) => cb(undefined) } };
+    await expect(DVT_APIKEY.callPermissions('request', {})).rejects.toThrow('denied');
+    globalThis.chrome = { runtime: {} };
+    await expect(DVT_APIKEY.callPermissions('request', {})).rejects.toThrow('unavailable');
+  });
+});
+
 describe('background.js と i18n.js の正規化・検出ロジックが一致する', () => {
   const bg = loadBackground({ fetch: okResponse, chrome: undefined });
   const samples = ['', ' abc ', 'abcテ', '\u3000x\u200By', 'a\tb', '😀', 'abcd-1234:fx', 'é', '\u007f'];
@@ -185,7 +222,7 @@ describe('background.js testApiKey() のエラー分類', () => {
     const err = await bg.testApiKey('deepl', 'abc:fx').catch(e => e);
     expect(err.code).toBe('noPermission');
     expect(err.params).toEqual({ host: 'api-free.deepl.com' });
-    expect(contains).toHaveBeenCalledWith({ origins: ['https://api-free.deepl.com/*'] });
+    expect(contains.mock.calls[0][0]).toEqual({ origins: ['https://api-free.deepl.com/*'] });
     // Apple フォールバック判定（isNetworkError）を壊さないよう元の TypeError のまま投げ直す
     expect(err).toBeInstanceOf(TypeError);
   });
@@ -219,11 +256,35 @@ describe('background.js testApiKey() のエラー分類', () => {
     ['deepl', 'abc:fx', 456, 'quota'],
     ['deepl', 'abc:fx', 429, 'rateLimit'],
     ['claude', 'sk', 401, 'invalidKey'],
-    ['gemini', 'AIza', 400, 'invalidKey'],
     ['gemini', 'AIza', 429, 'rateLimit'],
   ])('%s HTTP %i → %s', async (engine, key, status, code) => {
     const bg = loadBackground({ fetch: statusResponse(status), chrome: {} });
     const err = await bg.testApiKey(engine, key).catch(e => e);
+    expect(err.code).toBe(code);
+  });
+
+  it('Gemini の 400 は API_KEY_INVALID のときだけ invalidKey', async () => {
+    const bg = loadBackground({ fetch: statusResponse(400, geminiKeyInvalidBody), chrome: {} });
+    const err = await bg.testApiKey('gemini', 'AIza').catch(e => e);
+    expect(err.code).toBe('invalidKey');
+  });
+
+  it('Gemini の 400 でもキー以外の理由（FAILED_PRECONDITION 等）は詳細を残し、キー無効扱いしない', async () => {
+    const body = { error: { code: 400, message: 'User location is not supported for the API use.', status: 'FAILED_PRECONDITION' } };
+    const bg = loadBackground({ fetch: statusResponse(400, body), chrome: {} });
+    const err = await bg.testApiKey('gemini', 'AIza').catch(e => e);
+    expect(err.code).toBeUndefined();
+    expect(err.message).toContain('User location is not supported');
+  });
+
+  // Firefox の chrome.* 互換 API はコールバック式で Promise を返さない
+  it.each([
+    [true, 'network'],
+    [false, 'noPermission'],
+  ])('コールバック式の permissions.contains（結果 %s）→ %s', async (granted, code) => {
+    const contains = vi.fn((_details, cb) => { setTimeout(() => cb(granted), 0); return undefined; });
+    const bg = loadBackground({ fetch: firefoxNetworkError, chrome: { permissions: { contains }, runtime: {} } });
+    const err = await bg.testApiKey('deepl', 'abc:fx').catch(e => e);
     expect(err.code).toBe(code);
   });
 

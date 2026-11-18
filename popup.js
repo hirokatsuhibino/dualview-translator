@@ -185,12 +185,11 @@ const apiTestButtons = [];
 // host 権限を要求する。Firefox は permissions.request をユーザー操作の同期処理内で
 // 呼ぶ必要があるため、クリックハンドラから await を挟まずに呼ぶこと。
 // API が無い・失敗する環境（Safari 等）では何もせず検証を続ける。
+// ユーザーが許可ダイアログに回答するまで待ってから検証を送る（Firefox のコールバック式 API も考慮）。
 function requestHostPermission(origin) {
+  if (!origin) return Promise.resolve(true);
   try {
-    if (!origin || !chrome.permissions || typeof chrome.permissions.request !== 'function') {
-      return Promise.resolve(true);
-    }
-    return Promise.resolve(chrome.permissions.request({ origins: [origin] })).catch(() => true);
+    return DVT_APIKEY.callPermissions('request', { origins: [origin] }).catch(() => true);
   } catch (e) {
     return Promise.resolve(true);
   }
@@ -247,11 +246,28 @@ function setupApiKeyTest(btnId, inputId, engine) {
   syncToggleLabel();
   btn.before(toggle);
 
+  // 検証の世代番号。キーを編集したら進め、古いキーの検証結果やタイマーで表示を上書きしない
+  let testSeq = 0;
+  let resetTimer = null;
+
+  function resetBtnState() {
+    clearTimeout(resetTimer);
+    resetTimer = null;
+    btn.textContent = t('apiKeyTest');
+    btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+  }
+
   function updateTestBtn() {
     btn.disabled = !DVT_APIKEY.normalizeApiKey(input.value);
     checkChars();
   }
   apiTestButtons.push(updateTestBtn);
+
+  function onKeyEdited() {
+    testSeq++;
+    resetBtnState();
+    updateTestBtn();
+  }
 
   btn.addEventListener('click', () => {
     const apiKey = DVT_APIKEY.normalizeApiKey(input.value);
@@ -263,19 +279,22 @@ function setupApiKeyTest(btnId, inputId, engine) {
 
     // ユーザー操作の同期区間内で権限を要求する（Firefox で host 権限が未許可の場合に備える）
     const permission = requestHostPermission(DVT_APIKEY.originFor(engine, apiKey));
+    const seq = ++testSeq;
 
+    resetBtnState();
     btn.disabled = true;
     btn.textContent = t('apiKeyTesting');
-    btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
     showMessage('', null);
 
     permission.then(() => {
+      if (seq !== testSeq) return; // 許可ダイアログの間にキーが編集された
       chrome.runtime.sendMessage(
         { action: 'testApiKey', engine, apiKey },
         (res) => {
           if (chrome.runtime.lastError) {
             res = { ok: false, error: chrome.runtime.lastError.message };
           }
+          if (seq !== testSeq) return; // 古いキーの検証結果は表示しない
           if (res?.ok) {
             btn.textContent = t('apiKeyValid');
             btn.classList.add('dvt-test-ok');
@@ -285,16 +304,15 @@ function setupApiKeyTest(btnId, inputId, engine) {
             showMessage(DVT_APIKEY.formatApiError(res) || t('error'), 'ng');
           }
           btn.disabled = false;
-          setTimeout(() => {
-            btn.textContent = t('apiKeyTest');
-            btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+          resetTimer = setTimeout(() => {
+            if (seq === testSeq) resetBtnState();
           }, 3000);
         }
       );
     });
   });
 
-  input.addEventListener('input', updateTestBtn);
+  input.addEventListener('input', onKeyEdited);
 }
 
 // ストレージ読み込み後に呼ぶ

@@ -992,10 +992,26 @@ function errorResponse(err) {
 }
 
 // 指定オリジンへの host 権限があるか。判定できない環境では「ある」とみなし、誤った案内を避ける
+// Firefox の chrome.* 互換 API はコールバック式で Promise を返さないことがあるため、
+// browser.* があればそれを使い、無ければコールバックを Promise 化する（i18n.js の callPermissions と同じ方針）
 async function hasHostPermission(origin) {
-  if (typeof chrome === 'undefined' || !chrome.permissions || typeof chrome.permissions.contains !== 'function') return true;
   try {
-    return await chrome.permissions.contains({ origins: [origin] });
+    const b = typeof browser !== 'undefined' ? browser : null;
+    if (b && b.permissions && typeof b.permissions.contains === 'function') {
+      return (await b.permissions.contains({ origins: [origin] })) !== false;
+    }
+    const c = typeof chrome !== 'undefined' ? chrome : null;
+    if (!c || !c.permissions || typeof c.permissions.contains !== 'function') return true;
+    const granted = await new Promise((resolve, reject) => {
+      const ret = c.permissions.contains({ origins: [origin] }, (value) => {
+        const err = c.runtime && c.runtime.lastError;
+        if (err) reject(new Error(err.message || String(err)));
+        else resolve(value);
+      });
+      if (ret && typeof ret.then === 'function') ret.then(resolve, reject);
+    });
+    // 判定できない値（undefined 等）は「権限あり」とみなし、誤った案内を避ける
+    return granted !== false;
   } catch (e) {
     return true;
   }
@@ -1159,6 +1175,15 @@ async function fetchSummary(text, targetLang, config) {
 const CLAUDE_ORIGIN = 'https://api.anthropic.com/*';
 const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com/*';
 
+// Gemini のエラー応答がキー無効（API_KEY_INVALID）か。
+// 400 には地域・課金条件（FAILED_PRECONDITION）等も含まれるため、ステータスだけで判定しない
+function isGeminiKeyInvalid(errJson) {
+  const e = errJson && errJson.error;
+  if (!e) return false;
+  if (Array.isArray(e.details) && e.details.some(d => d && d.reason === 'API_KEY_INVALID')) return true;
+  return /API key not valid/i.test(e.message || '');
+}
+
 // ─── Claude API 要約 ─────────────────────────────────────────────────
 async function fetchClaudeSummary(text, targetLang, apiKey) {
   const res = await fetchApi(CLAUDE_ORIGIN, apiKey, 'https://api.anthropic.com/v1/messages', {
@@ -1208,10 +1233,11 @@ async function fetchGeminiSummary(text, targetLang, apiKey) {
   });
 
   if (!res.ok) {
-    let detail = '';
-    try { const err = await res.json(); detail = err.error?.message || JSON.stringify(err); } catch(e) {}
+    let errJson = null;
+    try { errJson = await res.json(); } catch(e) {}
+    const detail = errJson ? (errJson.error?.message || JSON.stringify(errJson)) : '';
     const status = res.status;
-    if (status === 400) throw apiError('invalidKey', `Gemini: APIキーが無効です: ${detail}`);
+    if (isGeminiKeyInvalid(errJson)) throw apiError('invalidKey', `Gemini: APIキーが無効です: ${detail}`);
     if (status === 429) throw apiError('rateLimit', 'Gemini: レート制限に達しました');
     throw new Error(`Gemini HTTP ${status}: ${detail}`);
   }
@@ -1290,9 +1316,13 @@ async function testApiKey(engine, rawKey) {
       }),
     });
     if (!res.ok) {
-      if (res.status === 400) throw apiError('invalidKey', 'APIキーが無効です');
+      let errJson = null;
+      try { errJson = await res.json(); } catch(e) {}
+      if (isGeminiKeyInvalid(errJson)) throw apiError('invalidKey', 'APIキーが無効です');
       if (res.status === 429) throw apiError('rateLimit', 'レート制限に達しました');
-      throw new Error(`HTTP ${res.status}`);
+      // 地域・課金条件など、キー以外の理由はメッセージをそのまま見せる
+      const detail = errJson?.error?.message || '';
+      throw new Error(detail ? `HTTP ${res.status}: ${detail}` : `HTTP ${res.status}`);
     }
     return;
   }

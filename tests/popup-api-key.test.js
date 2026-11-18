@@ -13,6 +13,9 @@ const bodyHtml = html.match(/<body[^>]*>([\s\S]*)<\/body>/)[1].replace(/<script[
 const saved = {};
 const calls = [];
 let testApiKeyResponse;
+// 指定すると testApiKey の応答を遅らせ、テスト側から呼び出せるようにする
+let deferTestApiKey = false;
+let pendingTestApiKey = [];
 
 beforeAll(async () => {
   saved.runtime = { ...chrome.runtime };
@@ -31,6 +34,11 @@ beforeAll(async () => {
   chrome.runtime.getManifest = () => ({ version: '0.0.0-test' });
   chrome.runtime.sendMessage = vi.fn((msg, cb) => {
     calls.push(['sendMessage', msg.action]);
+    if (msg.action === 'testApiKey' && deferTestApiKey) {
+      const res = testApiKeyResponse;
+      pendingTestApiKey.push(() => cb && cb(res));
+      return;
+    }
     const res = msg.action === 'testApiKey' ? testApiKeyResponse : { ok: true };
     if (cb) cb(res);
   });
@@ -60,7 +68,11 @@ afterAll(() => {
 
 beforeEach(() => {
   calls.length = 0;
-  chrome.permissions.request.mockClear();
+  deferTestApiKey = false;
+  pendingTestApiKey = [];
+  chrome.permissions = {
+    request: vi.fn((req) => { calls.push(['request', req.origins[0]]); return Promise.resolve(true); }),
+  };
 });
 
 const $ = (id) => document.getElementById(id);
@@ -123,7 +135,7 @@ describe('APIキー入力欄（popup）', () => {
     typeKey('deeplApiKey', 'abcd:fx');
     $('deeplTestBtn').click();
     // permissions.request はクリックの同期区間内で呼ばれている（Firefox のユーザー操作要件）
-    expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['https://api-free.deepl.com/*'] });
+    expect(chrome.permissions.request.mock.calls[0][0]).toEqual({ origins: ['https://api-free.deepl.com/*'] });
     await flush();
     expect(calls.map(c => c[0])).toEqual(['request', 'sendMessage']);
     const msg = msgFor('deeplApiKey');
@@ -136,7 +148,7 @@ describe('APIキー入力欄（popup）', () => {
     testApiKeyResponse = { ok: true };
     typeKey('claudeApiKey', 'sk-ant-test');
     $('claudeTestBtn').click();
-    expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['https://api.anthropic.com/*'] });
+    expect(chrome.permissions.request.mock.calls[0][0]).toEqual({ origins: ['https://api.anthropic.com/*'] });
     await flush();
     expect($('claudeTestBtn').textContent).toBe(t('apiKeyValid'));
     expect(msgFor('claudeApiKey').hidden).toBe(true);
@@ -154,6 +166,67 @@ describe('APIキー入力欄（popup）', () => {
       expect(msgFor('geminiApiKey').textContent).toBe(t('apiErrInvalidKey'));
     } finally {
       chrome.permissions = perms;
+    }
+  });
+
+  it('Firefox のコールバック式 permissions.request でも、許可ダイアログに回答するまで検証を送らない', async () => {
+    let answer;
+    chrome.permissions = {
+      request: vi.fn((req, cb) => { calls.push(['request', req.origins[0]]); answer = cb; return undefined; }),
+    };
+    testApiKeyResponse = { ok: true };
+    typeKey('deeplApiKey', 'abcd:fx');
+    $('deeplTestBtn').click();
+    await flush();
+    expect(calls.map(c => c[0])).toEqual(['request']); // まだ送っていない
+    answer(true);
+    await flush();
+    expect(calls.map(c => c[0])).toEqual(['request', 'sendMessage']);
+    expect($('deeplTestBtn').textContent).toBe(t('apiKeyValid'));
+  });
+
+  it('テスト中にキーを編集したら、古いキーの結果を表示しない', async () => {
+    deferTestApiKey = true;
+    testApiKeyResponse = { ok: false, errorCode: 'invalidKey' };
+    typeKey('deeplApiKey', 'wrong:fx');
+    $('deeplTestBtn').click();
+    await flush();
+    expect(pendingTestApiKey).toHaveLength(1);
+    expect($('deeplTestBtn').disabled).toBe(true);
+
+    // 応答待ちの間に正しいキーへ修正 → ボタンは初期状態に戻る
+    typeKey('deeplApiKey', 'right:fx');
+    expect($('deeplTestBtn').textContent).toBe(t('apiKeyTest'));
+    expect($('deeplTestBtn').disabled).toBe(false);
+
+    // 旧キーの失敗が遅れて届いても表示は変わらない
+    pendingTestApiKey[0]();
+    expect(msgFor('deeplApiKey').hidden).toBe(true);
+    expect($('deeplTestBtn').textContent).toBe(t('apiKeyTest'));
+    expect($('deeplTestBtn').classList.contains('dvt-test-ng')).toBe(false);
+  });
+
+  it('結果表示から 3 秒後のリセットは、その後のテスト結果を消さない', async () => {
+    vi.useFakeTimers();
+    try {
+      testApiKeyResponse = { ok: true };
+      typeKey('claudeApiKey', 'sk-1');
+      $('claudeTestBtn').click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect($('claudeTestBtn').textContent).toBe(t('apiKeyValid'));
+      await vi.advanceTimersByTimeAsync(2000);
+      // 2 回目のテスト（1 回目のタイマーは無効化される）
+      testApiKeyResponse = { ok: false, errorCode: 'invalidKey' };
+      $('claudeTestBtn').click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect($('claudeTestBtn').textContent).toBe(t('apiKeyInvalid'));
+      await vi.advanceTimersByTimeAsync(1500); // 1 回目のタイマー発火時刻を過ぎる
+      expect($('claudeTestBtn').textContent).toBe(t('apiKeyInvalid'));
+      await vi.advanceTimersByTimeAsync(2000);
+      expect($('claudeTestBtn').textContent).toBe(t('apiKeyTest'));
+      expect(msgFor('claudeApiKey').textContent).toBe(t('apiErrInvalidKey')); // 理由表示は残る
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
