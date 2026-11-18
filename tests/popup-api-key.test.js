@@ -66,11 +66,16 @@ afterAll(() => {
   document.body.innerHTML = '';
 });
 
+// 権限の状態（テストごとに切り替える）
+let permissionGranted = true;
+
 beforeEach(() => {
   calls.length = 0;
   deferTestApiKey = false;
   pendingTestApiKey = [];
+  permissionGranted = true;
   chrome.permissions = {
+    contains: vi.fn((req) => { calls.push(['contains', req.origins[0]]); return Promise.resolve(permissionGranted); }),
     request: vi.fn((req) => { calls.push(['request', req.origins[0]]); return Promise.resolve(true); }),
   };
 });
@@ -130,31 +135,60 @@ describe('APIキー入力欄（popup）', () => {
     expect(msg.hidden).toBe(true);
   });
 
-  it('テスト時は検証メッセージ送信より前に host 権限を要求し、権限不足の理由を入力欄の下に残す', async () => {
-    testApiKeyResponse = { ok: false, error: 'NetworkError when attempting to fetch resource.', errorCode: 'noPermission', errorParams: { host: 'api-free.deepl.com' } };
+  // Firefox では許可ダイアログが出るとポップアップが閉じるため、テストボタンでは権限を要求しない
+  it('権限が無いと分かればテストを送らず、「アクセスを許可」ボタン付きで理由を表示する（要求はしない）', async () => {
+    permissionGranted = false;
     typeKey('deeplApiKey', 'abcd:fx');
-    $('deeplTestBtn').click();
-    // permissions.request はクリックの同期区間内で呼ばれている（Firefox のユーザー操作要件）
-    expect(chrome.permissions.request.mock.calls[0][0]).toEqual({ origins: ['https://api-free.deepl.com/*'] });
     await flush();
-    expect(calls.map(c => c[0])).toEqual(['request', 'sendMessage']);
+    calls.length = 0;
+    $('deeplTestBtn').click();
+    await flush();
+    expect(chrome.permissions.contains.mock.calls.at(-1)[0]).toEqual({ origins: ['https://api-free.deepl.com/*'] });
+    expect(chrome.permissions.request).not.toHaveBeenCalled();
+    expect(calls.find(c => c[0] === 'sendMessage')).toBeUndefined();
     const msg = msgFor('deeplApiKey');
     expect(msg.hidden).toBe(false);
     expect(msg.textContent).toContain('api-free.deepl.com へのアクセスが許可されていません');
+    expect(msg.querySelector('.dvt-api-key-grant').textContent).toBe(t('apiKeyGrant'));
     expect($('deeplTestBtn').textContent).toBe(t('apiKeyInvalid'));
   });
 
-  it('Claude のテストは Anthropic のオリジンを要求し、成功時は理由表示を消す', async () => {
-    testApiKeyResponse = { ok: true };
+  it('「アクセスを許可」ボタンで権限を要求し、許可されたら案内を消す', async () => {
+    permissionGranted = false;
+    typeKey('deeplApiKey', 'abcd');
+    await flush();
+    const msg = msgFor('deeplApiKey');
+    // キー入力時点（ポップアップを開き直したときも同じ処理）で権限不足を案内する
+    expect(msg.textContent).toContain('api.deepl.com へのアクセスが許可されていません');
+    msg.querySelector('.dvt-api-key-grant').click();
+    // クリックの同期区間内で request を呼んでいる（Firefox のユーザー操作要件）
+    expect(chrome.permissions.request.mock.calls[0][0]).toEqual({ origins: ['https://api.deepl.com/*'] });
+    await flush();
+    expect(msg.hidden).toBe(true);
+  });
+
+  it('権限があればテストを送り、background の noPermission 応答にも「アクセスを許可」ボタンを付ける', async () => {
+    testApiKeyResponse = { ok: false, errorCode: 'noPermission', errorParams: { host: 'api.anthropic.com' } };
     typeKey('claudeApiKey', 'sk-ant-test');
     $('claudeTestBtn').click();
-    expect(chrome.permissions.request.mock.calls[0][0]).toEqual({ origins: ['https://api.anthropic.com/*'] });
+    await flush();
+    expect(chrome.permissions.contains.mock.calls.at(-1)[0]).toEqual({ origins: ['https://api.anthropic.com/*'] });
+    expect(calls.map(c => c[0]).filter(c => c !== 'contains')).toEqual(['sendMessage']);
+    const msg = msgFor('claudeApiKey');
+    expect(msg.textContent).toContain('api.anthropic.com');
+    expect(msg.querySelector('.dvt-api-key-grant')).not.toBeNull();
+  });
+
+  it('権限があって検証に成功したら理由表示を消す', async () => {
+    testApiKeyResponse = { ok: true };
+    typeKey('claudeApiKey', 'sk-ant-ok');
+    $('claudeTestBtn').click();
     await flush();
     expect($('claudeTestBtn').textContent).toBe(t('apiKeyValid'));
     expect(msgFor('claudeApiKey').hidden).toBe(true);
   });
 
-  it('permissions API が無い環境でもテストは実行される', async () => {
+  it('permissions API が無い環境でもテストは実行され、権限不足の案内は出さない', async () => {
     const perms = chrome.permissions;
     chrome.permissions = undefined;
     try {
@@ -169,20 +203,25 @@ describe('APIキー入力欄（popup）', () => {
     }
   });
 
-  it('Firefox のコールバック式 permissions.request でも、許可ダイアログに回答するまで検証を送らない', async () => {
+  it('Firefox のコールバック式 permissions.contains でも結果を待って判定する', async () => {
     let answer;
     chrome.permissions = {
-      request: vi.fn((req, cb) => { calls.push(['request', req.origins[0]]); answer = cb; return undefined; }),
+      contains: vi.fn((_req, cb) => { answer = cb; return undefined; }),
+      request: vi.fn(),
     };
-    testApiKeyResponse = { ok: true };
-    typeKey('deeplApiKey', 'abcd:fx');
-    $('deeplTestBtn').click();
+    typeKey('geminiApiKey', 'AIza-cb');
+    const msg = msgFor('geminiApiKey');
     await flush();
-    expect(calls.map(c => c[0])).toEqual(['request']); // まだ送っていない
-    answer(true);
+    expect(msg.hidden).toBe(true); // 回答前は何も出さない
+    answer(false);
     await flush();
-    expect(calls.map(c => c[0])).toEqual(['request', 'sendMessage']);
-    expect($('deeplTestBtn').textContent).toBe(t('apiKeyValid'));
+    expect(msg.textContent).toContain('generativelanguage.googleapis.com');
+  });
+
+  it('表示切替ボタンのアイコンは絵文字ではなく SVG（Firefox で豆腐にならない）', () => {
+    const toggle = $('deeplApiKey').closest('.dvt-api-key-wrap').querySelector('.dvt-api-key-toggle');
+    expect(toggle.querySelector('svg')).not.toBeNull();
+    expect(toggle.textContent).toBe('');
   });
 
   it('テスト中にキーを編集したら、古いキーの結果を表示しない', async () => {

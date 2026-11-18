@@ -182,16 +182,15 @@ function toggleLLMSettings() {
 // 残して表示する。以前はボタンが「無効」になるだけで、理由は 3 秒で消える title にしか出なかった。
 const apiTestButtons = [];
 
-// host 権限を要求する。Firefox は permissions.request をユーザー操作の同期処理内で
-// 呼ぶ必要があるため、クリックハンドラから await を挟まずに呼ぶこと。
-// API が無い・失敗する環境（Safari 等）では何もせず検証を続ける。
-// ユーザーが許可ダイアログに回答するまで待ってから検証を送る（Firefox のコールバック式 API も考慮）。
-function requestHostPermission(origin) {
-  if (!origin) return Promise.resolve(true);
+// host 権限の有無。判定できない環境（permissions API 無し・例外）では null を返し、案内を出さない
+function checkHostPermission(origin) {
+  if (!origin) return Promise.resolve(null);
   try {
-    return DVT_APIKEY.callPermissions('request', { origins: [origin] }).catch(() => true);
+    return DVT_APIKEY.callPermissions('contains', { origins: [origin] })
+      .then(v => (typeof v === 'boolean' ? v : null))
+      .catch(() => null);
   } catch (e) {
-    return Promise.resolve(true);
+    return Promise.resolve(null);
   }
 }
 
@@ -199,6 +198,10 @@ function setupApiKeyTest(btnId, inputId, engine) {
   const btn = document.getElementById(btnId);
   const input = document.getElementById(inputId);
   if (!btn || !input) return;
+
+  // 検証の世代番号。キーを編集したら進め、古いキーの検証結果やタイマーで表示を上書きしない
+  let testSeq = 0;
+  let resetTimer = null;
 
   // 入力欄の下に理由表示欄を作る（lang-row の直後）
   const row = input.closest('.lang-row');
@@ -209,11 +212,59 @@ function setupApiKeyTest(btnId, inputId, engine) {
   msgEl.hidden = true;
   if (row) row.after(msgEl);
 
-  function showMessage(text, kind) {
-    msgEl.textContent = text || '';
+  // action: { label, onClick } を渡すと、文言の後ろにボタンを付ける
+  function showMessage(text, kind, action) {
+    msgEl.textContent = '';
+    if (text) {
+      const span = document.createElement('span');
+      span.textContent = text;
+      msgEl.appendChild(span);
+    }
+    if (text && action) {
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'dvt-api-key-grant';
+      actionBtn.textContent = action.label;
+      actionBtn.addEventListener('click', action.onClick);
+      msgEl.appendChild(actionBtn);
+    }
     msgEl.hidden = !text;
     msgEl.classList.toggle('dvt-api-key-msg-ok', kind === 'ok');
     msgEl.classList.toggle('dvt-api-key-msg-ng', kind === 'ng');
+  }
+
+  // Firefox ではホスト権限がオフにされ得る。許可ダイアログが出るとポップアップが閉じるため
+  // （テスト結果を表示できない）、テストボタンでは要求せず、専用の「アクセスを許可」ボタンでだけ要求する。
+  // ポップアップを開き直すと checkPermission で状態を再確認するので、許可/拒否どちらでも結果が分かる。
+  function currentOrigin() {
+    return DVT_APIKEY.originFor(engine, DVT_APIKEY.normalizeApiKey(input.value));
+  }
+
+  function showNoPermission(origin) {
+    const host = origin.replace(/^https:\/\//, '').replace(/\/\*$/, '');
+    showMessage(t('apiErrNoPermission', { host }), 'ng', {
+      label: t('apiKeyGrant'),
+      onClick: () => {
+        // ユーザー操作の同期区間内で呼ぶ（await を挟まない）。ポップアップが閉じる場合もある
+        DVT_APIKEY.callPermissions('request', { origins: [origin] })
+          .then((granted) => {
+            if (granted === true && currentOrigin() === origin) showMessage('', null);
+          })
+          .catch(() => {});
+      },
+    });
+  }
+
+  // 権限が無いと分かったときだけ案内を出す（判定不能なら何もしない）
+  function checkPermission() {
+    const key = DVT_APIKEY.normalizeApiKey(input.value);
+    if (!key || DVT_APIKEY.findInvalidKeyChar(key)) return Promise.resolve(null);
+    const origin = currentOrigin();
+    const seq = testSeq;
+    return checkHostPermission(origin).then((granted) => {
+      if (granted === false && seq === testSeq && currentOrigin() === origin) showNoPermission(origin);
+      return granted;
+    });
   }
 
   // 入力中に使えない文字（全角文字など）を検出したら即座に警告する
@@ -228,7 +279,27 @@ function setupApiKeyTest(btnId, inputId, engine) {
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'dvt-api-key-toggle';
-  toggle.textContent = '👁';
+  // 絵文字（👁）は Firefox のポップアップで豆腐になるため SVG で描く
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(svgNs, 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('width', '14');
+  icon.setAttribute('height', '14');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+  const eye = document.createElementNS(svgNs, 'path');
+  eye.setAttribute('d', 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z');
+  const pupil = document.createElementNS(svgNs, 'circle');
+  pupil.setAttribute('cx', '12');
+  pupil.setAttribute('cy', '12');
+  pupil.setAttribute('r', '3');
+  [eye, pupil].forEach((el) => {
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', 'currentColor');
+    el.setAttribute('stroke-width', '2');
+    icon.appendChild(el);
+  });
+  toggle.appendChild(icon);
   // data-i18n-* 属性も付けておき、UI 言語切り替え時の applyToDOM() で文言を追従させる
   function syncToggleLabel() {
     const shown = input.type === 'text';
@@ -246,9 +317,6 @@ function setupApiKeyTest(btnId, inputId, engine) {
   syncToggleLabel();
   btn.before(toggle);
 
-  // 検証の世代番号。キーを編集したら進め、古いキーの検証結果やタイマーで表示を上書きしない
-  let testSeq = 0;
-  let resetTimer = null;
 
   function resetBtnState() {
     clearTimeout(resetTimer);
@@ -259,7 +327,7 @@ function setupApiKeyTest(btnId, inputId, engine) {
 
   function updateTestBtn() {
     btn.disabled = !DVT_APIKEY.normalizeApiKey(input.value);
-    checkChars();
+    if (!checkChars()) checkPermission();
   }
   apiTestButtons.push(updateTestBtn);
 
@@ -277,8 +345,7 @@ function setupApiKeyTest(btnId, inputId, engine) {
       return;
     }
 
-    // ユーザー操作の同期区間内で権限を要求する（Firefox で host 権限が未許可の場合に備える）
-    const permission = requestHostPermission(DVT_APIKEY.originFor(engine, apiKey));
+    const origin = DVT_APIKEY.originFor(engine, apiKey);
     const seq = ++testSeq;
 
     resetBtnState();
@@ -286,8 +353,19 @@ function setupApiKeyTest(btnId, inputId, engine) {
     btn.textContent = t('apiKeyTesting');
     showMessage('', null);
 
-    permission.then(() => {
-      if (seq !== testSeq) return; // 許可ダイアログの間にキーが編集された
+    // 権限が無いことが確実なら送信せず「アクセスを許可」ボタン付きで案内する
+    checkHostPermission(origin).then((granted) => {
+      if (seq !== testSeq) return; // 確認中にキーが編集された
+      if (granted === false) {
+        btn.disabled = false;
+        btn.textContent = t('apiKeyInvalid');
+        btn.classList.add('dvt-test-ng');
+        showNoPermission(origin);
+        resetTimer = setTimeout(() => {
+          if (seq === testSeq) resetBtnState();
+        }, 3000);
+        return;
+      }
       chrome.runtime.sendMessage(
         { action: 'testApiKey', engine, apiKey },
         (res) => {
@@ -301,7 +379,8 @@ function setupApiKeyTest(btnId, inputId, engine) {
           } else {
             btn.textContent = t('apiKeyInvalid');
             btn.classList.add('dvt-test-ng');
-            showMessage(DVT_APIKEY.formatApiError(res) || t('error'), 'ng');
+            if (res?.errorCode === 'noPermission') showNoPermission(origin);
+            else showMessage(DVT_APIKEY.formatApiError(res) || t('error'), 'ng');
           }
           btn.disabled = false;
           resetTimer = setTimeout(() => {

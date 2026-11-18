@@ -164,10 +164,12 @@
       right: 58px;
       top: 50%;
       transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
       background: transparent;
       border: none;
       padding: 2px 4px;
-      font-size: 12px;
+      color: var(--text);
       line-height: 1;
       cursor: pointer;
       opacity: 0.6;
@@ -183,6 +185,21 @@
       word-break: break-word;
     }
     .dvt-api-key-msg[hidden] { display: none; }
+    /* 権限不足時の「アクセスを許可」ボタン（Issue #262） */
+    .dvt-api-key-grant {
+      display: inline-block;
+      margin: 4px 0 0 0;
+      margin-inline-start: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-family: inherit;
+      color: var(--accent-text);
+      background: var(--accent);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .dvt-api-key-grant:hover { background: var(--btn-hover); }
     .dvt-api-key-msg.dvt-api-key-msg-ng { color: var(--dvt-err-text); }
     .dvt-api-key-msg.dvt-api-key-msg-ok { color: var(--dvt-ok-text); }
     .dvt-api-test-btn {

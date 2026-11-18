@@ -2881,33 +2881,34 @@ suites:
         title: "Firefox: host 権限オフのとき権限不足と表示される"
         priority: p0
         environment: firefox
-        description: "過去のバグ: 権限オフで fetch が NetworkError になり、理由不明の「✗ 無効」だけが出ていた。curl ではキーが通るため切り分けに時間がかかった"
+        description: "過去のバグ: 権限オフで fetch が NetworkError になり、理由不明の「✗ 無効」だけが出ていた。PR #263 の初版はテストボタンで許可ダイアログを出していたが、Firefox ではダイアログ表示でポップアップが閉じて理由を確認できなかった"
         preconditions:
-          - 翻訳エンジンを DeepL に設定し、有効な Free キー（末尾 :fx）を入力済み
-          - "about:addons → DualView Translator → 権限 で api-free.deepl.com をオフにする"
+          - 翻訳エンジンを DeepL に設定し、有効なキーを入力済み
+          - "about:addons → DualView Translator → 権限 で、キーに対応するドメイン（Free キーは api-free.deepl.com、Pro キーは api.deepl.com）をオフにする"
         steps:
-          - ポップアップの設定タブで DeepL の「テスト」を押す
-          - 表示された権限の許可ダイアログで「許可しない」を選ぶ
+          - ポップアップを開いて設定タブを表示する
+          - DeepL の「テスト」を押す
           - 任意の英語ページでページ全体翻訳を実行する
         expected:
-          - "入力欄の下に「api-free.deepl.com へのアクセスが許可されていません…」が残って表示される（3 秒で消えない）"
+          - "開いた時点で、入力欄の下に「<ドメイン> へのアクセスが許可されていません…」と「アクセスを許可」ボタンが表示される"
+          - テストを押しても許可ダイアログは出ず、ポップアップは閉じない。理由表示は 3 秒で消えない
           - 翻訳失敗の表示にも同じ文言が出る（NetworkError などの生メッセージではない）
       - id: AK-002
-        title: "Firefox: テストボタンで権限を許可すると成功する"
+        title: "Firefox: 「アクセスを許可」で権限を付与・拒否できる"
         priority: p0
         environment: firefox
         preconditions:
-          - AK-001 と同じく api-free.deepl.com の権限をオフにする
+          - AK-001 と同じく、キーに対応するドメインの権限をオフにする
         steps:
-          - DeepL の「テスト」を押す
-          - 権限の許可ダイアログで「許可」を選ぶ
-          - "about:addons の権限タブを開き直す"
+          - ポップアップの「アクセスを許可」を押し、権限ダイアログで「拒否」を選ぶ
+          - ポップアップを開き直す
+          - もう一度「アクセスを許可」を押し、今度は「許可」を選ぶ
+          - ポップアップを開き直して「テスト」を押す
         expected:
-          - "テストボタンが「✓ 有効」になる"
-          - 権限タブで api-free.deepl.com がオンになっている
-          - ページ全体翻訳が DeepL で成功する
-        known_limitations:
-          - "Firefox で許可ダイアログ表示中にポップアップが閉じる場合は、ポップアップを開き直して再度テストする（権限は付与済み）"
+          - ダイアログが出るとポップアップは閉じる（Firefox の仕様）
+          - 拒否した後に開き直すと、権限不足の案内が残っている
+          - 許可した後に開き直すと案内が消えていて、テストで「✓ 有効」になる
+          - "about:addons の権限タブで該当ドメインがオンになっている"
       - id: AK-003
         title: 全角文字が混入したキーを位置付きで警告する
         priority: p0
@@ -2928,7 +2929,7 @@ suites:
         priority: p1
         environment: chrome
         steps:
-          - DeepL / Claude / Gemini それぞれの APIキー欄の 👁 ボタンをクリックする
+          - DeepL / Claude / Gemini それぞれの APIキー欄の目のアイコンのボタンをクリックする（Firefox でもアイコンが四角い記号にならない）
           - もう一度クリックする
           - VoiceOver / NVDA でボタンにフォーカスする
         expected:
