@@ -29,6 +29,8 @@
       /* APIキー検証の理由表示（Issue #262）。ライトは白背景で WCAG AA 4.5:1 以上の濃い色にする */
       --dvt-err-text: #ef4444;
       --dvt-ok-text: #22c55e;
+      /* 「アクセスを許可」ボタンの文字色（背景は --accent / ホバー時 --btn-hover） */
+      --dvt-grant-text: #0c0c18;
     }
 
     @media (prefers-color-scheme: light) {
@@ -48,6 +50,7 @@
         --dot-idle: rgba(0,0,0,0.15);
         --dvt-err-text: #b91c1c;
         --dvt-ok-text: #15803d;
+      --dvt-grant-text: #1a1a2e;
       }
     }
 
@@ -68,6 +71,7 @@
       --dot-idle: rgba(0,0,0,0.15);
       --dvt-err-text: #b91c1c;
       --dvt-ok-text: #15803d;
+      --dvt-grant-text: #1a1a2e;
     }
 
     body {
@@ -193,7 +197,7 @@
       padding: 2px 8px;
       font-size: 11px;
       font-family: inherit;
-      color: var(--accent-text);
+      color: var(--dvt-grant-text);
       background: var(--accent);
       border: none;
       border-radius: 5px;

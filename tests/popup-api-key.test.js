@@ -299,7 +299,8 @@ describe('APIキー理由表示の色コントラスト（WCAG AA）', () => {
     expect(i, blockStart).toBeGreaterThanOrEqual(0);
     const body = css.slice(i, css.indexOf('}', i));
     const get = (name) => (body.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`)) || [])[1];
-    return { bg: get('bg'), bg2: get('bg2'), err: get('dvt-err-text'), ok: get('dvt-ok-text') };
+    return { bg: get('bg'), bg2: get('bg2'), err: get('dvt-err-text'), ok: get('dvt-ok-text'),
+      grant: get('dvt-grant-text'), accent: get('accent'), hover: get('btn-hover') };
   }
   function luminance(hex) {
     const [r, g, b] = [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16) / 255)
@@ -323,6 +324,21 @@ describe('APIキー理由表示の色コントラスト（WCAG AA）', () => {
       expect(contrast(v.err, bg)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(v.ok, bg)).toBeGreaterThanOrEqual(4.5);
     });
+  });
+
+  it.each([
+    ['ダーク（:root）', ':root {'],
+    ['ライト（prefers-color-scheme）', '@media (prefers-color-scheme: light) {\n      :root {'],
+    ['ライト（.dvt-light フォールバック）', ':root.dvt-light {'],
+  ])('%s: 「アクセスを許可」ボタンの文字が通常・ホバー時の背景に対して 4.5:1 以上', (_label, block) => {
+    const v = varsIn(block);
+    expect(v.grant).toBeTruthy();
+    expect(contrast(v.grant, v.accent)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(v.grant, v.hover)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('「アクセスを許可」ボタンは CSS 変数の文字色を使う', () => {
+    expect(css).toMatch(/\.dvt-api-key-grant\s*\{[^}]*color:\s*var\(--dvt-grant-text\)/);
   });
 
   it('理由表示は CSS 変数の色を使う（固定色を使わない）', () => {
