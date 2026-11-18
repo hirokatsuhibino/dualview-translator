@@ -246,6 +246,11 @@ var DVT_BAR = (function () {
     // まだ見つからない（再描画の途中）ならそのまま監視を続ける。
     function recheckTarget() {
       if (!isActive() || el.isConnected || !rule.selector) return;
+      // SPA 遷移でルールの URL 条件から外れていたら、別ページを翻訳しないよう監視ごと停止する
+      if (rule.urlPattern && !matchesUrlPattern(location.href, rule.urlPattern)) {
+        stopAutoRuleObserver(rule.id);
+        return;
+      }
       let next = null;
       try {
         next = document.querySelector(rule.selector);
@@ -258,11 +263,15 @@ var DVT_BAR = (function () {
       startAutoRuleObserver(next, rule, { translateNow: hasText });
     }
 
-    // body 配下の変更を監視。コールバックは el が接続中なら即 return するので軽量
+    // body 配下の変更を監視。コールバックは el が接続中なら即 return するので軽量。
+    // デバウンスにすると無関係な DOM 更新が続くページで再探索が延期され続けるため、
+    // 予約済みのタイマーは維持するスロットルにする（最初の変更から一定時間後に必ず再探索）
     const watcher = new MutationObserver(() => {
-      if (el.isConnected) return;
-      clearTimeout(recheckTimer);
-      recheckTimer = setTimeout(recheckTarget, RETRANSLATE_DEBOUNCE_MS);
+      if (el.isConnected || recheckTimer) return;
+      recheckTimer = setTimeout(() => {
+        recheckTimer = null;
+        recheckTarget();
+      }, RETRANSLATE_DEBOUNCE_MS);
     });
 
     // タブが再表示されたときにも差し替えをチェック（スリープ復帰直後など）

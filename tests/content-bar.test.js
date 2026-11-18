@@ -306,6 +306,42 @@ describe('DVT_BAR.startAutoRuleObserver — 対象要素の差し替え追従', 
     expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
   });
 
+  it('URL がルールの条件から外れていたら再探索せず監視を停止する', async () => {
+    const offRule = { ...rule, urlPattern: '*://dvt-no-match.example/*' };
+    DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), offRule);
+
+    const newEl = replaceTarget('<div class="dvt-test-mailbody"><p>contacts</p></div>');
+    await vi.runAllTimersAsync();
+    expect(DVT_PAGE.translateClickedElement).not.toHaveBeenCalled();
+
+    // 監視は停止済みなので、その後の書き換えにも反応しない
+    newEl.innerHTML = '<p>changed</p>';
+    await vi.runAllTimersAsync();
+    expect(DVT_PAGE.translateClickedElement).not.toHaveBeenCalled();
+  });
+
+  it('URL がルールの条件に一致していれば再探索する', async () => {
+    const onRule = { ...rule, urlPattern: location.href };
+    DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), onRule);
+    const newEl = replaceTarget('<div class="dvt-test-mailbody"><p>new mail</p></div>');
+    await vi.runAllTimersAsync();
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(newEl);
+  });
+
+  it('無関係な DOM 更新が短い間隔で続いても再探索が延期され続けない', async () => {
+    DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), rule);
+    const ticker = document.createElement('span');
+    document.body.appendChild(ticker);
+    const newEl = replaceTarget('<div class="dvt-test-mailbody"><p>new mail</p></div>');
+
+    // 200ms ごとに無関係な要素を更新し続ける（デバウンスだと永久に発火しない間隔）
+    for (let i = 0; i < 5; i++) {
+      ticker.textContent = String(i);
+      await vi.advanceTimersByTimeAsync(200);
+    }
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(newEl);
+  });
+
   it('stopAutoRuleObserver 後は差し替えに追従しない', async () => {
     DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), rule);
     DVT_BAR.stopAutoRuleObserver(rule.id);
