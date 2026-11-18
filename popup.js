@@ -127,7 +127,7 @@ engineSel.addEventListener('change', () => {
 });
 
 deeplApiKeyInput.addEventListener('input', () => {
-  chrome.storage.local.set({ deeplApiKey: deeplApiKeyInput.value.trim() });
+  chrome.storage.local.set({ deeplApiKey: DVT_APIKEY.normalizeApiKey(deeplApiKeyInput.value) });
   updateTranslateButtons();
 });
 
@@ -154,12 +154,12 @@ llmSel.addEventListener('change', () => {
 });
 
 claudeApiKeyInput.addEventListener('input', () => {
-  chrome.storage.local.set({ claudeApiKey: claudeApiKeyInput.value.trim() });
+  chrome.storage.local.set({ claudeApiKey: DVT_APIKEY.normalizeApiKey(claudeApiKeyInput.value) });
   updateSummaryButtons();
 });
 
 geminiApiKeyInput.addEventListener('input', () => {
-  chrome.storage.local.set({ geminiApiKey: geminiApiKeyInput.value.trim() });
+  chrome.storage.local.set({ geminiApiKey: DVT_APIKEY.normalizeApiKey(geminiApiKeyInput.value) });
   updateSummaryButtons();
 });
 
@@ -178,45 +178,120 @@ function toggleLLMSettings() {
 }
 
 // ── APIキー検証 ──────────────────────────────────────────────────────
+// Issue #262: 失敗理由（キー無効・使えない文字・権限不足・通信不可）を入力欄の下に
+// 残して表示する。以前はボタンが「無効」になるだけで、理由は 3 秒で消える title にしか出なかった。
 const apiTestButtons = [];
+
+// host 権限を要求する。Firefox は permissions.request をユーザー操作の同期処理内で
+// 呼ぶ必要があるため、クリックハンドラから await を挟まずに呼ぶこと。
+// API が無い・失敗する環境（Safari 等）では何もせず検証を続ける。
+function requestHostPermission(origin) {
+  try {
+    if (!origin || !chrome.permissions || typeof chrome.permissions.request !== 'function') {
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(chrome.permissions.request({ origins: [origin] })).catch(() => true);
+  } catch (e) {
+    return Promise.resolve(true);
+  }
+}
 
 function setupApiKeyTest(btnId, inputId, engine) {
   const btn = document.getElementById(btnId);
   const input = document.getElementById(inputId);
   if (!btn || !input) return;
 
+  // 入力欄の下に理由表示欄を作る（lang-row の直後）
+  const row = input.closest('.lang-row');
+  const msgEl = document.createElement('div');
+  msgEl.className = 'dvt-api-key-msg';
+  msgEl.setAttribute('role', 'status');
+  msgEl.setAttribute('aria-live', 'polite');
+  msgEl.hidden = true;
+  if (row) row.after(msgEl);
+
+  function showMessage(text, kind) {
+    msgEl.textContent = text || '';
+    msgEl.hidden = !text;
+    msgEl.classList.toggle('dvt-api-key-msg-ok', kind === 'ok');
+    msgEl.classList.toggle('dvt-api-key-msg-ng', kind === 'ng');
+  }
+
+  // 入力中に使えない文字（全角文字など）を検出したら即座に警告する
+  function checkChars() {
+    const bad = DVT_APIKEY.findInvalidKeyChar(DVT_APIKEY.normalizeApiKey(input.value));
+    if (bad) showMessage(t('apiErrInvalidChars', bad), 'ng');
+    else showMessage('', null);
+    return bad;
+  }
+
+  // 表示/非表示の切り替え（password 欄だと混入した文字に気づけないため）
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'dvt-api-key-toggle';
+  toggle.textContent = '👁';
+  // data-i18n-* 属性も付けておき、UI 言語切り替え時の applyToDOM() で文言を追従させる
+  function syncToggleLabel() {
+    const shown = input.type === 'text';
+    const key = shown ? 'apiKeyHide' : 'apiKeyShow';
+    toggle.setAttribute('data-i18n-aria-label', key);
+    toggle.setAttribute('data-i18n-title', key);
+    toggle.setAttribute('aria-label', t(key));
+    toggle.title = t(key);
+    toggle.setAttribute('aria-pressed', String(shown));
+  }
+  toggle.addEventListener('click', () => {
+    input.type = input.type === 'password' ? 'text' : 'password';
+    syncToggleLabel();
+  });
+  syncToggleLabel();
+  btn.before(toggle);
+
   function updateTestBtn() {
-    btn.disabled = !input.value.trim();
+    btn.disabled = !DVT_APIKEY.normalizeApiKey(input.value);
+    checkChars();
   }
   apiTestButtons.push(updateTestBtn);
 
   btn.addEventListener('click', () => {
-    const apiKey = input.value.trim();
+    const apiKey = DVT_APIKEY.normalizeApiKey(input.value);
     if (!apiKey) return;
+    if (checkChars()) {
+      btn.classList.add('dvt-test-ng');
+      return;
+    }
+
+    // ユーザー操作の同期区間内で権限を要求する（Firefox で host 権限が未許可の場合に備える）
+    const permission = requestHostPermission(DVT_APIKEY.originFor(engine, apiKey));
 
     btn.disabled = true;
     btn.textContent = t('apiKeyTesting');
     btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+    showMessage('', null);
 
-    chrome.runtime.sendMessage(
-      { action: 'testApiKey', engine, apiKey },
-      (res) => {
-        if (res?.ok) {
-          btn.textContent = t('apiKeyValid');
-          btn.classList.add('dvt-test-ok');
-        } else {
-          btn.textContent = t('apiKeyInvalid');
-          btn.title = res?.error || '';
-          btn.classList.add('dvt-test-ng');
+    permission.then(() => {
+      chrome.runtime.sendMessage(
+        { action: 'testApiKey', engine, apiKey },
+        (res) => {
+          if (chrome.runtime.lastError) {
+            res = { ok: false, error: chrome.runtime.lastError.message };
+          }
+          if (res?.ok) {
+            btn.textContent = t('apiKeyValid');
+            btn.classList.add('dvt-test-ok');
+          } else {
+            btn.textContent = t('apiKeyInvalid');
+            btn.classList.add('dvt-test-ng');
+            showMessage(DVT_APIKEY.formatApiError(res) || t('error'), 'ng');
+          }
+          btn.disabled = false;
+          setTimeout(() => {
+            btn.textContent = t('apiKeyTest');
+            btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
+          }, 3000);
         }
-        btn.disabled = false;
-        setTimeout(() => {
-          btn.textContent = t('apiKeyTest');
-          btn.classList.remove('dvt-test-ok', 'dvt-test-ng');
-          btn.title = '';
-        }, 3000);
-      }
-    );
+      );
+    });
   });
 
   input.addEventListener('input', updateTestBtn);

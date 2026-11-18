@@ -75,6 +75,11 @@ Tell DualView to auto-translate certain sites whenever you open them.
 
 For DeepL, sign up at [DeepL API](https://www.deepl.com/pro-api) and paste your key into the popup settings.
 
+Hit "Test" next to the key field to check it. If it fails, the reason shows up right under the field (and the 👁 button lets you show or hide the key).
+
+- **"Access to … isn't allowed"**: Firefox lets you switch off an add-on's site access. Hit "Test" to grant it, or go to `about:addons` → DualView Translator → Permissions and turn the domain on.
+- **"The API key contains a character that isn't allowed"**: something like a full-width character got in. Clear the field and paste your key again.
+
 Apple Translation only shows up on macOS Safari (we auto-detect it at startup and add it to the engine picker). If you're on Google or DeepL and your network drops, we automatically fall back to Apple Translation — but if the cache already has what you need, we just serve from cache and skip the fallback.
 
 ## AI summarization

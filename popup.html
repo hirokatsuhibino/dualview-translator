@@ -148,9 +148,36 @@
     }
     .dvt-api-key-wrap input {
       width: 100%;
-      padding: 6px 60px 6px 10px;
+      padding: 6px 86px 6px 10px;
       box-sizing: border-box;
     }
+    /* APIキー表示/非表示ボタン（テストボタンの左隣。Issue #262） */
+    .dvt-api-key-toggle {
+      position: absolute;
+      right: 58px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      padding: 2px 4px;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      opacity: 0.6;
+    }
+    .dvt-api-key-toggle:hover,
+    .dvt-api-key-toggle[aria-pressed="true"] { opacity: 1; }
+    /* APIキー検証の理由表示（入力欄の下に残す） */
+    .dvt-api-key-msg {
+      margin: 6px 0 0 50px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--muted);
+      word-break: break-word;
+    }
+    .dvt-api-key-msg[hidden] { display: none; }
+    .dvt-api-key-msg.dvt-api-key-msg-ng { color: #ef4444; }
+    .dvt-api-key-msg.dvt-api-key-msg-ok { color: #22c55e; }
     .dvt-api-test-btn {
       position: absolute;
       right: 4px;

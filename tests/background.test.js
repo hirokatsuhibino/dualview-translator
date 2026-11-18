@@ -52,9 +52,13 @@ beforeAll(() => {
   if (networkErrorMatch) isNetworkError = new Function('err', networkErrorMatch[0].replace(/^function.*?\{/, '').replace(/\}$/, ''));
 
   // testApiKey を抽出（getDeepLEndpointに依存するため一緒にeval）
-  const testApiKeyMatch = code.match(/async function testApiKey\(engine, apiKey\)\s*\{[\s\S]*?\n\}/);
+  const testApiKeyMatch = code.match(/async function testApiKey\(engine, rawKey\)\s*\{[\s\S]*?\n\}/);
+  // testApiKey は入力キーを normalizeApiKey で正規化する（Issue #262）ので一緒に評価する
+  const stripReMatch = code.match(/^const API_KEY_STRIP_RE = [^\n]*;$/m);
+  const normalizeMatch = code.match(/^function normalizeApiKey\(key\)\s*\{[\s\S]*?\n\}/m);
+  if (!stripReMatch || !normalizeMatch) throw new Error('background.test.js: normalizeApiKey の正規表現抽出に失敗（background.js のフォーマット変更を確認）');
   if (testApiKeyMatch && deepLMatch) {
-    const combined = deepLMatch[0] + '\n' + testApiKeyMatch[0] + '\n return testApiKey;';
+    const combined = stripReMatch[0] + '\n' + normalizeMatch[0] + '\n' + deepLMatch[0] + '\n' + testApiKeyMatch[0] + '\n return testApiKey;';
     testApiKey = new Function('fetch', combined)();
   }
 

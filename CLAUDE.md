@@ -39,7 +39,9 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）
 │   ├── auto-rule-edit.test.js # 自動翻訳ルール編集テスト（10件）
 │   ├── translation-cache.test.js # 翻訳・要約キャッシュテスト（31件）
-│   └── locales.test.js    #   _locales 整合性テスト（7件）
+│   ├── locales.test.js    #   _locales 整合性テスト（7件）
+│   ├── api-key-diagnostics.test.js # APIキー検証・エラー分類テスト
+│   └── popup-api-key.test.js # popup のAPIキー入力欄 jsdom 統合テスト
 ├── docs/                  # 公開資料
 │   ├── chrome-web-store.md #   Chrome Web Store掲載用テキスト
 │   ├── RELEASE_NOTES.md   #   リリースノート
@@ -118,6 +120,14 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - **領域選択**: `enterRegionMode` の mousemove / click ハンドラで `eventTarget(e)`（`event.composedPath()[0]` を優先）を使い、retargeting で host になってしまう問題を回避して shadow 内の実要素をハイライト/翻訳
 - **対象外**: 自動翻訳ルールのセレクタ選択（`enterSelectorPickMode`／生成 CSS セレクタは shadow を貫通できず機能しない）、言語検出（`content-bar.js`／shadow 内テキスト未収集）、closed shadow root（JS から到達不可）
 - **既知の制約**: 翻訳結果の表示制御は inline style（`setProperty('display','block','important')` 等）で行うため shadow 内でも機能は動作するが、`content.css` は shadow boundary を越えないため装飾（訳文の色・区切り線等）は未適用。shadow root への style 注入は follow-up
+
+### APIキーの検証とエラー分類（Issue #262）
+
+- **共通ヘルパー `DVT_APIKEY`**（`i18n.js` 末尾）: `normalizeApiKey`（空白・全角スペース・ゼロ幅文字を全位置から除去）/ `findInvalidKeyChar`（印字可能 ASCII 以外を `{ pos, char, cp }` で返す）/ `originFor(engine, apiKey)` / `formatApiError(res)`。popup と content script の両方で使うため `i18n.js` に置く
+- **background.js にも同じ `normalizeApiKey` / `findInvalidKeyChar` がある**（Service Worker から `i18n.js` を読めないため）。片方を変えたらもう片方も揃える。一致は `tests/api-key-diagnostics.test.js` で検証
+- `fetchApi(origin, apiKey, url, init)`: DeepL / Claude / Gemini への fetch は必ずこれを通す。送信前に不正文字を検査（`invalidChars`）し、network error 時は `chrome.permissions.contains` で権限を確認して `noPermission` / `network` の code を付ける。**元の TypeError に code を付けて投げ直す**ので Apple オフラインフォールバック（`isNetworkError`）は従来どおり動く。permissions API が無い・例外の環境では「権限あり」とみなす
+- HTTP ステータスも `invalidKey`（DeepL 403 / Claude 401 / Gemini 400）・`quota`（DeepL 456）・`rateLimit`（429）に分類。失敗応答は `errorResponse(err)` で `{ ok:false, error, errorCode, errorParams }` を返し、UI 側は `DVT_APIKEY.formatApiError(res)` で UI 言語の文言にする（code が無ければ生メッセージ）
+- popup のテストボタンは、Firefox で host 権限が未許可の場合に備えて **クリックの同期区間内で `chrome.permissions.request`** を呼んでから `testApiKey` を送る（await を挟むとユーザー操作扱いが外れる）。理由は入力欄の下の `.dvt-api-key-msg`（`aria-live="polite"`）に残し、👁 ボタンで表示/非表示を切り替えられる
 
 ### 要約エンジン（LLM）
 
