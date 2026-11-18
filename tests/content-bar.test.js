@@ -411,6 +411,30 @@ describe('DVT_BAR.startAutoRuleObserver — 対象要素の差し替え追従', 
     expect(DVT_PAGE.translateClickedElement).not.toHaveBeenCalled();
   });
 
+  it('SPA 遷移後に同じルールが採用されても差し替え先を重複して翻訳しない', async () => {
+    DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), rule);
+    // 実際の翻訳 API と同様に時間がかかる翻訳にする（差し替え監視の 500ms より長い）
+    DVT_PAGE.translateClickedElement.mockImplementation(
+      () => new Promise(resolve => setTimeout(resolve, 2000))
+    );
+    const newEl = replaceTarget('<div class="dvt-test-mailbody"><p>new mail</p></div>');
+    // 差し替え監視のタイマー（500ms）より先に、SPA 遷移由来の checkAutoRules が走る
+    await DVT_BAR.checkAutoRules();
+    await vi.runAllTimersAsync();
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(newEl);
+  });
+
+  it('別タブでセレクタが変更されていたら最新のセレクタで探し直す', async () => {
+    storedRules = [{ ...rule, selector: '.dvt-test-newbody' }];
+    DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), rule);
+    replaceTarget('<div class="dvt-test-mailbody"><p>old</p></div><div class="dvt-test-newbody"><p>new</p></div>');
+    await vi.runAllTimersAsync();
+    const newEl = document.querySelector('.dvt-test-newbody');
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(newEl);
+  });
+
   it('stopAutoRuleObserver 後は差し替えに追従しない', async () => {
     DVT_BAR.startAutoRuleObserver(document.querySelector('.dvt-test-mailbody'), rule);
     DVT_BAR.stopAutoRuleObserver(rule.id);

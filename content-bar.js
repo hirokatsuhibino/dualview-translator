@@ -256,9 +256,15 @@ var DVT_BAR = (function () {
         stopAutoRuleObserver(rule.id);
         return;
       }
+      // セレクタを変更しても別タブには再適用メッセージが届かないため、探索も最新ルールのセレクタで行う
+      if (!latest.selector) {
+        // ページ全体翻訳のルールに変わった場合は、この要素監視は不要
+        stopAutoRuleObserver(rule.id);
+        return;
+      }
       let next = null;
       try {
-        next = document.querySelector(rule.selector);
+        next = document.querySelector(latest.selector);
       } catch (e) {
         return; // 不正なセレクタ
       }
@@ -336,11 +342,9 @@ var DVT_BAR = (function () {
     return null;
   }
 
-  // 採用ルール以外の監視をすべて停止する（ruleId が null なら全停止）
-  function stopOtherAutoRuleObservers(ruleId) {
-    for (const id of [...activeRuleObservers.keys()]) {
-      if (id !== ruleId) stopAutoRuleObserver(id);
-    }
+  // 自動ルールの監視をすべて停止する
+  function stopAllAutoRuleObservers() {
+    for (const id of [...activeRuleObservers.keys()]) stopAutoRuleObserver(id);
   }
 
   // ─── 自動ルールObserverの停止 ────────────────────────────────────────
@@ -371,8 +375,10 @@ var DVT_BAR = (function () {
         const el = await waitForElement(rule.selector);
         if (!el) continue; // タイムアウト後も見つからなければスキップ
 
-        // SPA 遷移で採用ルールが変わった場合、旧ルールの監視が残って競合しないよう停止する
-        stopOtherAutoRuleObservers(rule.id);
+        // これから翻訳する前に既存の監視をすべて停止する。
+        // 別ルールの監視が残ると競合し、同じルールの監視が残ると差し替え検知が同じ要素を
+        // 重複して翻訳するため（新しい監視は翻訳完了後に張り直す）
+        stopAllAutoRuleObservers();
 
         // 翻訳完了後にコンテンツ変更監視を開始（webメール等の書き換えに対応）
         // Promise.resolve()で同期・非同期どちらの戻り値にも対応
@@ -383,7 +389,7 @@ var DVT_BAR = (function () {
           .then(() => startAutoRuleObserver(el, rule))
           .catch(() => {});
       } else {
-        stopOtherAutoRuleObservers(rule.id);
+        stopAllAutoRuleObservers();
         // セレクタなしはページ全体翻訳
         if (rule.mode === 'summarize') {
           DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
@@ -394,7 +400,7 @@ var DVT_BAR = (function () {
       return true; // マッチしたルールで処理済み
     }
     // どのルールも採用されない（SPA 遷移で URL が外れた等）なら旧ルールの監視をすべて停止する
-    stopOtherAutoRuleObservers(null);
+    stopAllAutoRuleObservers();
     return false; // マッチするルールなし
   }
 
