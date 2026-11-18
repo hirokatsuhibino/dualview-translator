@@ -26,6 +26,9 @@
       --btn-sec-hover-bg: rgba(255,255,255,0.06);
       --btn-sec-hover-border: rgba(255,255,255,0.15);
       --dot-idle: rgba(255,255,255,0.2);
+      /* APIキー検証の理由表示（Issue #262）。ライトは白背景で WCAG AA 4.5:1 以上の濃い色にする */
+      --dvt-err-text: #ef4444;
+      --dvt-ok-text: #22c55e;
     }
 
     @media (prefers-color-scheme: light) {
@@ -43,6 +46,8 @@
         --btn-sec-hover-bg: rgba(0,0,0,0.04);
         --btn-sec-hover-border: rgba(0,0,0,0.18);
         --dot-idle: rgba(0,0,0,0.15);
+        --dvt-err-text: #b91c1c;
+        --dvt-ok-text: #15803d;
       }
     }
 
@@ -61,6 +66,8 @@
       --btn-sec-hover-bg: rgba(0,0,0,0.04);
       --btn-sec-hover-border: rgba(0,0,0,0.18);
       --dot-idle: rgba(0,0,0,0.15);
+      --dvt-err-text: #b91c1c;
+      --dvt-ok-text: #15803d;
     }
 
     body {
@@ -176,8 +183,8 @@
       word-break: break-word;
     }
     .dvt-api-key-msg[hidden] { display: none; }
-    .dvt-api-key-msg.dvt-api-key-msg-ng { color: #ef4444; }
-    .dvt-api-key-msg.dvt-api-key-msg-ok { color: #22c55e; }
+    .dvt-api-key-msg.dvt-api-key-msg-ng { color: var(--dvt-err-text); }
+    .dvt-api-key-msg.dvt-api-key-msg-ok { color: var(--dvt-ok-text); }
     .dvt-api-test-btn {
       position: absolute;
       right: 4px;

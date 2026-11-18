@@ -230,3 +230,45 @@ describe('APIキー入力欄（popup）', () => {
     }
   });
 });
+
+// 理由表示の文字色が WCAG AA（通常テキスト 4.5:1）を満たすか、popup.html の CSS 変数から計算して検証する
+describe('APIキー理由表示の色コントラスト（WCAG AA）', () => {
+  const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+  // 指定ブロック内の CSS 変数値を取る
+  function varsIn(blockStart) {
+    const i = css.indexOf(blockStart);
+    expect(i, blockStart).toBeGreaterThanOrEqual(0);
+    const body = css.slice(i, css.indexOf('}', i));
+    const get = (name) => (body.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`)) || [])[1];
+    return { bg: get('bg'), bg2: get('bg2'), err: get('dvt-err-text'), ok: get('dvt-ok-text') };
+  }
+  function luminance(hex) {
+    const [r, g, b] = [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16) / 255)
+      .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  function contrast(a, b) {
+    const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (l1 + 0.05) / (l2 + 0.05);
+  }
+
+  it.each([
+    ['ダーク（:root）', ':root {'],
+    ['ライト（prefers-color-scheme）', '@media (prefers-color-scheme: light) {\n      :root {'],
+    ['ライト（.dvt-light フォールバック）', ':root.dvt-light {'],
+  ])('%s: エラー色・成功色が背景に対して 4.5:1 以上', (_label, block) => {
+    const v = varsIn(block);
+    expect(v.err).toBeTruthy();
+    expect(v.ok).toBeTruthy();
+    [v.bg, v.bg2].forEach(bg => {
+      expect(contrast(v.err, bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(v.ok, bg)).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  it('理由表示は CSS 変数の色を使う（固定色を使わない）', () => {
+    expect(css).toMatch(/\.dvt-api-key-msg\.dvt-api-key-msg-ng\s*\{\s*color:\s*var\(--dvt-err-text\)/);
+    expect(css).toMatch(/\.dvt-api-key-msg\.dvt-api-key-msg-ok\s*\{\s*color:\s*var\(--dvt-ok-text\)/);
+  });
+});
+
