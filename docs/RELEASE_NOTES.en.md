@@ -24,6 +24,9 @@ permalink: /RELEASE_NOTES.en.html
 
 ### Bug Fixes
 
+- Fixed auto-rules with a selector going quiet after your Mac woke from sleep (or whenever the page rebuilt the target element) until you reloaded the page (#260).
+  - When the target element drops out of the DOM, we now look it up again by selector and re-attach translation and watching.
+  - The same check also runs when you switch back to the tab.
 - Fixed a case where running page translation with DeepL selected but no API key left an in-progress marker (`data-dvt-id="dvt-pending"`) on the target elements, so you couldn't re-translate them even after setting the key (found while working on #256).
 
 ---
