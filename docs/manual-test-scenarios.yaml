@@ -336,6 +336,20 @@ suites:
         expected:
           - 翻訳は発火しない
 
+      - id: RT-004
+        title: SPA 遷移で採用ルールが切り替わったら旧ルールが動かない
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 上から順に「/contacts を翻訳のみ」「全 URL を翻訳＆要約」の 2 ルールを同じセレクタで登録済み
+          - Claude または Gemini の API キーを設定済み
+        steps:
+          - 全 URL ルールが発火するページを開き、要約付きで翻訳されるのを確認する
+          - SPA 内のリンクで /contacts に移動する
+        expected:
+          - /contacts では翻訳のみが行われ、要約ブロックは付かない
+          - 元のページに戻ると再び要約付きで翻訳される
+
     known_limitations:
       - "対象要素の中の子孫要素だけが深い階層で入れ替わる場合は、従来どおり直下の子ノード変更のみ検知する"
       - "Shadow DOM 内の要素はセレクタで探せないため対象外"

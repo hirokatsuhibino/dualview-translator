@@ -33,7 +33,7 @@ LLM（Claude / Gemini）による要約機能も搭載。
 │   ├── i18n.test.js       #   i18n テスト（86件）
 │   ├── content-core.test.js #  content-core テスト（20件）
 │   ├── content-page.test.js #  content-page テスト（10件）
-│   ├── content-bar.test.js #   content-bar テスト（42件）
+│   ├── content-bar.test.js #   content-bar テスト（47件）
 │   ├── content-selection.test.js # content-selection テスト（9件）
 │   ├── background.test.js  #  background テスト（18件）
 │   ├── safari-compat.test.js # Safari/iOS互換テスト（8件）

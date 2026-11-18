@@ -244,10 +244,15 @@ var DVT_BAR = (function () {
     // ── 対象要素の差し替え検知 ──
     // 古い要素が DOM から外れていて、セレクタで別の要素が見つかれば張り直す。
     // まだ見つからない（再描画の途中）ならそのまま監視を続ける。
-    function recheckTarget() {
+    async function recheckTarget() {
       if (!isActive() || el.isConnected || !rule.selector) return;
-      // SPA 遷移でルールの URL 条件から外れていたら、別ページを翻訳しないよう監視ごと停止する
-      if (rule.urlPattern && !matchesUrlPattern(location.href, rule.urlPattern)) {
+      // 現在の URL でこのルールがまだ採用されるかを、保存済みルールから再評価する。
+      // SPA 遷移で URL 条件から外れた／より優先度の高いルールに切り替わった／
+      // ルールが削除・無効化された場合は、別ページや別モードで翻訳しないよう監視ごと停止する
+      const latest = await findStillAdoptedRule(rule.id);
+      // 待機中に別の再探索が張り直した・停止した場合はここで終了（二重翻訳防止）
+      if (!isActive() || el.isConnected) return;
+      if (!latest) {
         stopAutoRuleObserver(rule.id);
         return;
       }
@@ -260,10 +265,12 @@ var DVT_BAR = (function () {
       if (!next || next === el) return;
       // 本文がまだ空なら翻訳はせず監視だけ張る（中身が入った時点で子ノード監視が再翻訳する）
       const hasText = (next.textContent || '').trim().length > 0;
-      startAutoRuleObserver(next, rule, { translateNow: hasText });
+      // モード変更などに追従するため、保存済みの最新ルールで張り直す
+      startAutoRuleObserver(next, latest, { translateNow: hasText });
     }
 
-    // body 配下の変更を監視。コールバックは el が接続中なら即 return するので軽量。
+    // document 配下の変更を監視（body 自体の差し替えも拾えるよう document を対象にする）。
+    // コールバックは el が接続中なら即 return するので軽量。
     // デバウンスにすると無関係な DOM 更新が続くページで再探索が延期され続けるため、
     // 予約済みのタイマーは維持するスロットルにする（最初の変更から一定時間後に必ず再探索）
     const watcher = new MutationObserver(() => {
@@ -289,15 +296,50 @@ var DVT_BAR = (function () {
     activeRuleObservers.set(rule.id, entry);
 
     if (rule.selector) {
-      watcher.observe(document.body || document.documentElement, { childList: true, subtree: true });
+      watcher.observe(document, { childList: true, subtree: true });
       document.addEventListener('visibilitychange', onVisibilityChange);
     }
 
     if (options.translateNow) {
       // retranslate が翻訳中の自己変更を無視し、完了後に子ノード監視を開始する
       retranslate();
-    } else {
+    } else if (el.isConnected) {
       observer.observe(el, { childList: true });
+    }
+
+    // 翻訳処理中に対象要素が作り直されていた場合、以後 DOM 更新がないと検知できないため
+    // 監視開始の時点で一度だけ差し替えを確認する
+    if (rule.selector && !el.isConnected) recheckTarget();
+  }
+
+  // ─── 採用ルールの再評価 ──────────────────────────────────────────────
+  // checkAutoRules と同じ優先順（先頭から、URL が一致し、セレクタ要素が存在する最初のルール）で
+  // 現在の URL に採用されるルールを求め、それが ruleId のルールなら最新のルールを返す。
+  // より優先度の高いルールが採用される・URL が一致しない・削除/無効化済みの場合は null。
+  async function findStillAdoptedRule(ruleId) {
+    const data = await new Promise(resolve =>
+      chrome.storage.local.get('autoRules', resolve)
+    );
+    const rules = ((data && data.autoRules) || []).filter(r => r.enabled);
+    const url = location.href;
+    for (const r of rules) {
+      if (!matchesUrlPattern(url, r.urlPattern)) continue;
+      if (r.id === ruleId) return r;
+      // 優先度の高いルールが今のページに適用できるなら、そちらが採用される
+      if (!r.selector) return null;
+      try {
+        if (document.querySelector(r.selector)) return null;
+      } catch (e) {
+        // 不正なセレクタのルールは適用できないので次へ
+      }
+    }
+    return null;
+  }
+
+  // 採用ルール以外の監視をすべて停止する（ruleId が null なら全停止）
+  function stopOtherAutoRuleObservers(ruleId) {
+    for (const id of [...activeRuleObservers.keys()]) {
+      if (id !== ruleId) stopAutoRuleObserver(id);
     }
   }
 
@@ -329,6 +371,9 @@ var DVT_BAR = (function () {
         const el = await waitForElement(rule.selector);
         if (!el) continue; // タイムアウト後も見つからなければスキップ
 
+        // SPA 遷移で採用ルールが変わった場合、旧ルールの監視が残って競合しないよう停止する
+        stopOtherAutoRuleObservers(rule.id);
+
         // 翻訳完了後にコンテンツ変更監視を開始（webメール等の書き換えに対応）
         // Promise.resolve()で同期・非同期どちらの戻り値にも対応
         const fn = rule.mode === 'summarize'
@@ -338,6 +383,7 @@ var DVT_BAR = (function () {
           .then(() => startAutoRuleObserver(el, rule))
           .catch(() => {});
       } else {
+        stopOtherAutoRuleObservers(rule.id);
         // セレクタなしはページ全体翻訳
         if (rule.mode === 'summarize') {
           DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
@@ -347,6 +393,8 @@ var DVT_BAR = (function () {
       }
       return true; // マッチしたルールで処理済み
     }
+    // どのルールも採用されない（SPA 遷移で URL が外れた等）なら旧ルールの監視をすべて停止する
+    stopOtherAutoRuleObservers(null);
     return false; // マッチするルールなし
   }
 
