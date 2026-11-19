@@ -30,6 +30,9 @@ permalink: /RELEASE_NOTES.en.html
   - If a full-width character or similar sneaks into the key field, the browser refuses to send the request and you'd see "Invalid." We now warn you as you type, with the exact position (e.g. position 27: "テ" U+30C6), and quietly strip spaces, full-width spaces, and zero-width characters.
   - Added a show/hide button to the API key fields.
   - The reason a test failed (bad key, disallowed character, missing permission, can't connect, quota hit, rate limited) now stays under the field instead of hiding in a tooltip that vanished after 3 seconds. Translation and summary failures show the same messages.
+- Fixed auto-rules with a selector going quiet after your Mac woke from sleep (or whenever the page rebuilt the target element) until you reloaded the page (#260).
+  - When the target element drops out of the DOM, we now look it up again by selector and re-attach translation and watching.
+  - The same check also runs when you switch back to the tab.
 - Fixed a case where running page translation with DeepL selected but no API key left an in-progress marker (`data-dvt-id="dvt-pending"`) on the target elements, so you couldn't re-translate them even after setting the key (found while working on #256).
 
 ---
