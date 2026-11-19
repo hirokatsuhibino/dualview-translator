@@ -17,6 +17,11 @@ permalink: /RELEASE_NOTES.en.html
   - On macOS 10.14–11 you won't get new updates, but the version you've already got keeps working.
   - Nothing changes for iOS (15.0+) or for Chrome / Firefox.
 
+### Bug Fixes
+
+- Fixed Safari opening a broken tab for a welcome page (welcome.html) that isn't bundled, the first time you installed the extension (#265).
+  - That page walks you through pinning in Chrome / Firefox, so Safari just skips it now. Chrome and Firefox work the same as before.
+
 ---
 
 ## v1.9.0 (2026-11-19)

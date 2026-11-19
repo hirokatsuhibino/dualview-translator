@@ -108,10 +108,16 @@ chrome.runtime.onStartup?.addListener(() => { detectAppleAvailability(); });
 // ツールバーへのピン留めはブラウザ仕様上、開発者側から強制できないため、
 // インストール直後に手順を案内するページを開いてピン留めを誘導する。
 // reason === 'install' のときのみ（update / chrome_update では開かない）。
+// Safari では開かない（#265）: Xcode のリソースに welcome.html を同梱しておらず、
+// 案内内容も Chrome / Firefox 向けのピン留め手順のため。拡張 URL のスキーム
+// （safari-web-extension:）で同期判定する。appleAvailable は ping による非同期判定で
+// onInstalled 時点では未確定のため使わない。
 function openWelcomeOnInstall(details) {
   if (!details || details.reason !== 'install') return;
   if (!chrome.tabs || typeof chrome.tabs.create !== 'function') return;
-  chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+  const url = chrome.runtime.getURL('welcome.html');
+  if (/^safari-web-extension:/i.test(url)) return;
+  chrome.tabs.create({ url });
 }
 chrome.runtime.onInstalled.addListener(openWelcomeOnInstall);
 

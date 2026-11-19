@@ -17,6 +17,11 @@ permalink: /RELEASE_NOTES.html
   - macOS 10.14〜11 では今後の更新が届かないが、インストール済みの版は引き続き使える
   - iOS 版（iOS 15.0 以降）と Chrome / Firefox 版は変更なし
 
+### バグ修正
+
+- Safari で拡張を初めてインストールしたとき、存在しない案内ページ（welcome.html）のタブが開いてエラーになる問題を修正（#265）
+  - 案内ページの内容は Chrome / Firefox 向けのピン留め手順のため、Safari では開かないようにした。Chrome / Firefox は従来どおり
+
 ---
 
 ## v1.9.0（2026-11-19）
