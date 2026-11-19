@@ -77,10 +77,10 @@ xcodebuild -downloadPlatform iOS
 # ランタイム ID を確認（iOS-27-2-iPhone19-4 のように端末名付きの ID が Duo 用）
 xcrun simctl list runtimes | grep iOS
 
-# 端末を作成して起動
-xcrun simctl create "iPhone Duo" com.apple.CoreSimulator.SimDeviceType.iPhone-Duo \
-  com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4
-xcrun simctl boot "iPhone Duo"
+# 端末を作成して起動（create が返す UDID で起動する。同名の端末が複数あると名前指定では一意にならない）
+UDID=$(xcrun simctl create "iPhone Duo" com.apple.CoreSimulator.SimDeviceType.iPhone-Duo \
+  com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4)
+xcrun simctl boot "$UDID"
 ```
 
 確認するのは「閉じた状態（外側の画面）」「半開き」「全開（内側の画面）」の 3 状態。どの状態でも黒帯・はみ出しがなく、開閉の切り替えでその場でレイアウトが変わること（v1.9.0 で確認済み）。
