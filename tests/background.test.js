@@ -422,6 +422,21 @@ describe('openWelcomeOnInstall()（ピン留め誘導・#244）', () => {
     expect(mock.created).toHaveLength(0);
   });
 
+  it('Safari（safari-web-extension: スキーム）では開かない（#265）', () => {
+    const mock = makeChrome();
+    mock.runtime.getURL = (p) => 'safari-web-extension://ABCD-1234/' + p;
+    openWelcomeOnInstall(mock, { reason: 'install' });
+    expect(mock.created).toHaveLength(0);
+  });
+
+  it('Firefox（moz-extension: スキーム）では開く', () => {
+    const mock = makeChrome();
+    mock.runtime.getURL = (p) => 'moz-extension://abcd/' + p;
+    openWelcomeOnInstall(mock, { reason: 'install' });
+    expect(mock.created).toHaveLength(1);
+    expect(mock.created[0].url).toBe('moz-extension://abcd/welcome.html');
+  });
+
   it('chrome.tabs.create が使えない環境では何もしない（例外を投げない）', () => {
     const mock = { tabs: {}, runtime: { getURL: (p) => p } };
     expect(() => openWelcomeOnInstall(mock, { reason: 'install' })).not.toThrow();

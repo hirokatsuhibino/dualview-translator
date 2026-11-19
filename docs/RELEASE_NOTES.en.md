@@ -10,6 +10,11 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Bug Fixes
+
+- Fixed Safari opening a broken tab for a welcome page (welcome.html) that isn't bundled, the first time you installed the extension (#265).
+  - That page walks you through pinning in Chrome / Firefox, so Safari just skips it now. Chrome and Firefox work the same as before.
+
 ---
 
 ## v1.9.0 (2026-11-19)

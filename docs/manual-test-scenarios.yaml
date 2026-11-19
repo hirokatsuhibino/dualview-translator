@@ -2612,6 +2612,21 @@ suites:
           - クリック直後にバナーが消える
           - 再オープン後も表示されない（pinBannerDismissed が永続化され、回数上限に関係なく出ない）
 
+      - id: PO-008
+        title: Safari では初回インストール時にウェルカムページを開かない
+        priority: p0
+        environment: safari-mac / safari-ios
+        description: "Issue #265 の回帰防止。Safari 版は Xcode リソースに welcome.html を同梱しておらず、新規インストール時にファイルが見つからないエラーのタブが開いていた（App Review で新規インストールを試すため審査リスク）"
+        preconditions:
+          - DualView Translator（Safari 版）が未インストール、または Safari の拡張設定から一度削除した状態
+        steps:
+          - Xcode からアプリをビルド・実行（または TestFlight からインストール）する
+          - Safari の設定で拡張を有効にする
+        expected:
+          - welcome.html のタブ（ファイルが見つからないエラー）が開かない
+          - ポップアップは通常どおり開き、翻訳が動作する
+          - "Chrome / Firefox では従来どおり初回インストール時に welcome.html が開く（PO-001）"
+
   - id: disqus-iframe
     title: Disqus iframe 内コメントのページ翻訳
     description: "PR #251 で追加。cross-origin iframe（disqus.com）にも content script を注入し、ページ全体翻訳で Disqus コメントも訳すこと（Issue #250）"
