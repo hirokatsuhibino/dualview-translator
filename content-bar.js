@@ -191,17 +191,30 @@ var DVT_BAR = (function () {
   }
 
   // ─── アクティブなルールObserverの管理 ──────────────────────────────
-  // ruleId → MutationObserver のマップ。削除・無効化時に切断するために保持する。
+  // ruleId → { observer, watcher, cleanup } のマップ。削除・無効化時に切断するために保持する。
   const activeRuleObservers = new Map();
 
   // ─── 要素の再翻訳監視 ────────────────────────────────────────────────
   // 翻訳済み要素のコンテンツが外部から書き換えられたとき（webメール等）に再翻訳する。
   // 翻訳中はObserverを一時切断して自分の変更を無視し、完了後に再接続する。
-  function startAutoRuleObserver(el, rule) {
+  //
+  // あわせて、対象要素そのものがページ側で作り直された場合（スリープ復帰後の再描画など）にも
+  // 追従する（issue #260）。古い要素が DOM から外れたら rule.selector で要素を探し直し、
+  // 見つかった新しい要素に翻訳と監視を張り直す。
+  //
+  // options.translateNow: true のとき、監視開始と同時に el を翻訳する（要素差し替え時に使用）
+  function startAutoRuleObserver(el, rule, options = {}) {
     // 同じルールの既存Observerがあれば先に停止（重複防止）
     stopAutoRuleObserver(rule.id);
 
     let retranslateTimer = null;
+    let recheckTimer = null;
+    const entry = { observer: null, watcher: null, cleanup: null };
+
+    // このエントリがまだ有効か（ルール削除・無効化・要素差し替えで無効になる）
+    function isActive() {
+      return activeRuleObservers.get(rule.id) === entry;
+    }
 
     async function retranslate() {
       // 翻訳中はObserverを停止して自分の変更を無視
@@ -216,7 +229,7 @@ var DVT_BAR = (function () {
         // 再翻訳失敗は無視
       } finally {
         // ルールが削除・無効化されていなければ監視を再開
-        if (activeRuleObservers.has(rule.id) && document.contains(el)) {
+        if (isActive() && el.isConnected) {
           observer.observe(el, { childList: true });
         }
       }
@@ -228,16 +241,120 @@ var DVT_BAR = (function () {
       retranslateTimer = setTimeout(retranslate, RETRANSLATE_DEBOUNCE_MS);
     });
 
-    observer.observe(el, { childList: true });
-    activeRuleObservers.set(rule.id, observer);
+    // ── 対象要素の差し替え検知 ──
+    // 古い要素が DOM から外れていて、セレクタで別の要素が見つかれば張り直す。
+    // まだ見つからない（再描画の途中）ならそのまま監視を続ける。
+    async function recheckTarget() {
+      if (!isActive() || el.isConnected || !rule.selector) return;
+      // 現在の URL でこのルールがまだ採用されるかを、保存済みルールから再評価する。
+      // SPA 遷移で URL 条件から外れた／より優先度の高いルールに切り替わった／
+      // ルールが削除・無効化された場合は、別ページや別モードで翻訳しないよう監視ごと停止する
+      const latest = await findStillAdoptedRule(rule.id);
+      // 待機中に別の再探索が張り直した・停止した場合はここで終了（二重翻訳防止）
+      if (!isActive() || el.isConnected) return;
+      if (!latest) {
+        stopAutoRuleObserver(rule.id);
+        return;
+      }
+      // セレクタを変更しても別タブには再適用メッセージが届かないため、探索も最新ルールのセレクタで行う
+      if (!latest.selector) {
+        // ページ全体翻訳のルールに変わった場合は、この要素監視は不要
+        stopAutoRuleObserver(rule.id);
+        return;
+      }
+      let next = null;
+      try {
+        next = document.querySelector(latest.selector);
+      } catch (e) {
+        return; // 不正なセレクタ
+      }
+      if (!next || next === el) return;
+      // 本文がまだ空なら翻訳はせず監視だけ張る（中身が入った時点で子ノード監視が再翻訳する）
+      const hasText = (next.textContent || '').trim().length > 0;
+      // モード変更などに追従するため、保存済みの最新ルールで張り直す
+      startAutoRuleObserver(next, latest, { translateNow: hasText });
+    }
+
+    // document 配下の変更を監視（body 自体の差し替えも拾えるよう document を対象にする）。
+    // コールバックは el が接続中なら即 return するので軽量。
+    // デバウンスにすると無関係な DOM 更新が続くページで再探索が延期され続けるため、
+    // 予約済みのタイマーは維持するスロットルにする（最初の変更から一定時間後に必ず再探索）
+    const watcher = new MutationObserver(() => {
+      if (el.isConnected || recheckTimer) return;
+      recheckTimer = setTimeout(() => {
+        recheckTimer = null;
+        recheckTarget();
+      }, RETRANSLATE_DEBOUNCE_MS);
+    });
+
+    // タブが再表示されたときにも差し替えをチェック（スリープ復帰直後など）
+    function onVisibilityChange() {
+      if (!document.hidden) recheckTarget();
+    }
+
+    entry.observer = observer;
+    entry.watcher = watcher;
+    entry.cleanup = () => {
+      clearTimeout(retranslateTimer);
+      clearTimeout(recheckTimer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+    activeRuleObservers.set(rule.id, entry);
+
+    if (rule.selector) {
+      watcher.observe(document, { childList: true, subtree: true });
+      document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+
+    if (options.translateNow) {
+      // retranslate が翻訳中の自己変更を無視し、完了後に子ノード監視を開始する
+      retranslate();
+    } else if (el.isConnected) {
+      observer.observe(el, { childList: true });
+    }
+
+    // 翻訳処理中に対象要素が作り直されていた場合、以後 DOM 更新がないと検知できないため
+    // 監視開始の時点で一度だけ差し替えを確認する
+    if (rule.selector && !el.isConnected) recheckTarget();
+  }
+
+  // ─── 採用ルールの再評価 ──────────────────────────────────────────────
+  // checkAutoRules と同じ優先順（先頭から、URL が一致し、セレクタ要素が存在する最初のルール）で
+  // 現在の URL に採用されるルールを求め、それが ruleId のルールなら最新のルールを返す。
+  // より優先度の高いルールが採用される・URL が一致しない・削除/無効化済みの場合は null。
+  async function findStillAdoptedRule(ruleId) {
+    const data = await new Promise(resolve =>
+      chrome.storage.local.get('autoRules', resolve)
+    );
+    const rules = ((data && data.autoRules) || []).filter(r => r.enabled);
+    const url = location.href;
+    for (const r of rules) {
+      if (!matchesUrlPattern(url, r.urlPattern)) continue;
+      if (r.id === ruleId) return r;
+      // 優先度の高いルールが今のページに適用できるなら、そちらが採用される
+      if (!r.selector) return null;
+      try {
+        if (document.querySelector(r.selector)) return null;
+      } catch (e) {
+        // 不正なセレクタのルールは適用できないので次へ
+      }
+    }
+    return null;
+  }
+
+  // 自動ルールの監視をすべて停止する
+  function stopAllAutoRuleObservers() {
+    for (const id of [...activeRuleObservers.keys()]) stopAutoRuleObserver(id);
   }
 
   // ─── 自動ルールObserverの停止 ────────────────────────────────────────
   // ルール削除・無効化時にpopup.jsから呼び出される
   function stopAutoRuleObserver(ruleId) {
-    const observer = activeRuleObservers.get(ruleId);
-    if (observer) {
-      observer.disconnect();
+    const entry = activeRuleObservers.get(ruleId);
+    if (entry) {
+      entry.observer.disconnect();
+      entry.watcher.disconnect();
+      entry.cleanup();
       activeRuleObservers.delete(ruleId);
     }
   }
@@ -258,6 +375,11 @@ var DVT_BAR = (function () {
         const el = await waitForElement(rule.selector);
         if (!el) continue; // タイムアウト後も見つからなければスキップ
 
+        // これから翻訳する前に既存の監視をすべて停止する。
+        // 別ルールの監視が残ると競合し、同じルールの監視が残ると差し替え検知が同じ要素を
+        // 重複して翻訳するため（新しい監視は翻訳完了後に張り直す）
+        stopAllAutoRuleObservers();
+
         // 翻訳完了後にコンテンツ変更監視を開始（webメール等の書き換えに対応）
         // Promise.resolve()で同期・非同期どちらの戻り値にも対応
         const fn = rule.mode === 'summarize'
@@ -267,6 +389,7 @@ var DVT_BAR = (function () {
           .then(() => startAutoRuleObserver(el, rule))
           .catch(() => {});
       } else {
+        stopAllAutoRuleObservers();
         // セレクタなしはページ全体翻訳
         if (rule.mode === 'summarize') {
           DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
@@ -276,6 +399,8 @@ var DVT_BAR = (function () {
       }
       return true; // マッチしたルールで処理済み
     }
+    // どのルールも採用されない（SPA 遷移で URL が外れた等）なら旧ルールの監視をすべて停止する
+    stopAllAutoRuleObservers();
     return false; // マッチするルールなし
   }
 

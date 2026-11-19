@@ -293,6 +293,67 @@ suites:
           - 次の DOM 変更時に要約付きで翻訳される
           - Observer が新モードで動作する
 
+  - id: rule-target-replaced
+    title: 自動翻訳ルールの対象要素差し替えへの追従
+    description: "Issue #260。スリープ復帰後などにページ側が対象要素を作り直すと、自動翻訳が止まりリロードまで直らなかった"
+    scenarios:
+
+      - id: RT-001
+        title: スリープ復帰後も Web メールの本文が自動翻訳される
+        priority: p0
+        environment: firefox
+        description: "過去に存在したバグ: Firefox で xgate のページにセレクタ指定のルールを設定していると、Mac のスリープ復帰後に何も翻訳されなくなり、リロードすると直った"
+        preconditions:
+          - Web メール（xgate 等）のメール本文を指すセレクタ指定の自動翻訳ルールを登録済み
+          - 対象ページを開き、ルールが発火して本文が翻訳されている
+        steps:
+          - Mac をスリープさせ、数分以上おいてから復帰する
+          - 対象ページのタブに戻る（リロードしない）
+          - 別のメールを開く
+        expected:
+          - 復帰後に表示されたメール本文が自動で翻訳される
+          - 別のメールを開いた場合も翻訳される
+          - リロードせずに動作する
+
+      - id: RT-002
+        title: SPA の再描画で対象要素が作り直されても追従する
+        priority: p1
+        environment: chrome
+        preconditions:
+          - セレクタ指定のルールが発火して翻訳済みのページ
+        steps:
+          - DevTools のコンソールで対象要素の親の innerHTML を、同じセレクタにマッチする新しい要素で置き換える
+        expected:
+          - 約 0.5 秒後に新しい要素が翻訳される
+          - コンソールにエラーが出ない
+
+      - id: RT-003
+        title: ルール削除後は差し替えに追従しない
+        priority: p1
+        steps:
+          - ルール発火中のページで、ポップアップからそのルールを削除する
+          - DevTools で対象要素を作り直す
+        expected:
+          - 翻訳は発火しない
+
+      - id: RT-004
+        title: SPA 遷移で採用ルールが切り替わったら旧ルールが動かない
+        priority: p1
+        environment: chrome
+        preconditions:
+          - 上から順に「/contacts を翻訳のみ」「全 URL を翻訳＆要約」の 2 ルールを同じセレクタで登録済み
+          - Claude または Gemini の API キーを設定済み
+        steps:
+          - 全 URL ルールが発火するページを開き、要約付きで翻訳されるのを確認する
+          - SPA 内のリンクで /contacts に移動する
+        expected:
+          - /contacts では翻訳のみが行われ、要約ブロックは付かない
+          - 元のページに戻ると再び要約付きで翻訳される
+
+    known_limitations:
+      - "対象要素の中の子孫要素だけが深い階層で入れ替わる場合は、従来どおり直下の子ノード変更のみ検知する"
+      - "Shadow DOM 内の要素はセレクタで探せないため対象外"
+
   # ━━━━━ 4. 要素ピッカー連携 ━━━━━
   - id: selector-picker
     title: 要素ピッカーとルールフォームの連携
