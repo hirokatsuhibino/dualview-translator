@@ -10,6 +10,10 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.9.0 (2026-11-19)
+
 ### Improvements
 
 - **Whole-page translation now fills in what you're looking at first** (#256)
