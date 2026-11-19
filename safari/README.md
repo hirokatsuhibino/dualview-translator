@@ -11,7 +11,8 @@ macOS / iOS 両プラットフォームで Safari Web Extension として DualVi
 - Safari 16.4 以降（macOS）/ Safari 15 以降（iOS）
 - **Share Extension は最低 OS が異なる**:
   - iOS: 15.0 以降（既存 Safari Extension と同じ）
-  - macOS: **12.0 以降**（SwiftUI + async/await を使うため、既存 Web Extension の 10.14 より新しい）
+  - macOS: **12.0 以降**（SwiftUI + async/await を使うため）
+- **macOS のアプリ本体・Web Extension も 12.0 以降**（#267）。Xcode 27 以降は 12.0 未満のデプロイ対象を受け付けずビルドが失敗するため、v1.9.0 で 10.14 から引き上げた。`tests/safari-compat.test.js` で下限を検証している
 - 実機 iOS 配布には Apple Developer Program（$99/年）が必要。開発中のローカル検証のみなら無料 Apple ID で可
 
 ## ビルド

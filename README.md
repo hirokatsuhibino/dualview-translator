@@ -121,7 +121,7 @@ v1.6 から、Safari 以外のアプリのテキストも共有シート経由�
 | 翻訳ビューの **コピー** | 訳文をクリップボードにコピー（2 秒間「✓ コピー済」表示） |
 | 翻訳ビューの **閉じる** / `Esc`（macOS） | Extension を閉じる |
 
-- 対応 OS: **iOS 15.0+ / macOS 12.0+**（既存の Safari Web Extension は引き続き macOS 10.14+ で動作）
+- 対応 OS: **iOS 15.0+ / macOS 12.0+**（v1.9.0 から Safari Web Extension も macOS 12.0+。それ以前は 10.14+）
 - 翻訳エンジン: **Google Translate**（v1）。要約 / DeepL / Apple 翻訳は v2 以降で順次追加予定
 - 翻訳先言語などの設定は Web 拡張で変更したものを App Group 経由で自動共有（再設定不要）
 - 共有時は受け取ったテキストを GET URL に乗せる仕様だが、`URLSession.ephemeral` + `URLCache` 無効化により**端末内のディスクキャッシュ**にはテキストを残さない（Google 側のサーバーアクセスログや中間プロキシなど経路上のログには記録され得る点はご留意ください）

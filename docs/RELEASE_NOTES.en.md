@@ -10,6 +10,13 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+### Changes
+
+- **The macOS (Safari) version now needs macOS 12.0 or later** (#267)
+  - The latest Xcode can't build for anything older than macOS 12.0, so we've bumped it up from macOS 10.14.
+  - On macOS 10.14–11 you won't get new updates, but the version you've already got keeps working.
+  - Nothing changes for iOS (15.0+) or for Chrome / Firefox.
+
 ---
 
 ## v1.9.0 (2026-11-19)

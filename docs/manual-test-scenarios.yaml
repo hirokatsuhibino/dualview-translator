@@ -3031,3 +3031,35 @@ suites:
           - オフライン時の Apple 翻訳フォールバックが従来どおり動く
     known_limitations:
       - "permissions API が無い環境では権限不足を判定できないため、通信失敗は「通信できませんでした」と表示する"
+
+  # ━━━━━ macOS 版の最小対応 OS 引き上げ（#267） ━━━━━
+  - id: macos-deployment-target
+    title: macOS 版の最小対応 OS（12.0）
+    description: "Issue #267 で追加。Xcode 27 以降が macOS 12.0 未満のデプロイ対象を受け付けずビルドが失敗していたため、App / Web Extension を 10.14 から 12.0 に引き上げた"
+    scenarios:
+      - id: MDT-001
+        title: Xcode で macOS 版をアーカイブできる
+        priority: p0
+        environment: safari-mac
+        description: "過去のバグ: MACOSX_DEPLOYMENT_TARGET = 10.14 のため Xcode 27.2 でビルド・アーカイブが失敗し、Mac App Store に提出できなかった"
+        preconditions:
+          - 最新の Xcode がインストールされている
+        steps:
+          - "スキーム「DualView Translator (macOS)」、実行先「Any Mac」で Product → Archive を実行する"
+        expected:
+          - deployment target のエラーが出ずにアーカイブが完了する
+          - Organizer から App Store Connect へアップロードできる
+      - id: MDT-002
+        title: macOS 12 以降で拡張が動作する
+        priority: p1
+        environment: safari-mac
+        preconditions:
+          - macOS 12.0 以降の Mac（可能なら最小の 12.x でも確認）
+        steps:
+          - アプリをインストールして起動し、Safari の設定で拡張を有効にする
+          - 任意の外国語ページでページ全体翻訳を実行する
+        expected:
+          - 拡張が Safari の設定に表示され、有効化できる
+          - ページ翻訳・選択翻訳・共有シート翻訳が動作する
+        known_limitations:
+          - "macOS 10.14〜11 には v1.9.0 以降の更新が配信されない（インストール済みの版は動作する）"
