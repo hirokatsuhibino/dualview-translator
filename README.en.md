@@ -121,7 +121,7 @@ Starting in v1.6, you can translate text from outside Safari too — just hit th
 | **Copy** in the translation view | Copies the translation to clipboard (shows "✓ Copied" for 2 seconds) |
 | **Close** / `Esc` (macOS) | Dismisses the extension |
 
-- Supported OS: **iOS 15.0+ / macOS 12.0+** (the existing Safari Web Extension still works on macOS 10.14+)
+- Supported OS: **iOS 15.0+ / macOS 12.0+** (as of v1.9.0 the Safari Web Extension needs macOS 12.0+ too; earlier versions ran on 10.14+)
 - Translation engine: **Google Translate** (v1). Summarization, DeepL, and Apple Translation are coming in v2.
 - Settings (target language, etc.) you set in the web extension are shared via App Group automatically — no need to set anything up again
 - The shared text rides on a GET URL, but we use `URLSession.ephemeral` + disabled `URLCache` so it doesn't get cached on your device. (Heads up: it can still appear in Google's server access logs or any proxy logs along the way — that's the nature of GET requests.)

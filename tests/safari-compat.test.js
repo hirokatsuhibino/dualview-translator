@@ -118,3 +118,34 @@ describe('manifest.json Safari 互換', () => {
     expect(manifest.host_permissions).toContain('https://generativelanguage.googleapis.com/*');
   });
 });
+
+// ─── Xcode プロジェクトのデプロイ対象（#267） ────────────────────────
+// Xcode 27 以降は macOS 12.0 未満のデプロイ対象を受け付けず、ビルド・アーカイブが
+// 失敗する。10.14 に戻されると Mac App Store 提出がブロックされるため下限を固定する。
+describe('Xcode プロジェクトのデプロイ対象（#267）', () => {
+  const pbxprojPath = resolve(
+    import.meta.dirname, '..', 'safari', 'DualView Translator',
+    'DualView Translator.xcodeproj', 'project.pbxproj'
+  );
+  const pbxproj = readFileSync(pbxprojPath, 'utf-8');
+
+  // "major.minor" を比較可能な数値に変換する
+  const toNum = (v) => {
+    const [major, minor = '0'] = v.split('.');
+    return Number(major) * 100 + Number(minor);
+  };
+  const collect = (key) =>
+    [...pbxproj.matchAll(new RegExp(`${key} = ([0-9.]+);`, 'g'))].map((m) => m[1]);
+
+  it('macOS の全ターゲット・全構成が 12.0 以上（6 箇所）', () => {
+    const values = collect('MACOSX_DEPLOYMENT_TARGET');
+    expect(values).toHaveLength(6);
+    for (const v of values) expect(toNum(v)).toBeGreaterThanOrEqual(toNum('12.0'));
+  });
+
+  it('iOS の全ターゲット・全構成が 15.0 以上（6 箇所）', () => {
+    const values = collect('IPHONEOS_DEPLOYMENT_TARGET');
+    expect(values).toHaveLength(6);
+    for (const v of values) expect(toNum(v)).toBeGreaterThanOrEqual(toNum('15.0'));
+  });
+});
