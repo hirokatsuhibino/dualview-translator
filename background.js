@@ -425,7 +425,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return fetchTranslation(msg.text, msg.tl, msg.sl || 'auto', config);
     })
       .then(result => sendResponse({ ok: true, result }))
-      .catch(err => sendResponse({ ok: false, error: err.message }));
+      .catch(err => sendResponse(errorResponse(err)));
     return true;
   }
   if (msg.action === 'detectLang') {
@@ -437,7 +437,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'testApiKey') {
     testApiKey(msg.engine, msg.apiKey)
       .then(() => sendResponse({ ok: true }))
-      .catch(err => sendResponse({ ok: false, error: err.message }));
+      .catch(err => sendResponse(errorResponse(err)));
     return true;
   }
   if (msg.action === 'summarize') {
@@ -445,7 +445,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return fetchSummary(msg.text, msg.targetLang, config);
     })
       .then(summary => sendResponse({ ok: true, summary }))
-      .catch(err => sendResponse({ ok: false, error: err.message }));
+      .catch(err => sendResponse(errorResponse(err)));
     return true;
   }
   if (msg.action === 'cacheStats') {
@@ -518,7 +518,7 @@ function loadEngineConfig() {
     chrome.storage.local.get(ENGINE_CONFIG_KEYS, (data) => {
       resolve({
         engine: data.translateEngine || ENGINES.GOOGLE,
-        deeplApiKey: data.deeplApiKey || '',
+        deeplApiKey: normalizeApiKey(data.deeplApiKey),
         appleAvailable: !!data.appleAvailable,
       });
     });
@@ -950,6 +950,97 @@ async function fetchApple(text, tl, sl) {
   });
 }
 
+// ─── APIキーの検証とエラー分類（Issue #262） ─────────────────────────
+// 「APIキーが無効です」としか出ないと、実際にはキーへの全角文字混入や Firefox の
+// host_permissions 未許可が原因でも利用者には区別できない。エラーに code を付けて
+// UI 側（i18n.js の DVT_APIKEY.formatApiError）で原因別の文言を出せるようにする。
+// 注意: normalizeApiKey / findInvalidKeyChar は i18n.js の DVT_APIKEY にも同じ実装がある
+// （Service Worker からは i18n.js を読めないため）。片方を変えたらもう片方も揃えること。
+const API_KEY_STRIP_RE = /[\s\u200B-\u200D\u2060\uFEFF]/g;
+
+function normalizeApiKey(key) {
+  return typeof key === 'string' ? key.replace(API_KEY_STRIP_RE, '') : '';
+}
+
+function findInvalidKeyChar(key) {
+  const chars = Array.from(typeof key === 'string' ? key : '');
+  for (let i = 0; i < chars.length; i++) {
+    const code = chars[i].codePointAt(0);
+    if (code < 0x21 || code > 0x7e) {
+      return { pos: i + 1, char: chars[i], cp: 'U+' + code.toString(16).toUpperCase().padStart(4, '0') };
+    }
+  }
+  return null;
+}
+
+// code 付きのエラーを作る（params は UI 文言のプレースホルダ用）
+function apiError(code, message, params) {
+  const err = new Error(message);
+  err.code = code;
+  if (params) err.params = params;
+  return err;
+}
+
+// 失敗応答に載せるフィールド（code が無ければ従来どおり error のみ）
+function errorResponse(err) {
+  const res = { ok: false, error: err && err.message };
+  if (err && err.code) {
+    res.errorCode = err.code;
+    if (err.params) res.errorParams = err.params;
+  }
+  return res;
+}
+
+// 指定オリジンへの host 権限があるか。判定できない環境では「ある」とみなし、誤った案内を避ける
+// Firefox の chrome.* 互換 API はコールバック式で Promise を返さないことがあるため、
+// browser.* があればそれを使い、無ければコールバックを Promise 化する（i18n.js の callPermissions と同じ方針）
+async function hasHostPermission(origin) {
+  try {
+    const b = typeof browser !== 'undefined' ? browser : null;
+    if (b && b.permissions && typeof b.permissions.contains === 'function') {
+      return (await b.permissions.contains({ origins: [origin] })) !== false;
+    }
+    const c = typeof chrome !== 'undefined' ? chrome : null;
+    if (!c || !c.permissions || typeof c.permissions.contains !== 'function') return true;
+    const granted = await new Promise((resolve, reject) => {
+      const ret = c.permissions.contains({ origins: [origin] }, (value) => {
+        const err = c.runtime && c.runtime.lastError;
+        if (err) reject(new Error(err.message || String(err)));
+        else resolve(value);
+      });
+      if (ret && typeof ret.then === 'function') ret.then(resolve, reject);
+    });
+    // 判定できない値（undefined 等）は「権限あり」とみなし、誤った案内を避ける
+    return granted !== false;
+  } catch (e) {
+    return true;
+  }
+}
+
+// 有料/キー必須 API への fetch。送信前にキーの文字を検査し、通信失敗時は原因を分類する。
+// network error は Apple フォールバック判定（isNetworkError）を壊さないよう、
+// 元の TypeError に code を付けてそのまま投げ直す。
+async function fetchApi(origin, apiKey, url, init) {
+  const bad = findInvalidKeyChar(apiKey);
+  if (bad) {
+    throw apiError('invalidChars', `APIキーに使用できない文字が含まれています（${bad.pos}文字目: 「${bad.char}」${bad.cp}）`, bad);
+  }
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (isNetworkError(err)) {
+      const host = origin.replace(/^https:\/\//, '').replace(/\/\*$/, '');
+      if (!(await hasHostPermission(origin))) {
+        err.code = 'noPermission';
+        err.params = { host };
+      } else {
+        err.code = 'network';
+      }
+    }
+    throw err;
+  }
+}
+
 // ─── DeepL API ───────────────────────────────────────────────────────
 // DualView言語コード → DeepL言語コード変換
 const DEEPL_LANG_MAP = {
@@ -969,6 +1060,18 @@ function getDeepLEndpoint(apiKey) {
     : 'https://api.deepl.com/v2/translate';
 }
 
+function getDeepLOrigin(apiKey) {
+  return new URL(getDeepLEndpoint(apiKey)).origin + '/*';
+}
+
+// DeepL の HTTP エラーを分類（403: キー無効 / 456: 文字数上限 / 429: レート制限）
+function deepLHttpError(status, prefix) {
+  if (status === 403) return apiError('invalidKey', `${prefix}APIキーが無効です`);
+  if (status === 456) return apiError('quota', `${prefix}翻訳上限に達しました`);
+  if (status === 429) return apiError('rateLimit', `${prefix}レート制限に達しました`);
+  return new Error(`${prefix}HTTP ${status}`);
+}
+
 // 実 API 呼び出し（1 チャンク分）
 async function fetchDeepLChunk(chunk, sl, tl, apiKey) {
   const endpoint = getDeepLEndpoint(apiKey);
@@ -981,7 +1084,7 @@ async function fetchDeepLChunk(chunk, sl, tl, apiKey) {
     body.source_lang = toDeepLLang(sl);
   }
 
-  const res = await fetch(endpoint, {
+  const res = await fetchApi(getDeepLOrigin(apiKey), apiKey, endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `DeepL-Auth-Key ${apiKey}`,
@@ -990,12 +1093,7 @@ async function fetchDeepLChunk(chunk, sl, tl, apiKey) {
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const status = res.status;
-    if (status === 403) throw new Error('DeepL: APIキーが無効です');
-    if (status === 456) throw new Error('DeepL: 翻訳上限に達しました');
-    throw new Error(`DeepL HTTP ${status}`);
-  }
+  if (!res.ok) throw deepLHttpError(res.status, 'DeepL: ');
 
   const data = await res.json();
   if (data.translations && data.translations.length > 0) {
@@ -1023,8 +1121,8 @@ function getLLMConfig() {
     chrome.storage.local.get(['llmEngine', 'claudeApiKey', 'geminiApiKey'], (data) => {
       resolve({
         engine: data.llmEngine || 'claude',
-        claudeApiKey: data.claudeApiKey || '',
-        geminiApiKey: data.geminiApiKey || '',
+        claudeApiKey: normalizeApiKey(data.claudeApiKey),
+        geminiApiKey: normalizeApiKey(data.geminiApiKey),
       });
     });
   });
@@ -1074,9 +1172,21 @@ async function fetchSummary(text, targetLang, config) {
   return summary;
 }
 
+const CLAUDE_ORIGIN = 'https://api.anthropic.com/*';
+const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com/*';
+
+// Gemini のエラー応答がキー無効（API_KEY_INVALID）か。
+// 400 には地域・課金条件（FAILED_PRECONDITION）等も含まれるため、ステータスだけで判定しない
+function isGeminiKeyInvalid(errJson) {
+  const e = errJson && errJson.error;
+  if (!e) return false;
+  if (Array.isArray(e.details) && e.details.some(d => d && d.reason === 'API_KEY_INVALID')) return true;
+  return /API key not valid/i.test(e.message || '');
+}
+
 // ─── Claude API 要約 ─────────────────────────────────────────────────
 async function fetchClaudeSummary(text, targetLang, apiKey) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetchApi(CLAUDE_ORIGIN, apiKey, 'https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'x-api-key': apiKey,
@@ -1098,8 +1208,8 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
     let detail = '';
     try { const err = await res.json(); detail = err.error?.message || JSON.stringify(err); } catch(e) {}
     const status = res.status;
-    if (status === 401) throw new Error('Claude: APIキーが無効です');
-    if (status === 429) throw new Error('Claude: レート制限に達しました');
+    if (status === 401) throw apiError('invalidKey', 'Claude: APIキーが無効です');
+    if (status === 429) throw apiError('rateLimit', 'Claude: レート制限に達しました');
     throw new Error(`Claude HTTP ${status}: ${detail}`);
   }
 
@@ -1110,7 +1220,7 @@ async function fetchClaudeSummary(text, targetLang, apiKey) {
 // ─── Gemini API 要約 ─────────────────────────────────────────────────
 async function fetchGeminiSummary(text, targetLang, apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
+  const res = await fetchApi(GEMINI_ORIGIN, apiKey, url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1123,11 +1233,12 @@ async function fetchGeminiSummary(text, targetLang, apiKey) {
   });
 
   if (!res.ok) {
-    let detail = '';
-    try { const err = await res.json(); detail = err.error?.message || JSON.stringify(err); } catch(e) {}
+    let errJson = null;
+    try { errJson = await res.json(); } catch(e) {}
+    const detail = errJson ? (errJson.error?.message || JSON.stringify(errJson)) : '';
     const status = res.status;
-    if (status === 400) throw new Error(`Gemini: APIキーが無効です: ${detail}`);
-    if (status === 429) throw new Error('Gemini: レート制限に達しました');
+    if (isGeminiKeyInvalid(errJson)) throw apiError('invalidKey', `Gemini: APIキーが無効です: ${detail}`);
+    if (status === 429) throw apiError('rateLimit', 'Gemini: レート制限に達しました');
     throw new Error(`Gemini HTTP ${status}: ${detail}`);
   }
 
@@ -1136,12 +1247,14 @@ async function fetchGeminiSummary(text, targetLang, apiKey) {
 }
 
 // ─── APIキー検証 ────────────────────────────────────────────────────
-async function testApiKey(engine, apiKey) {
+async function testApiKey(engine, rawKey) {
+  // 前後空白・ゼロ幅文字は保存時と同じく除去してから検証する
+  const apiKey = normalizeApiKey(rawKey);
   if (!apiKey) throw new Error('APIキーが入力されていません');
 
   if (engine === 'deepl') {
     const endpoint = getDeepLEndpoint(apiKey);
-    const res = await fetch(endpoint, {
+    const res = await fetchApi(getDeepLOrigin(apiKey), apiKey, endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `DeepL-Auth-Key ${apiKey}`,
@@ -1149,15 +1262,12 @@ async function testApiKey(engine, apiKey) {
       },
       body: JSON.stringify({ text: ['test'], target_lang: 'JA' }),
     });
-    if (!res.ok) {
-      if (res.status === 403) throw new Error('APIキーが無効です');
-      throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw deepLHttpError(res.status, '');
     return;
   }
 
   if (engine === 'claude') {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetchApi(CLAUDE_ORIGIN, apiKey, 'https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -1172,7 +1282,7 @@ async function testApiKey(engine, apiKey) {
       }),
     });
     if (!res.ok) {
-      if (res.status === 401) throw new Error('APIキーが無効です');
+      if (res.status === 401) throw apiError('invalidKey', 'APIキーが無効です');
       if (res.status === 429) return; // レート制限はキー有効とみなす
       if (res.status === 400) {
         // レスポンスボディでモデル不明エラーを判別（それ以外の400は認証とは無関係なのでキー有効扱い）
@@ -1198,7 +1308,7 @@ async function testApiKey(engine, apiKey) {
 
   if (engine === 'gemini') {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
+    const res = await fetchApi(GEMINI_ORIGIN, apiKey, url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1206,8 +1316,13 @@ async function testApiKey(engine, apiKey) {
       }),
     });
     if (!res.ok) {
-      if (res.status === 400) throw new Error('APIキーが無効です');
-      throw new Error(`HTTP ${res.status}`);
+      let errJson = null;
+      try { errJson = await res.json(); } catch(e) {}
+      if (isGeminiKeyInvalid(errJson)) throw apiError('invalidKey', 'APIキーが無効です');
+      if (res.status === 429) throw apiError('rateLimit', 'レート制限に達しました');
+      // 地域・課金条件など、キー以外の理由はメッセージをそのまま見せる
+      const detail = errJson?.error?.message || '';
+      throw new Error(detail ? `HTTP ${res.status}: ${detail}` : `HTTP ${res.status}`);
     }
     return;
   }

@@ -1010,7 +1010,7 @@ var DVT_PAGE = (function () {
         }, (res) => {
           if (chrome.runtime.lastError) { reject(new Error(t('error'))); return; }
           if (res?.ok) resolve(res.summary);
-          else reject(new Error(res?.error || t('translateFailed')));
+          else reject(new Error(DVT_APIKEY.formatApiError(res) || t('translateFailed')));
         });
       });
 

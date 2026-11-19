@@ -75,6 +75,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: '検証中...',
       apiKeyValid: '✓ 有効',
       apiKeyInvalid: '✗ 無効',
+      apiErrInvalidKey: 'APIキーが無効です',
+      apiErrInvalidChars: 'APIキーに使用できない文字が含まれています（{pos}文字目: 「{char}」{cp}）。キーを貼り直してください',
+      apiErrNoPermission: '{host} へのアクセスが許可されていません。ポップアップの「設定」タブで「アクセスを許可」を押すか、拡張機能の管理画面の「権限」でオンにしてください',
+      apiKeyGrant: 'アクセスを許可',
+      apiErrNetwork: '通信できませんでした。ネットワーク接続を確認してください',
+      apiErrQuota: '翻訳文字数の上限に達しました',
+      apiErrRateLimit: 'レート制限に達しました。しばらく待ってから再試行してください',
+      apiKeyShow: 'APIキーを表示',
+      apiKeyHide: 'APIキーを隠す',
       shortcutInfo: '<strong>ショートカット：</strong>Ctrl+Shift+T（ページ翻訳）/ Ctrl+Shift+Y（選択翻訳）/ Ctrl+Shift+R（領域選択）',
       // 要約エンジン設定
       llmLabel: '要約エンジン',
@@ -204,6 +213,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'Testing...',
       apiKeyValid: '✓ Valid',
       apiKeyInvalid: '✗ Invalid',
+      apiErrInvalidKey: 'The API key is invalid',
+      apiErrInvalidChars: 'The API key contains a character that isn\'t allowed (position {pos}: "{char}" {cp}). Try pasting the key again',
+      apiErrNoPermission: 'Access to {host} isn\'t allowed. Hit "Allow access" on the popup\'s Settings tab, or turn it on under Permissions in the add-on settings',
+      apiKeyGrant: 'Allow access',
+      apiErrNetwork: 'Couldn\'t connect. Check your network connection',
+      apiErrQuota: 'You\'ve hit the translation character limit',
+      apiErrRateLimit: 'Rate limit reached. Wait a bit and try again',
+      apiKeyShow: 'Show API key',
+      apiKeyHide: 'Hide API key',
       shortcutInfo: '<strong>Shortcuts:</strong> Ctrl+Shift+T (page) / Ctrl+Shift+Y (selection) / Ctrl+Shift+R (region)',
       llmLabel: 'Summary Engine',
       llmClaude: 'Claude (API key required)',
@@ -331,6 +349,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: '验证中...',
       apiKeyValid: '✓ 有效',
       apiKeyInvalid: '✗ 无效',
+      apiErrInvalidKey: 'API密钥无效',
+      apiErrInvalidChars: 'API密钥包含不允许的字符（第{pos}个字符：“{char}” {cp}）。请重新粘贴密钥',
+      apiErrNoPermission: '未允许访问 {host}。请在弹出窗口的“设置”标签中点击“允许访问”，或在扩展管理页面的“权限”中开启',
+      apiKeyGrant: '允许访问',
+      apiErrNetwork: '无法连接。请检查网络连接',
+      apiErrQuota: '已达到翻译字符数上限',
+      apiErrRateLimit: '已达到速率限制，请稍后重试',
+      apiKeyShow: '显示API密钥',
+      apiKeyHide: '隐藏API密钥',
       shortcutInfo: '<strong>快捷键：</strong>Ctrl+Shift+T（页面翻译）/ Ctrl+Shift+Y（选择翻译）/ Ctrl+Shift+R（区域选择）',
       llmLabel: '摘要引擎', llmClaude: 'Claude（需要API密钥）', llmGemini: 'Gemini（需要API密钥）',
       claudeApiKeyLabel: 'Claude API密钥', claudeApiKeyPlaceholder: '输入Claude API密钥',
@@ -453,6 +480,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: '驗證中...',
       apiKeyValid: '✓ 有效',
       apiKeyInvalid: '✗ 無效',
+      apiErrInvalidKey: 'API金鑰無效',
+      apiErrInvalidChars: 'API金鑰包含不允許的字元（第{pos}個字元：「{char}」{cp}）。請重新貼上金鑰',
+      apiErrNoPermission: '未允許存取 {host}。請在彈出視窗的「設定」分頁點擊「允許存取」，或在擴充功能管理頁面的「權限」中開啟',
+      apiKeyGrant: '允許存取',
+      apiErrNetwork: '無法連線。請檢查網路連線',
+      apiErrQuota: '已達到翻譯字數上限',
+      apiErrRateLimit: '已達到速率限制，請稍後再試',
+      apiKeyShow: '顯示API金鑰',
+      apiKeyHide: '隱藏API金鑰',
       shortcutInfo: '<strong>快捷鍵：</strong>Ctrl+Shift+T（頁面翻譯）/ Ctrl+Shift+Y（選擇翻譯）/ Ctrl+Shift+R（區域選擇）',
       llmLabel: '摘要引擎', llmClaude: 'Claude（需要API金鑰）', llmGemini: 'Gemini（需要API金鑰）',
       claudeApiKeyLabel: 'Claude API金鑰', claudeApiKeyPlaceholder: '輸入Claude API金鑰',
@@ -575,6 +611,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: '검증 중...',
       apiKeyValid: '✓ 유효',
       apiKeyInvalid: '✗ 무효',
+      apiErrInvalidKey: 'API 키가 유효하지 않습니다',
+      apiErrInvalidChars: 'API 키에 사용할 수 없는 문자가 포함되어 있습니다({pos}번째 문자: "{char}" {cp}). 키를 다시 붙여넣어 주세요',
+      apiErrNoPermission: '{host} 접근이 허용되지 않았습니다. 팝업의 "설정" 탭에서 "접근 허용"을 누르거나 확장 프로그램 관리 화면의 "권한"에서 켜 주세요',
+      apiKeyGrant: '접근 허용',
+      apiErrNetwork: '연결할 수 없습니다. 네트워크 연결을 확인해 주세요',
+      apiErrQuota: '번역 글자 수 한도에 도달했습니다',
+      apiErrRateLimit: '요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요',
+      apiKeyShow: 'API 키 표시',
+      apiKeyHide: 'API 키 숨기기',
       shortcutInfo: '<strong>단축키:</strong> Ctrl+Shift+T (페이지 번역) / Ctrl+Shift+Y (선택 번역) / Ctrl+Shift+R (영역 선택)',
       llmLabel: '요약 엔진', llmClaude: 'Claude (API 키 필요)', llmGemini: 'Gemini (API 키 필요)',
       claudeApiKeyLabel: 'Claude API 키', claudeApiKeyPlaceholder: 'Claude API 키 입력',
@@ -697,6 +742,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'Vérification...',
       apiKeyValid: '✓ Valide',
       apiKeyInvalid: '✗ Invalide',
+      apiErrInvalidKey: 'La clé API est invalide',
+      apiErrInvalidChars: 'La clé API contient un caractère non autorisé (position {pos} : « {char} » {cp}). Collez à nouveau la clé',
+      apiErrNoPermission: 'L\'accès à {host} n\'est pas autorisé. Cliquez sur « Autoriser l\'accès » dans l\'onglet Paramètres de la fenêtre, ou activez-le dans Permissions des paramètres de l\'extension',
+      apiKeyGrant: 'Autoriser l\'accès',
+      apiErrNetwork: 'Connexion impossible. Vérifiez votre connexion réseau',
+      apiErrQuota: 'Limite de caractères de traduction atteinte',
+      apiErrRateLimit: 'Limite de requêtes atteinte. Réessayez dans un instant',
+      apiKeyShow: 'Afficher la clé API',
+      apiKeyHide: 'Masquer la clé API',
       shortcutInfo: '<strong>Raccourcis :</strong> Ctrl+Shift+T (page) / Ctrl+Shift+Y (sélection) / Ctrl+Shift+R (région)',
       llmLabel: 'Moteur de résumé', llmClaude: 'Claude (clé API requise)', llmGemini: 'Gemini (clé API requise)',
       claudeApiKeyLabel: 'Clé API Claude', claudeApiKeyPlaceholder: 'Entrez la clé API Claude',
@@ -819,6 +873,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'Überprüfung...',
       apiKeyValid: '✓ Gültig',
       apiKeyInvalid: '✗ Ungültig',
+      apiErrInvalidKey: 'Der API-Schlüssel ist ungültig',
+      apiErrInvalidChars: 'Der API-Schlüssel enthält ein unzulässiges Zeichen (Position {pos}: „{char}“ {cp}). Füge den Schlüssel erneut ein',
+      apiErrNoPermission: 'Zugriff auf {host} ist nicht erlaubt. Klicke im Popup-Tab „Einstellungen“ auf „Zugriff erlauben“ oder aktiviere ihn unter Berechtigungen in den Erweiterungseinstellungen',
+      apiKeyGrant: 'Zugriff erlauben',
+      apiErrNetwork: 'Keine Verbindung möglich. Prüfe deine Netzwerkverbindung',
+      apiErrQuota: 'Das Zeichenlimit für Übersetzungen ist erreicht',
+      apiErrRateLimit: 'Anfragelimit erreicht. Versuche es gleich noch einmal',
+      apiKeyShow: 'API-Schlüssel anzeigen',
+      apiKeyHide: 'API-Schlüssel ausblenden',
       shortcutInfo: '<strong>Tastenkürzel:</strong> Ctrl+Shift+T (Seite) / Ctrl+Shift+Y (Auswahl) / Ctrl+Shift+R (Bereich)',
       llmLabel: 'Zusammenfassungs-Engine', llmClaude: 'Claude (API-Schlüssel erforderlich)', llmGemini: 'Gemini (API-Schlüssel erforderlich)',
       claudeApiKeyLabel: 'Claude API-Schlüssel', claudeApiKeyPlaceholder: 'Claude API-Schlüssel eingeben',
@@ -941,6 +1004,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'Verificando...',
       apiKeyValid: '✓ Válida',
       apiKeyInvalid: '✗ Inválida',
+      apiErrInvalidKey: 'La clave API no es válida',
+      apiErrInvalidChars: 'La clave API contiene un carácter no permitido (posición {pos}: «{char}» {cp}). Vuelve a pegar la clave',
+      apiErrNoPermission: 'No se permite el acceso a {host}. Pulsa «Permitir acceso» en la pestaña Configuración de la ventana emergente o actívalo en Permisos de la configuración de la extensión',
+      apiKeyGrant: 'Permitir acceso',
+      apiErrNetwork: 'No se pudo conectar. Revisa tu conexión de red',
+      apiErrQuota: 'Se alcanzó el límite de caracteres de traducción',
+      apiErrRateLimit: 'Se alcanzó el límite de solicitudes. Espera un momento y vuelve a intentarlo',
+      apiKeyShow: 'Mostrar clave API',
+      apiKeyHide: 'Ocultar clave API',
       shortcutInfo: '<strong>Atajos:</strong> Ctrl+Shift+T (página) / Ctrl+Shift+Y (selección) / Ctrl+Shift+R (región)',
       llmLabel: 'Motor de resumen', llmClaude: 'Claude (clave API requerida)', llmGemini: 'Gemini (clave API requerida)',
       claudeApiKeyLabel: 'Clave API Claude', claudeApiKeyPlaceholder: 'Ingrese la clave API Claude',
@@ -1063,6 +1135,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'Verificando...',
       apiKeyValid: '✓ Válida',
       apiKeyInvalid: '✗ Inválida',
+      apiErrInvalidKey: 'A chave de API é inválida',
+      apiErrInvalidChars: 'A chave de API contém um caractere não permitido (posição {pos}: "{char}" {cp}). Cole a chave novamente',
+      apiErrNoPermission: 'O acesso a {host} não está permitido. Toque em "Permitir acesso" na aba Configurações do pop-up ou ative em Permissões nas configurações da extensão',
+      apiKeyGrant: 'Permitir acesso',
+      apiErrNetwork: 'Não foi possível conectar. Verifique sua conexão de rede',
+      apiErrQuota: 'O limite de caracteres de tradução foi atingido',
+      apiErrRateLimit: 'Limite de requisições atingido. Aguarde um pouco e tente novamente',
+      apiKeyShow: 'Mostrar chave de API',
+      apiKeyHide: 'Ocultar chave de API',
       shortcutInfo: '<strong>Atalhos:</strong> Ctrl+Shift+T (página) / Ctrl+Shift+Y (seleção) / Ctrl+Shift+R (região)',
       llmLabel: 'Motor de resumo', llmClaude: 'Claude (chave API necessária)', llmGemini: 'Gemini (chave API necessária)',
       claudeApiKeyLabel: 'Chave API Claude', claudeApiKeyPlaceholder: 'Insira a chave API Claude',
@@ -1185,6 +1266,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'Проверка...',
       apiKeyValid: '✓ Действителен',
       apiKeyInvalid: '✗ Недействителен',
+      apiErrInvalidKey: 'API-ключ недействителен',
+      apiErrInvalidChars: 'API-ключ содержит недопустимый символ (позиция {pos}: «{char}» {cp}). Вставьте ключ заново',
+      apiErrNoPermission: 'Доступ к {host} не разрешён. Нажмите «Разрешить доступ» на вкладке «Настройки» во всплывающем окне или включите его в разделе «Разрешения» настроек расширения',
+      apiKeyGrant: 'Разрешить доступ',
+      apiErrNetwork: 'Не удалось подключиться. Проверьте сетевое подключение',
+      apiErrQuota: 'Достигнут лимит символов перевода',
+      apiErrRateLimit: 'Достигнут лимит запросов. Подождите и повторите попытку',
+      apiKeyShow: 'Показать API-ключ',
+      apiKeyHide: 'Скрыть API-ключ',
       shortcutInfo: '<strong>Горячие клавиши:</strong> Ctrl+Shift+T (страница) / Ctrl+Shift+Y (выделение) / Ctrl+Shift+R (область)',
       llmLabel: 'Движок резюме', llmClaude: 'Claude (требуется API-ключ)', llmGemini: 'Gemini (требуется API-ключ)',
       claudeApiKeyLabel: 'API-ключ Claude', claudeApiKeyPlaceholder: 'Введите API-ключ Claude',
@@ -1307,6 +1397,15 @@ var DVT_I18N = (function () {
       apiKeyTesting: 'جارٍ التحقق...',
       apiKeyValid: '✓ صالح',
       apiKeyInvalid: '✗ غير صالح',
+      apiErrInvalidKey: 'مفتاح API غير صالح',
+      apiErrInvalidChars: 'يحتوي مفتاح API على حرف غير مسموح به (الموضع {pos}: "{char}" {cp}). الصق المفتاح مرة أخرى',
+      apiErrNoPermission: 'الوصول إلى {host} غير مسموح. اضغط "السماح بالوصول" في تبويب الإعدادات بالنافذة المنبثقة، أو فعّله من الأذونات في إعدادات الإضافة',
+      apiKeyGrant: 'السماح بالوصول',
+      apiErrNetwork: 'تعذّر الاتصال. تحقق من اتصال الشبكة',
+      apiErrQuota: 'تم بلوغ حد أحرف الترجمة',
+      apiErrRateLimit: 'تم بلوغ حد الطلبات. انتظر قليلًا ثم أعد المحاولة',
+      apiKeyShow: 'إظهار مفتاح API',
+      apiKeyHide: 'إخفاء مفتاح API',
       shortcutInfo: '<strong>اختصارات:</strong> Ctrl+Shift+T (الصفحة) / Ctrl+Shift+Y (التحديد) / Ctrl+Shift+R (المنطقة)',
       llmLabel: 'محرك التلخيص', llmClaude: 'Claude (مفتاح API مطلوب)', llmGemini: 'Gemini (مفتاح API مطلوب)',
       claudeApiKeyLabel: 'مفتاح API لـ Claude', claudeApiKeyPlaceholder: 'أدخل مفتاح API لـ Claude',
@@ -1491,3 +1590,84 @@ var DVT_I18N = (function () {
 // content.js / popup.js から簡単にアクセスするためのショートカット
 // eslint-disable-next-line no-unused-vars
 var t = DVT_I18N.t;
+
+// ─── APIキーの正規化・検証・エラー文言（Issue #262） ─────────────────
+// popup.js（入力・テスト）と content script（翻訳/要約エラー表示）の両方で使うため、
+// 両方に読み込まれている i18n.js に置く。
+// 注意: normalizeApiKey / findInvalidKeyChar は background.js にも同じ実装がある
+// （Service Worker からは i18n.js を読めないため）。片方を変えたらもう片方も揃えること。
+// tests/api-key-diagnostics.test.js で両者の結果が一致することを検証している。
+// eslint-disable-next-line no-var
+var DVT_APIKEY = (() => {
+  // 空白（全角スペース・BOM を含む）とゼロ幅文字はキーに含まれ得ないので全位置から除去する
+  const STRIP_RE = /[\s\u200B-\u200D\u2060\uFEFF]/g;
+
+  function normalizeApiKey(key) {
+    return typeof key === 'string' ? key.replace(STRIP_RE, '') : '';
+  }
+
+  // HTTP ヘッダー / URL に入れられない文字（印字可能 ASCII 以外）を探す。
+  // 見つかれば { pos: 1始まりの位置, char, cp: 'U+XXXX' }、なければ null
+  function findInvalidKeyChar(key) {
+    const chars = Array.from(typeof key === 'string' ? key : '');
+    for (let i = 0; i < chars.length; i++) {
+      const code = chars[i].codePointAt(0);
+      if (code < 0x21 || code > 0x7e) {
+        return { pos: i + 1, char: chars[i], cp: 'U+' + code.toString(16).toUpperCase().padStart(4, '0') };
+      }
+    }
+    return null;
+  }
+
+  // エンジンごとの API オリジン（host_permissions の権限確認・要求に使う）
+  function originFor(engine, apiKey) {
+    if (engine === 'deepl') {
+      return normalizeApiKey(apiKey).endsWith(':fx') ? 'https://api-free.deepl.com/*' : 'https://api.deepl.com/*';
+    }
+    if (engine === 'claude') return 'https://api.anthropic.com/*';
+    if (engine === 'gemini') return 'https://generativelanguage.googleapis.com/*';
+    return null;
+  }
+
+  const CODE_TO_KEY = {
+    invalidKey: 'apiErrInvalidKey',
+    invalidChars: 'apiErrInvalidChars',
+    noPermission: 'apiErrNoPermission',
+    network: 'apiErrNetwork',
+    quota: 'apiErrQuota',
+    rateLimit: 'apiErrRateLimit',
+  };
+
+  // background からの失敗応答 { error, errorCode, errorParams } を UI 言語の文言にする。
+  // errorCode が無い・未知のときは background の生メッセージをそのまま返す
+  function formatApiError(res) {
+    const key = res && CODE_TO_KEY[res.errorCode];
+    if (key) return DVT_I18N.t(key, res.errorParams || {});
+    return (res && res.error) || '';
+  }
+
+  // permissions.request / contains を Promise で呼ぶ。
+  // Firefox の chrome.* 互換 API はコールバック式で Promise を返さないことがあるため、
+  // browser.* があればそれを使い、無ければコールバックを Promise 化する（戻り値が thenable ならそれも待つ）。
+  // ※ request はユーザー操作の同期区間内で呼ぶ必要があるので、この関数内でも await を挟まずに呼び出している
+  function callPermissions(method, details) {
+    const b = typeof browser !== 'undefined' ? browser : null;
+    if (b && b.permissions && typeof b.permissions[method] === 'function') {
+      return Promise.resolve(b.permissions[method](details));
+    }
+    const c = typeof chrome !== 'undefined' ? chrome : null;
+    if (!c || !c.permissions || typeof c.permissions[method] !== 'function') {
+      return Promise.reject(new Error('permissions API unavailable'));
+    }
+    return new Promise((resolve, reject) => {
+      const ret = c.permissions[method](details, (value) => {
+        const err = c.runtime && c.runtime.lastError;
+        if (err) reject(new Error(err.message || String(err)));
+        else resolve(value);
+      });
+      if (ret && typeof ret.then === 'function') ret.then(resolve, reject);
+    });
+  }
+
+  return { normalizeApiKey, findInvalidKeyChar, originFor, formatApiError, callPermissions };
+})();

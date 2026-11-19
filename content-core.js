@@ -59,8 +59,10 @@ var DVT = (function () {
           }
           resolve(res.result);
         } else {
-          // res.error にネイティブハンドラや background.js からのエラー詳細が含まれる場合は表示する
-          const detail = res?.error ? ` — ${res.error}` : '';
+          // res.error にネイティブハンドラや background.js からのエラー詳細が含まれる場合は表示する。
+          // errorCode 付き（キー無効・権限不足など。Issue #262）は UI 言語の文言に置き換える
+          const message = DVT_APIKEY.formatApiError(res);
+          const detail = message ? ` — ${message}` : '';
           resolve({ text: t('translateFailed') + detail, detectedLang: null });
         }
       });
