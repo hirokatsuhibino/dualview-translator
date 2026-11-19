@@ -66,6 +66,38 @@ iOS Safari は以下の Web Extension API を提供しません。拡張は自�
 
 ページ翻訳・選択翻訳・領域選択翻訳・設定はすべてポップアップから操作できます。
 
+## iPhone Duo（折りたたみ iPhone）で動作確認する
+
+iPhone Duo のシミュレータは、iOS 27 以降の **iPhone Duo 専用ランタイム** でしか作れない（通常の iOS 27 ランタイムや iOS 26 では `Incompatible device` で失敗する）。
+
+```bash
+# iOS シミュレータのランタイムをダウンロード（数 GB。iPhone Duo 用ランタイムも同時に入る）
+xcodebuild -downloadPlatform iOS
+
+# ランタイム ID を確認（iOS-27-2-iPhone19-4 のように端末名付きの ID が Duo 用）
+xcrun simctl list runtimes | grep iOS
+
+# 端末を作成して起動
+xcrun simctl create "iPhone Duo" com.apple.CoreSimulator.SimDeviceType.iPhone-Duo \
+  com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4
+xcrun simctl boot "iPhone Duo"
+```
+
+確認するのは「閉じた状態（外側の画面）」「半開き」「全開（内側の画面）」の 3 状態。どの状態でも黒帯・はみ出しがなく、開閉の切り替えでその場でレイアウトが変わること（v1.9.0 で確認済み）。
+
+## Claude Code 用の Xcode スキル
+
+Xcode には Claude Code などのエージェント向けスキル（iPhone Duo / 画面サイズ変更への対応を見る `app-resizability`、シミュレータを操作する `device-interaction`、`swiftui-specialist` など）が付属している。次のコマンドで書き出すと、以降に始める Claude Code のセッションで使えるようになる。
+
+```bash
+xcrun agent skills export --output-dir ~/.claude/skills
+```
+
+- 実行すると Xcode が起動し、そのまま開いた状態になる
+- 書き出し先の `~/.claude/skills` はホームディレクトリの全プロジェクト共通フォルダ。すでに起動中のセッションには反映されないことがある（その場合は新しいセッションを始める）
+- **書き出したスキルはリポジトリにコミットしない**。コマンドでいつでも再生成でき、Xcode の更新で内容が変わり、配布条件も確認していないため
+- Xcode を更新したら、同じコマンドで書き出し直す
+
 ## Xcode プロジェクトの再生成
 
 拡張の `manifest.json` に変更を加えた場合など、プロジェクトを再生成したい場合:
