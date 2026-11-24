@@ -57,6 +57,7 @@ describe('DVT_BAR.checkAutoRules', () => {
     globalThis.DVT_PAGE = {
       translatePage: vi.fn(),
       translatePageAndSummarize: vi.fn(),
+      ensurePageTranslate: vi.fn(),
       // Promise を返すようにモック（fn(el).then() に対応）
       translateClickedElement: vi.fn().mockResolvedValue(undefined),
       translateAndSummarizeClickedElement: vi.fn().mockResolvedValue(undefined),
@@ -89,7 +90,7 @@ describe('DVT_BAR.checkAutoRules', () => {
     }));
     const result = await DVT_BAR.checkAutoRules();
     expect(result).toBe(false);
-    expect(DVT_PAGE.translatePage).not.toHaveBeenCalled();
+    expect(DVT_PAGE.ensurePageTranslate).not.toHaveBeenCalled();
   });
 
   it('マッチするルールがある場合はページ全体を翻訳してtrueを返す', async () => {
@@ -98,7 +99,9 @@ describe('DVT_BAR.checkAutoRules', () => {
     }));
     const result = await DVT_BAR.checkAutoRules();
     expect(result).toBe(true);
-    expect(DVT_PAGE.translatePage).toHaveBeenCalledWith('ja');
+    // トグルの translatePage ではなく、状態をそろえる ensurePageTranslate を使う（Issue #271）
+    expect(DVT_PAGE.ensurePageTranslate).toHaveBeenCalledWith('ja', 'translate');
+    expect(DVT_PAGE.translatePage).not.toHaveBeenCalled();
   });
 
   it('モードがsummarizeの場合は翻訳＆要約を実行する', async () => {
@@ -107,7 +110,8 @@ describe('DVT_BAR.checkAutoRules', () => {
     }));
     const result = await DVT_BAR.checkAutoRules();
     expect(result).toBe(true);
-    expect(DVT_PAGE.translatePageAndSummarize).toHaveBeenCalledWith('ja');
+    expect(DVT_PAGE.ensurePageTranslate).toHaveBeenCalledWith('ja', 'summarize');
+    expect(DVT_PAGE.translatePageAndSummarize).not.toHaveBeenCalled();
   });
 
   it('セレクタが指定されている場合は要素翻訳を実行する', async () => {

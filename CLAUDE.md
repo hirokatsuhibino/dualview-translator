@@ -207,6 +207,12 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 **既知の制約**: `display:none` の要素（タブ UI の裏側など）は交差しないため、表示されるまで翻訳されない。
 
+### ページ全体翻訳の自動ルール（Issue #271）
+
+- `translatePage` / `translatePageAndSummarize` は手動操作用の**トグル**（翻訳中に呼ぶと解除）。自動翻訳ルール（`checkAutoRules`）は SPA の URL 変更のたびに再評価されるため、トグルではなく `DVT_PAGE.ensurePageTranslate(tl, mode)` を使う
+  - 同じモード・翻訳先で翻訳中なら解除せず、ページ監視を再開（動いていれば何もしない）して未翻訳の新規要素だけ翻訳する。モードか翻訳先が違えば解除してから翻訳し直す
+- 開始時に翻訳対象が 0 件でもページ監視は開始する。0 件になるのは SPA の初期描画前や、拡張の再読み込み・更新で content script が入れ直され前の翻訳済み要素（`data-dvt-id` 付き）だけが残っている場合で、監視なしで終えると「翻訳中」のまま以後の記事が翻訳されなかった
+
 ### 調査用デバッグログ（Issue #271）
 
 - `chrome.storage.local` の `debugLog` が `true` のときだけ、`[DVT debug <ISO時刻>]` 接頭辞で `console.log` に出す。既定は無効

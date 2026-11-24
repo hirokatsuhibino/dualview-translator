@@ -21,6 +21,10 @@ permalink: /RELEASE_NOTES.en.html
 
 - Fixed Safari opening a broken tab for a welcome page (welcome.html) that isn't bundled, the first time you installed the extension (#265).
   - That page walks you through pinning in Chrome / Firefox, so Safari just skips it now. Chrome and Firefox work the same as before.
+- Fixed whole-page auto-translation rules stopping or switching themselves off (#271).
+  - On SPAs like feedly, every in-page navigation that changed the URL flipped translation off and back on. Auto rules now keep translation running and just translate what's new.
+  - If nothing translatable was on the page when it opened, articles that showed up later never got translated. That could happen on pages that render their content late, or after the extension updated or reloaded. Now it keeps watching the page and translates new content as it appears.
+  - The popup's "Translate page" button still toggles translation on and off like before.
 
 ---
 

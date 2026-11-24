@@ -3132,3 +3132,44 @@ suites:
         expected:
           - "復帰・タブ再表示時に「[page] snapshot(...)」で pageTranslateActive・ページ監視・lazy(...) の状態が出る"
           - "スクロールで要素が画面に入ると「遅延翻訳 交差」と「translate#N 開始」が出る"
+
+  - id: page-rule-resume
+    title: ページ全体翻訳の自動ルールの継続
+    description: "Issue #271。ページ全体翻訳ルールが SPA の URL 変更のたびに解除・再開を繰り返し、開始時に対象 0 件だとページ監視を始めずに翻訳中のまま止まっていた"
+    scenarios:
+      - id: PR-001
+        title: SPA で記事を切り替えても翻訳が解除されない
+        priority: p0
+        environment: firefox
+        description: "過去に存在したバグ: feedly 等で URL が変わるたびに翻訳が解除・再開を交互に繰り返した"
+        preconditions:
+          - "セレクタなし（ページ全体翻訳）の自動ルールを feedly 等の SPA に設定済み"
+        steps:
+          - 対象ページを開き、翻訳されるのを確認する
+          - フィードや記事を 2〜3 回切り替える（URL が変わる操作）
+        expected:
+          - 既存の訳文が消えない
+          - 新しく表示された記事も翻訳される
+      - id: PR-002
+        title: 拡張の再読み込み後もスクロールで翻訳が続く
+        priority: p1
+        environment: firefox
+        description: "過去に存在したバグ: content script が入れ直されると前の翻訳済み要素だけが残って対象 0 件となり、以後の記事が翻訳されなかった"
+        preconditions:
+          - PR-001 の対象ページが翻訳済みの状態で開いている
+        steps:
+          - about:debugging で拡張を再読み込みする（タブはリロードしない）
+          - 対象ページでスクロールや記事の追加読み込みを行う
+        expected:
+          - 新しく表示された記事が翻訳される
+      - id: PR-003
+        title: 手動のページ翻訳ボタンは切り替えのまま
+        priority: p1
+        preconditions:
+          - 自動ルールが当たらないページを開いている
+        steps:
+          - ポップアップの「ページ翻訳」を押す
+          - もう一度「ページ翻訳」を押す
+        expected:
+          - 1 回目で翻訳、2 回目で原文に戻る
+

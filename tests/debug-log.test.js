@@ -201,14 +201,13 @@ describe('ページ全体翻訳のデバッグログ（content-page）', () => {
     logSpy.mockRestore();
   });
 
-  it('翻訳対象 0 件で終わったことと、ページ監視を開始しないことを記録する', async () => {
+  it('翻訳対象 0 件のときは件数と、ページ監視のみ開始したことを記録する', async () => {
     document.body.replaceChildren();
     await DVT_PAGE.translatePage('ja');
     const logs = dvtLogs(logSpy);
     expect(logs.some(l => l.includes('[page] ページ全体翻訳 開始 tl=ja 対象 0 件'))).toBe(true);
-    expect(logs.some(l => l.includes('対象 0 件のため終了（ページ監視は開始しない）'))).toBe(true);
-    // 状態: 翻訳は有効扱いなのにページ監視が無い
-    expect(DVT_PAGE.getDebugState()).toMatch(/pageTranslateActive=true mode=translate ページ監視=false/);
+    expect(logs.some(l => l.includes('対象 0 件のためページ監視のみ開始'))).toBe(true);
+    expect(DVT_PAGE.getDebugState()).toMatch(/pageTranslateActive=true mode=translate ページ監視=true/);
   });
 
   it('翻訳後はページ監視が動いていることを状態に出す', async () => {

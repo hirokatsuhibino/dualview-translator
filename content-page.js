@@ -669,7 +669,12 @@ var DVT_PAGE = (function () {
     const elements = filterTranslatableElements(document);
     dlog(`ページ全体翻訳 開始 tl=${tl} 対象 ${elements.length} 件`);
     if (elements.length === 0) {
-      dlog('ページ全体翻訳: 対象 0 件のため終了（ページ監視は開始しない）');
+      // 対象が 0 件でもページ監視は開始する（Issue #271）。
+      // 監視なしで終えると「翻訳中」の状態だけが残り、後から追加された記事が二度と翻訳されない。
+      // 0 件になるのは、SPA の中身がまだ描画されていない場合や、拡張の再読み込み・更新で
+      // content script が入れ直され、前の content script が翻訳した要素だけが残っている場合
+      dlog('ページ全体翻訳: 対象 0 件のためページ監視のみ開始');
+      startPageObserver(tl);
       return;
     }
 
@@ -695,7 +700,9 @@ var DVT_PAGE = (function () {
     const elements = filterTranslatableElements(document);
     dlog(`ページ全体翻訳＆要約 開始 tl=${tl} 対象 ${elements.length} 件`);
     if (elements.length === 0) {
-      dlog('ページ全体翻訳＆要約: 対象 0 件のため終了（ページ監視は開始しない）');
+      // translatePage と同じく、0 件でもページ監視は開始する（Issue #271）
+      dlog('ページ全体翻訳＆要約: 対象 0 件のためページ監視のみ開始');
+      startPageObserver(tl);
       return;
     }
 
@@ -707,6 +714,32 @@ var DVT_PAGE = (function () {
 
     // 翻訳＆要約完了後、動的コンテンツの監視を開始
     startPageObserver(tl);
+  }
+
+  // ─── 自動翻訳ルールからのページ全体翻訳（Issue #271） ──────────────
+  // translatePage / translatePageAndSummarize は手動操作用のトグルで、翻訳中に呼ぶと解除する。
+  // 自動翻訳ルールは SPA の URL 変更のたびに再評価されるため、トグルを使うと
+  // URL が変わるたびに翻訳が ON/OFF を繰り返してしまう。
+  // ここでは「指定モード・翻訳先で翻訳されている状態」にそろえるだけで、解除はしない。
+  async function ensurePageTranslate(tl, mode) {
+    const wantMode = mode === 'summarize' ? 'summarize' : 'translate';
+    if (DVT.state.pageTranslateActive) {
+      if (DVT.state.pageTranslateMode === wantMode && DVT.state.targetLang === tl) {
+        dlog(`ensurePageTranslate: 翻訳中のため継続 mode=${wantMode}`);
+        // 監視が止まっていれば再開し（動いていれば何もしない）、未翻訳の新規要素だけ翻訳する
+        startPageObserver(tl);
+        await translateNewElements(tl);
+        return;
+      }
+      // モードや翻訳先が変わった場合は、いったん解除してから指定の状態でやり直す
+      dlog(`ensurePageTranslate: モード変更 ${DVT.state.pageTranslateMode} → ${wantMode}`);
+      undoPageTranslate();
+    }
+    if (wantMode === 'summarize') {
+      await translatePageAndSummarize(tl);
+    } else {
+      await translatePage(tl);
+    }
   }
 
   function undoPageTranslate() {
@@ -1153,5 +1186,5 @@ var DVT_PAGE = (function () {
       + ` 翻訳済み要素=${document.querySelectorAll('[data-dvt-id]').length} ${lz}`;
   }
 
-  return { getDebugState, translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
+  return { getDebugState, ensurePageTranslate, translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
 })();

@@ -444,12 +444,10 @@ var DVT_BAR = (function () {
       } else {
         dlog(`checkAutoRules: ページ全体翻訳ルール採用 rule=${rule.id} mode=${rule.mode} pageTranslateActive=${!!DVT.state.pageTranslateActive}`);
         stopAllAutoRuleObservers();
-        // セレクタなしはページ全体翻訳
-        if (rule.mode === 'summarize') {
-          DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
-        } else {
-          DVT_PAGE.translatePage(DVT.state.targetLang);
-        }
+        // セレクタなしはページ全体翻訳。
+        // translatePage はトグル（翻訳中なら解除）なので、SPA の URL 変更で再評価されるたびに
+        // 翻訳が解除されないよう、状態をそろえるだけの ensurePageTranslate を使う（Issue #271）
+        DVT_PAGE.ensurePageTranslate(DVT.state.targetLang, rule.mode);
       }
       return true; // マッチしたルールで処理済み
     }
