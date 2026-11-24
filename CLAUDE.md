@@ -207,6 +207,15 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 **既知の制約**: `display:none` の要素（タブ UI の裏側など）は交差しないため、表示されるまで翻訳されない。
 
+### 調査用デバッグログ（Issue #271）
+
+- `chrome.storage.local` の `debugLog` が `true` のときだけ、`[DVT debug <ISO時刻>]` 接頭辞で `console.log` に出す。既定は無効
+- content script 側: `DVT.debugLog()` / `DVT.isDebugEnabled()` / `DVT.describeEl()`（`content-core.js`）。翻訳メッセージの開始・応答・応答待ちの経過（10/30/60/120 秒）、ページのライフサイクル（`visibilitychange` / `pageshow` / `online` 等）を出す
+- 自動翻訳ルール（`content-bar.js`）: 監視開始・停止、子ノード変更の検知、再翻訳の開始・終了、差し替え再探索、`checkAutoRules` の結果。タブ再表示・`online`・`focus` のたびに `logAutoRuleSnapshot()` で各ルールの監視要素・翻訳中フラグ・セレクタが今指す要素を出す
+- background 側: `bgDebugLog()`（`background.js`）。翻訳メッセージの受信・完了、Google / API fetch の所要時間とステータス、起動・`onSuspend`
+- 本文・APIキーはログに出さない（テキストは長さのみ、要素はタグ・id・class のみ）
+- 有効化（Firefox）: `about:debugging` → この Firefox → DualView Translator の「調査」を開き、コンソールで `browser.storage.local.set({ debugLog: true })`。無効化は `false`。ページ側のログはタブの Web コンソール、background 側のログは「調査」のコンソールに出る
+
 ## コーディングルール
 
 - コメントは日本語で書く（コードは英語可）

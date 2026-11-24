@@ -21,6 +21,43 @@ var DVT = (function () {
     fallbackToastShown: false,
   };
 
+  // ─── 調査用デバッグログ（Issue #271） ──────────────────────────────────
+  // chrome.storage.local の debugLog が true のときだけ Web コンソールに出力する。
+  // スリープ復帰後に自動翻訳ルールが止まる問題の原因を、再現時のログで確定するために使う。
+  // 出力するのは状態・要素の概要・処理時間だけで、本文や APIキーは出さない。
+  let debugEnabled = false;
+  try {
+    chrome.storage.local.get('debugLog', (d) => { debugEnabled = !!(d && d.debugLog); });
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if ((!area || area === 'local') && changes.debugLog) {
+        debugEnabled = !!changes.debugLog.newValue;
+      }
+    });
+  } catch (e) {
+    // storage が使えない環境ではログを出さない
+  }
+
+  function isDebugEnabled() {
+    return debugEnabled;
+  }
+
+  function debugLog(...args) {
+    if (!debugEnabled) return;
+    console.log(`[DVT debug ${new Date().toISOString()}]`, ...args);
+  }
+
+  // ログ用に要素を短く表す（タグ#id.class・接続状態・テキスト長。本文は出さない）
+  function describeEl(el) {
+    if (!el) return String(el);
+    let s = (el.tagName || el.nodeName || '?').toLowerCase();
+    if (el.id) s += '#' + el.id;
+    if (typeof el.className === 'string' && el.className.trim()) {
+      s += '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.');
+    }
+    const len = (el.textContent || '').trim().length;
+    return `${s} [connected=${!!el.isConnected} textLen=${len}]`;
+  }
+
   // ─── 言語コード→表示名マップ ───────────────────────────────────────
   const LANG_NAMES = {
     ja: '日本語', en: 'English', zh: '中文', 'zh-cn': '中文（簡体）', 'zh-tw': '中文（繁体）',
@@ -47,10 +84,27 @@ var DVT = (function () {
   }
 
   // ─── 翻訳API呼び出し（background経由） ──────────────────────────────
+  let translateSeq = 0;
+  // 応答待ちが長引いたときに途中経過をログに出す間隔（Issue #271 調査用）
+  const TRANSLATE_WAIT_LOG_MS = [10000, 30000, 60000, 120000];
+
   function translate(text, tl, sl = 'auto') {
+    const seq = ++translateSeq;
+    const t0 = Date.now();
+    const waitTimers = debugEnabled
+      ? TRANSLATE_WAIT_LOG_MS.map(ms => setTimeout(() => {
+        debugLog(`translate#${seq} 応答待ち ${ms / 1000}s 経過（まだ応答なし）`);
+      }, ms))
+      : [];
+    debugLog(`translate#${seq} 開始 len=${(text || '').length} tl=${tl} sl=${sl} online=${navigator.onLine}`);
     return new Promise((resolve) => {
       chrome.runtime.sendMessage({ action: 'translate', text, tl, sl }, (res) => {
-        if (chrome.runtime.lastError) { resolve({ text: t('error'), detectedLang: null }); return; }
+        waitTimers.forEach(clearTimeout);
+        const lastErr = chrome.runtime.lastError;
+        debugLog(`translate#${seq} 応答 ${Date.now() - t0}ms`,
+          lastErr ? `lastError=${lastErr.message}` : `ok=${!!res?.ok}`,
+          res && !res.ok ? `error=${res.errorCode || ''} ${res.error || ''}` : '');
+        if (lastErr) { resolve({ text: t('error'), detectedLang: null }); return; }
         if (res?.ok) {
           // Apple フォールバック発生時の通知（ページ life cycle 内 1 回まで）
           if (res.result?.fallback && !state.fallbackToastShown) {
@@ -632,9 +686,28 @@ var DVT = (function () {
     // 全アクション同期応答のここでは return true を返さない（= 非同期応答にしない）。
   });
 
+  // ─── ページのライフサイクルをログに残す（Issue #271 調査用） ─────────
+  // スリープ復帰の前後関係（タブの表示・オンライン復帰・bfcache）を追えるようにする
+  ['visibilitychange', 'freeze', 'resume'].forEach(type => {
+    document.addEventListener(type, () => {
+      debugLog(`page: ${type} hidden=${document.hidden}`);
+    });
+  });
+  ['pageshow', 'pagehide'].forEach(type => {
+    window.addEventListener(type, (e) => {
+      debugLog(`page: ${type} persisted=${!!(e && e.persisted)}`);
+    });
+  });
+  ['online', 'offline', 'focus'].forEach(type => {
+    window.addEventListener(type, () => debugLog(`page: ${type} online=${navigator.onLine}`));
+  });
+
   // ─── 公開API ───────────────────────────────────────────────────────
   return {
     state,
+    debugLog,
+    isDebugEnabled,
+    describeEl,
     translate,
     langMatches,
     escapeHtml,

@@ -3078,3 +3078,45 @@ suites:
           - ページ翻訳・選択翻訳・共有シート翻訳が動作する
         known_limitations:
           - "macOS 10.14〜11 には v1.9.0 以降の更新が配信されない（インストール済みの版は動作する）"
+
+  - id: debug-log
+    title: 調査用デバッグログ（debugLog）
+    description: "Issue #271 で追加。スリープ復帰後に xgate へ再ログインすると自動翻訳が止まる問題の原因を確定するためのログ。storage の debugLog が true のときだけ出力する"
+    scenarios:
+      - id: DL-001
+        title: 既定ではデバッグログを出さない
+        priority: p1
+        environment: firefox
+        preconditions:
+          - debugLog を設定していない（または false）
+        steps:
+          - 任意のページでページ全体翻訳を実行する
+          - Web コンソールを開く
+        expected:
+          - "「[DVT debug」で始まるログが出ない"
+      - id: DL-002
+        title: debugLog を有効にすると翻訳と自動ルール監視のログが出る
+        priority: p1
+        environment: firefox
+        preconditions:
+          - "about:debugging の拡張の「調査」コンソールで browser.storage.local.set({ debugLog: true }) を実行済み"
+          - セレクタ指定の自動翻訳ルールを登録済み
+        steps:
+          - 対象ページを開き、ルールを発火させる
+          - Web コンソール（ページ側）と拡張の「調査」コンソール（background 側）を確認する
+        expected:
+          - "ページ側に「[autoRule] 監視開始」「再翻訳 開始/終了」「translate#N 開始/応答」が出る"
+          - "background 側に「bg translate#N 受信/完了」「bg Google fetch 応答」が出る"
+          - ログにメール本文や APIキーが含まれない
+      - id: DL-003
+        title: スリープ復帰・再ログイン時の状態をログで確認できる
+        priority: p2
+        environment: firefox
+        preconditions:
+          - DL-002 の状態で xgate の自動翻訳ルールが動作している
+        steps:
+          - Mac をスリープさせ、xgate のセッションが切れる程度の時間をおいて復帰する
+          - xgate に再ログインし、メールを開く
+        expected:
+          - "復帰時に「page: visibilitychange」「snapshot(visibilitychange)」が出る"
+          - "翻訳が応答しない場合は「translate#N 応答待ち 10s 経過」が出る"
