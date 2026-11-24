@@ -212,6 +212,8 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 - `chrome.storage.local` の `debugLog` が `true` のときだけ、`[DVT debug <ISO時刻>]` 接頭辞で `console.log` に出す。既定は無効
 - content script 側: `DVT.debugLog()` / `DVT.isDebugEnabled()` / `DVT.describeEl()`（`content-core.js`）。翻訳メッセージの開始・応答・応答待ちの経過（10/30/60/120 秒）、ページのライフサイクル（`visibilitychange` / `pageshow` / `online` 等）を出す
 - 自動翻訳ルール（`content-bar.js`）: 監視開始・停止、子ノード変更の検知、再翻訳の開始・終了、差し替え再探索、`checkAutoRules` の結果。タブ再表示・`online`・`focus` のたびに `logAutoRuleSnapshot()` で各ルールの監視要素・翻訳中フラグ・セレクタが今指す要素を出す
+- ページ全体翻訳（`content-page.js`）: 開始時の対象件数（0 件で終わりページ監視を開始しなかった場合も記録）、ページ監視の開始・停止、DOM 変更で見つかった新規対象の件数、遅延翻訳の開始・交差・停止、解除。`DVT_PAGE.getDebugState()` で `pageTranslateActive` / ページ監視の有無 / 監視中の body が現在の body と同じか / 遅延翻訳のキュー状況を 1 行にまとめ、`logAutoRuleSnapshot()` が一緒に出す
+- メッセージ受信: content script が受け取った `action` 名（`content-core.js`）
 - background 側: `bgDebugLog()`（`background.js`）。翻訳メッセージの受信・完了、Google / API fetch の所要時間とステータス、起動・`onSuspend`
 - 本文・APIキーはログに出さない（テキストは長さのみ、要素はタグ・id・class のみ）
 - 有効化（Firefox）: `about:debugging` → この Firefox → DualView Translator の「調査」を開き、コンソールで `browser.storage.local.set({ debugLog: true })`。無効化は `false`。ページ側のログはタブの Web コンソール、background 側のログは「調査」のコンソールに出る

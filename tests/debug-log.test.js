@@ -182,3 +182,62 @@ describe('自動翻訳ルール監視のデバッグログ（content-bar）', ()
     expect(dvtLogs(logSpy)).toEqual([]);
   });
 });
+
+describe('ページ全体翻訳のデバッグログ（content-page）', () => {
+  let logSpy;
+
+  beforeEach(() => {
+    __resetMockStorage();
+    chrome.storage.local.set({ debugLog: true });
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    loadScript('i18n.js', 'content-core.js', 'content-page.js');
+    DVT.state.pageTranslateActive = false;
+    DVT.state.pageTranslateMode = null;
+  });
+
+  afterEach(() => {
+    if (DVT.state.pageTranslateActive) DVT_PAGE.undoPageTranslate();
+    document.body.replaceChildren();
+    logSpy.mockRestore();
+  });
+
+  it('翻訳対象 0 件で終わったことと、ページ監視を開始しないことを記録する', async () => {
+    document.body.replaceChildren();
+    await DVT_PAGE.translatePage('ja');
+    const logs = dvtLogs(logSpy);
+    expect(logs.some(l => l.includes('[page] ページ全体翻訳 開始 tl=ja 対象 0 件'))).toBe(true);
+    expect(logs.some(l => l.includes('対象 0 件のため終了（ページ監視は開始しない）'))).toBe(true);
+    // 状態: 翻訳は有効扱いなのにページ監視が無い
+    expect(DVT_PAGE.getDebugState()).toMatch(/pageTranslateActive=true mode=translate ページ監視=false/);
+  });
+
+  it('翻訳後はページ監視が動いていることを状態に出す', async () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world from the page';
+    document.body.replaceChildren(p);
+    await DVT_PAGE.translatePage('ja');
+    const state = DVT_PAGE.getDebugState();
+    expect(state).toMatch(/pageTranslateActive=true mode=translate ページ監視=true 監視中body=現在のbody:true/);
+    expect(state).toMatch(/翻訳済み要素=1/);
+  });
+
+  it('body が差し替えられたら 監視中body=現在のbody:false になる', async () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world from the page';
+    document.body.replaceChildren(p);
+    await DVT_PAGE.translatePage('ja');
+    const oldBody = document.body;
+    document.documentElement.replaceChild(document.createElement('body'), oldBody);
+    try {
+      expect(DVT_PAGE.getDebugState()).toMatch(/監視中body=現在のbody:false/);
+    } finally {
+      document.documentElement.replaceChild(oldBody, document.body);
+    }
+  });
+
+  it('受信したメッセージの action を記録する', () => {
+    const listener = chrome.runtime.onMessage.addListener.mock.calls.at(-1)[0];
+    listener({ action: 'getState' }, {}, () => {});
+    expect(dvtLogs(logSpy).some(l => l.includes('メッセージ受信 action=getState'))).toBe(true);
+  });
+});

@@ -601,6 +601,8 @@ var DVT = (function () {
 
   // ─── メッセージリスナー（popup / background からの指示） ─────────────
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    // 調査用: 受信したメッセージの種類だけ残す（本文は出さない）
+    debugLog(`メッセージ受信 action=${msg && msg.action}`);
     if (msg.action === 'translatePage') {
       DVT_PAGE.translatePage(msg.lang);
       relayToChildFrames('translatePage', { lang: msg.lang });

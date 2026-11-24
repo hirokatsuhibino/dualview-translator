@@ -467,12 +467,14 @@ var DVT_PAGE = (function () {
   // （MutationObserver 由来の新規要素など）そこへ追加する。
   function scheduleLazyTranslation(elements, tl, idPrefix) {
     if (isLazyActiveFor(tl, idPrefix)) {
+      dlog(`遅延翻訳に追加 ${elements.length} 件`);
       lazyState.total += elements.length;
       elements.forEach(el => lazyState.observer.observe(el));
       return;
     }
 
     stopLazyTranslation();
+    dlog(`遅延翻訳 開始 ${elements.length} 件`);
 
     const vh = window.innerHeight || document.documentElement.clientHeight || 0;
     const rootMargin = Math.max(1, Math.round(vh * LAZY_ROOT_MARGIN_RATIO));
@@ -500,6 +502,7 @@ var DVT_PAGE = (function () {
       if (lazyState !== state || !DVT.state.pageTranslateActive) return;
       const hits = entries.filter(e => e.isIntersecting);
       if (hits.length === 0) return;
+      dlog(`遅延翻訳 交差 ${hits.length} 件 → キュー投入（待機 ${state.queue.length + hits.length} / 実行中 ${state.workers}）`);
       // 同一コールバック内の要素はビューポートに近い順に翻訳する
       hits.sort((a, b) => viewportDistance(a.boundingClientRect) - viewportDistance(b.boundingClientRect));
       hits.forEach(e => {
@@ -570,6 +573,7 @@ var DVT_PAGE = (function () {
   // 遅延翻訳を停止して Observer と待機キューを破棄する
   function stopLazyTranslation() {
     if (!lazyState) return;
+    dlog('遅延翻訳 停止');
     if (lazyState.observer) lazyState.observer.disconnect();
     lazyState.queue.length = 0;
     if (!lazyState.toastClosed) {
@@ -579,8 +583,15 @@ var DVT_PAGE = (function () {
     lazyState = null;
   }
 
+  // ─── 調査用デバッグログ（Issue #271） ────────────────────────────────
+  function dlog(...args) {
+    if (DVT.debugLog) DVT.debugLog('[page]', ...args);
+  }
+
   // ─── 動的コンテンツ監視（MutationObserver） ────────────────────────
   let pageObserver = null;
+  // pageObserver が監視している body（SPA が body ごと差し替えたかの判定に使う。調査用）
+  let observedBody = null;
   let observerDebounceTimer = null;
   // 監視済み shadow root を記録し、同一 root の二重 observe を避ける
   let observedShadowRoots = new WeakSet();
@@ -599,6 +610,7 @@ var DVT_PAGE = (function () {
 
   function startPageObserver(tl) {
     if (pageObserver) return;
+    dlog('ページ監視 開始');
     pageObserver = new MutationObserver(() => {
       // デバウンス: 短時間に大量のDOM変更があっても1回だけ処理
       if (observerDebounceTimer) clearTimeout(observerDebounceTimer);
@@ -606,6 +618,7 @@ var DVT_PAGE = (function () {
         translateNewElements(tl);
       }, OBSERVER_DEBOUNCE_MS);
     });
+    observedBody = document.body;
     pageObserver.observe(document.body, {
       childList: true,
       subtree: true,
@@ -616,9 +629,11 @@ var DVT_PAGE = (function () {
 
   function stopPageObserver() {
     if (pageObserver) {
+      dlog('ページ監視 停止');
       pageObserver.disconnect();
       pageObserver = null;
     }
+    observedBody = null;
     if (observerDebounceTimer) {
       clearTimeout(observerDebounceTimer);
       observerDebounceTimer = null;
@@ -633,6 +648,7 @@ var DVT_PAGE = (function () {
     // 後から出現した shadow root（遅延ロードのコメント等）も監視対象に追加
     observeShadowRoots();
     const elements = filterTranslatableElements(document);
+    dlog(`DOM 変更 → 新規の翻訳対象 ${elements.length} 件`);
     if (elements.length === 0) return;
     // 要約モードでは全訳文を結合して LLM に渡すため遅延翻訳は使えない
     const lazy = DVT.state.pageTranslateMode !== 'summarize';
@@ -651,7 +667,11 @@ var DVT_PAGE = (function () {
     DVT.state.targetLang = tl;
 
     const elements = filterTranslatableElements(document);
-    if (elements.length === 0) return;
+    dlog(`ページ全体翻訳 開始 tl=${tl} 対象 ${elements.length} 件`);
+    if (elements.length === 0) {
+      dlog('ページ全体翻訳: 対象 0 件のため終了（ページ監視は開始しない）');
+      return;
+    }
 
     // ビューポート優先＋遅延翻訳: 見えている箇所から訳文を埋め、
     // 画面外はスクロールで近づいたときに翻訳する（Issue #256）
@@ -673,7 +693,11 @@ var DVT_PAGE = (function () {
     DVT.state.targetLang = tl;
 
     const elements = filterTranslatableElements(document);
-    if (elements.length === 0) return;
+    dlog(`ページ全体翻訳＆要約 開始 tl=${tl} 対象 ${elements.length} 件`);
+    if (elements.length === 0) {
+      dlog('ページ全体翻訳＆要約: 対象 0 件のため終了（ページ監視は開始しない）');
+      return;
+    }
 
     // ステップ1: 各文のデュアルビュー翻訳
     await runConcurrentTranslation(elements, tl, 'dvt-');
@@ -686,6 +710,7 @@ var DVT_PAGE = (function () {
   }
 
   function undoPageTranslate() {
+    dlog('ページ全体翻訳 解除');
     DVT.state.pageTranslateActive = false;
     DVT.state.pageTranslateMode = null;
     // 動的コンテンツ監視を停止
@@ -1118,5 +1143,15 @@ var DVT_PAGE = (function () {
     window.addEventListener('keydown', onKeyDown, true);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
+  // 調査用: ページ全体翻訳の状態を 1 行にまとめる（Issue #271）
+  function getDebugState() {
+    const lz = lazyState
+      ? `lazy(total=${lazyState.total} processed=${lazyState.processed} queue=${lazyState.queue.length} workers=${lazyState.workers})`
+      : 'lazy=なし';
+    return `pageTranslateActive=${!!DVT.state.pageTranslateActive} mode=${DVT.state.pageTranslateMode}`
+      + ` ページ監視=${!!pageObserver} 監視中body=現在のbody:${observedBody ? observedBody === document.body : '-'}`
+      + ` 翻訳済み要素=${document.querySelectorAll('[data-dvt-id]').length} ${lz}`;
+  }
+
+  return { getDebugState, translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
 })();

@@ -3120,3 +3120,15 @@ suites:
         expected:
           - "復帰時に「page: visibilitychange」「snapshot(visibilitychange)」が出る"
           - "翻訳が応答しない場合は「translate#N 応答待ち 10s 経過」が出る"
+      - id: DL-004
+        title: ページ全体翻訳ルールのページでスリープ復帰後の状態をログで確認できる
+        priority: p2
+        environment: firefox
+        preconditions:
+          - debugLog を有効にしている
+          - セレクタなし（ページ全体翻訳）の自動翻訳ルールが当たるページ（feedly 等）を開いている
+        steps:
+          - Mac をスリープさせ、復帰後にタブを切り替えて戻り、スクロールする
+        expected:
+          - "復帰・タブ再表示時に「[page] snapshot(...)」で pageTranslateActive・ページ監視・lazy(...) の状態が出る"
+          - "スクロールで要素が画面に入ると「遅延翻訳 交差」と「translate#N 開始」が出る"

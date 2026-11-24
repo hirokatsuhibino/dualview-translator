@@ -442,6 +442,7 @@ var DVT_BAR = (function () {
           })
           .catch((e) => { dlog(`checkAutoRules: 初回翻訳 例外 rule=${rule.id}: ${e && e.message}`); });
       } else {
+        dlog(`checkAutoRules: ページ全体翻訳ルール採用 rule=${rule.id} mode=${rule.mode} pageTranslateActive=${!!DVT.state.pageTranslateActive}`);
         stopAllAutoRuleObservers();
         // セレクタなしはページ全体翻訳
         if (rule.mode === 'summarize') {
@@ -494,6 +495,10 @@ var DVT_BAR = (function () {
   // どの要素に張られているか・翻訳中のまま止まっていないか・セレクタが今どの要素を指すかを出す
   function logAutoRuleSnapshot(trigger) {
     if (typeof DVT === 'undefined' || !DVT.isDebugEnabled || !DVT.isDebugEnabled()) return;
+    // ページ全体翻訳（セレクタなしのルール・翻訳バー・手動）の状態
+    if (typeof DVT_PAGE !== 'undefined' && DVT_PAGE.getDebugState) {
+      DVT.debugLog('[page]', `snapshot(${trigger}): ${DVT_PAGE.getDebugState()}`);
+    }
     if (activeRuleObservers.size === 0) {
       dlog(`snapshot(${trigger}): 有効な監視なし`);
       return;
