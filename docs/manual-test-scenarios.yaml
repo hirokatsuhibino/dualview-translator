@@ -3078,3 +3078,114 @@ suites:
           - ページ翻訳・選択翻訳・共有シート翻訳が動作する
         known_limitations:
           - "macOS 10.14〜11 には v1.9.0 以降の更新が配信されない（インストール済みの版は動作する）"
+
+  - id: debug-log
+    title: 調査用デバッグログ（debugLog）
+    description: "Issue #271 で追加。スリープ復帰後に xgate へ再ログインすると自動翻訳が止まる問題の原因を確定するためのログ。storage の debugLog が true のときだけ出力する"
+    scenarios:
+      - id: DL-001
+        title: 既定ではデバッグログを出さない
+        priority: p1
+        environment: firefox
+        preconditions:
+          - debugLog を設定していない（または false）
+        steps:
+          - 任意のページでページ全体翻訳を実行する
+          - Web コンソールを開く
+        expected:
+          - "「[DVT debug」で始まるログが出ない"
+      - id: DL-002
+        title: debugLog を有効にすると翻訳と自動ルール監視のログが出る
+        priority: p1
+        environment: firefox
+        preconditions:
+          - "about:debugging の拡張の「調査」コンソールで browser.storage.local.set({ debugLog: true }) を実行済み"
+          - セレクタ指定の自動翻訳ルールを登録済み
+        steps:
+          - 対象ページを開き、ルールを発火させる
+          - Web コンソール（ページ側）と拡張の「調査」コンソール（background 側）を確認する
+        expected:
+          - "ページ側に「[autoRule] 監視開始」「再翻訳 開始/終了」「translate#N 開始/応答」が出る"
+          - "background 側に「bg translate#N 受信/完了」「bg Google fetch 応答」が出る"
+          - ログにメール本文や APIキーが含まれない
+      - id: DL-003
+        title: スリープ復帰・再ログイン時の状態をログで確認できる
+        priority: p2
+        environment: firefox
+        preconditions:
+          - DL-002 の状態で xgate の自動翻訳ルールが動作している
+        steps:
+          - Mac をスリープさせ、xgate のセッションが切れる程度の時間をおいて復帰する
+          - xgate に再ログインし、メールを開く
+        expected:
+          - "復帰時に「page: visibilitychange」「snapshot(visibilitychange)」が出る"
+          - "翻訳が応答しない場合は「translate#N 応答待ち 10s 経過」が出る"
+      - id: DL-004
+        title: ページ全体翻訳ルールのページでスリープ復帰後の状態をログで確認できる
+        priority: p2
+        environment: firefox
+        preconditions:
+          - debugLog を有効にしている
+          - セレクタなし（ページ全体翻訳）の自動翻訳ルールが当たるページ（feedly 等）を開いている
+        steps:
+          - Mac をスリープさせ、復帰後にタブを切り替えて戻り、スクロールする
+        expected:
+          - "復帰・タブ再表示時に「[page] snapshot(...)」で pageTranslateActive・ページ監視・lazy(...) の状態が出る"
+          - "スクロールで要素が画面に入ると「遅延翻訳 交差」と「translate#N 開始」が出る"
+
+  - id: page-rule-resume
+    title: ページ全体翻訳の自動ルールの継続
+    description: "Issue #271。ページ全体翻訳ルールが SPA の URL 変更のたびに解除・再開を繰り返し、開始時に対象 0 件だとページ監視を始めずに翻訳中のまま止まっていた"
+    scenarios:
+      - id: PR-001
+        title: SPA で記事を切り替えても翻訳が解除されない
+        priority: p0
+        environment: firefox
+        description: "過去に存在したバグ: feedly 等で URL が変わるたびに翻訳が解除・再開を交互に繰り返した"
+        preconditions:
+          - "セレクタなし（ページ全体翻訳）の自動ルールを feedly 等の SPA に設定済み"
+        steps:
+          - 対象ページを開き、翻訳されるのを確認する
+          - フィードや記事を 2〜3 回切り替える（URL が変わる操作）
+        expected:
+          - 既存の訳文が消えない
+          - 新しく表示された記事も翻訳される
+      - id: PR-002
+        title: 拡張の再読み込み後もスクロールで翻訳が続く
+        priority: p1
+        environment: firefox
+        description: "過去に存在したバグ: content script が入れ直されると前の翻訳済み要素だけが残って対象 0 件となり、以後の記事が翻訳されなかった"
+        preconditions:
+          - PR-001 の対象ページが翻訳済みの状態で開いている
+        steps:
+          - about:debugging で拡張を再読み込みする（タブはリロードしない）
+          - 対象ページでスクロールや記事の追加読み込みを行う
+        expected:
+          - 新しく表示された記事が翻訳される
+      - id: PR-003
+        title: 手動のページ翻訳ボタンは切り替えのまま
+        priority: p1
+        preconditions:
+          - 自動ルールが当たらないページを開いている
+        steps:
+          - ポップアップの「ページ翻訳」を押す
+          - もう一度「ページ翻訳」を押す
+        expected:
+          - 1 回目で翻訳、2 回目で原文に戻る
+      - id: PR-004
+        title: 拡張の更新後に Web メールへ再ログインしても翻訳される
+        priority: p0
+        environment: firefox
+        description: "過去に存在したバグ: スリープ中に拡張が更新され、xgate がログイン画面の状態で content script が入れ直されると、本文要素の待機が 10 秒でタイムアウトし、ログインしても URL が変わらないためリロードするまで翻訳されなかった"
+        preconditions:
+          - "Web メール（xgate 等）の本文を指すセレクタ指定の自動翻訳ルールを登録済み"
+          - 開発版を一時的なアドオンとして読み込んでいる（再読み込みで更新を再現するため）
+        steps:
+          - Web メールからログアウトし、ログイン画面を表示する
+          - "about:debugging で拡張を再読み込みする"
+          - 10 秒以上待ってからログインし、メールを開く
+          - 別のメールを開く
+        expected:
+          - リロードせずにメール本文が翻訳される
+          - 別のメールを開いた場合も翻訳される
+

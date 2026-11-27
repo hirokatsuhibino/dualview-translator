@@ -21,6 +21,13 @@ permalink: /RELEASE_NOTES.en.html
 
 - Fixed Safari opening a broken tab for a welcome page (welcome.html) that isn't bundled, the first time you installed the extension (#265).
   - That page walks you through pinning in Chrome / Firefox, so Safari just skips it now. Chrome and Firefox work the same as before.
+- Fixed whole-page auto-translation rules stopping or switching themselves off (#271).
+  - On SPAs like feedly, every in-page navigation that changed the URL flipped translation off and back on. Auto rules now keep translation running and just translate what's new.
+  - If nothing translatable was on the page when it opened, articles that showed up later never got translated. That could happen on pages that render their content late, or after the extension updated or reloaded. Now it keeps watching the page and translates new content as it appears.
+  - The popup's "Translate page" button still toggles translation on and off like before.
+- Fixed selector-based auto-translation rules not kicking in after you logged back in to webmail following an extension update (#271).
+  - When the extension updates (say, while your Mac is asleep), it gets re-injected into your open tabs. If your webmail (xgate, etc.) was on its login screen at that moment, the mail body didn't show up within 10 seconds, and since logging in doesn't change the URL, nothing got translated until you reloaded.
+  - Now, if the URL matches a rule but the element isn't there yet, it keeps waiting and translates as soon as the element shows up.
 
 ---
 

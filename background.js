@@ -21,6 +21,38 @@ function getMenuTitles(lang) {
   return CONTEXT_MENU_TITLES[lang] || CONTEXT_MENU_TITLES['en'];
 }
 
+// ─── 調査用デバッグログ（Issue #271） ──────────────────────────────────
+// chrome.storage.local の debugLog が true のときだけ拡張のコンソールに出力する。
+// 本文や APIキーは出さず、処理時間・ステータス・エラーだけを残す。
+let bgDebugEnabled = false;
+try {
+  chrome.storage.local.get('debugLog', (d) => { bgDebugEnabled = !!(d && d.debugLog); });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if ((!area || area === 'local') && changes.debugLog) {
+      bgDebugEnabled = !!changes.debugLog.newValue;
+    }
+  });
+} catch (e) {
+  // storage が使えない環境ではログを出さない
+}
+
+function bgDebugLog(...args) {
+  if (!bgDebugEnabled) return;
+  console.log(`[DVT debug ${new Date().toISOString()}]`, ...args);
+}
+
+let bgTranslateSeq = 0;
+
+// background（Firefox ではイベントページ）の起動・停止を残す。スリープ前後で作り直されたかを追う
+try {
+  chrome.storage.local.get('debugLog', (d) => {
+    if (d && d.debugLog) console.log(`[DVT debug ${new Date().toISOString()}]`, 'bg 起動');
+  });
+  chrome.runtime.onSuspend?.addListener(() => bgDebugLog('bg onSuspend（停止）'));
+} catch (e) {
+  // 取得できない環境では何もしない
+}
+
 // ─── 翻訳エンジン名（typo 防止のため定数化） ──────────────────────
 const ENGINES = Object.freeze({ GOOGLE: 'google', DEEPL: 'deepl', APPLE: 'apple' });
 
@@ -427,11 +459,21 @@ if (HAS_COMMANDS) {
 // ─── メッセージハンドラ ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'translate') {
+    const seq = ++bgTranslateSeq;
+    const t0 = Date.now();
+    bgDebugLog(`bg translate#${seq} 受信 len=${(msg.text || '').length} tl=${msg.tl} online=${navigator.onLine}`);
     getEngineConfig().then(config => {
+      bgDebugLog(`bg translate#${seq} 設定取得 ${Date.now() - t0}ms engine=${config.engine}`);
       return fetchTranslation(msg.text, msg.tl, msg.sl || 'auto', config);
     })
-      .then(result => sendResponse({ ok: true, result }))
-      .catch(err => sendResponse(errorResponse(err)));
+      .then(result => {
+        bgDebugLog(`bg translate#${seq} 完了 ${Date.now() - t0}ms engineUsed=${result && result.engineUsed}`);
+        sendResponse({ ok: true, result });
+      })
+      .catch(err => {
+        bgDebugLog(`bg translate#${seq} 失敗 ${Date.now() - t0}ms ${err && err.name}: ${err && err.message}`);
+        sendResponse(errorResponse(err));
+      });
     return true;
   }
   if (msg.action === 'detectLang') {
@@ -911,7 +953,15 @@ async function fetchChunkedWithCache(engine, text, sl, tl, { chunkSize, concurre
 // 実 API 呼び出し（1 チャンク分）
 async function fetchGoogleChunk(chunk, sl, tl) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(chunk)}`;
-  const res = await fetch(url);
+  const t0 = Date.now();
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (err) {
+    bgDebugLog(`bg Google fetch 失敗 ${Date.now() - t0}ms ${err && err.name}: ${err && err.message}`);
+    throw err;
+  }
+  bgDebugLog(`bg Google fetch 応答 ${Date.now() - t0}ms status=${res.status}`);
   if (!res.ok) throw new Error(`Google HTTP ${res.status}`);
   const data = await res.json();
   const translated = data[0].map(item => item[0]).filter(Boolean).join('');
@@ -1031,9 +1081,13 @@ async function fetchApi(origin, apiKey, url, init) {
   if (bad) {
     throw apiError('invalidChars', `APIキーに使用できない文字が含まれています（${bad.pos}文字目: 「${bad.char}」${bad.cp}）`, bad);
   }
+  const t0 = Date.now();
   try {
-    return await fetch(url, init);
+    const res = await fetch(url, init);
+    bgDebugLog(`bg API fetch 応答 ${origin} ${Date.now() - t0}ms status=${res.status}`);
+    return res;
   } catch (err) {
+    bgDebugLog(`bg API fetch 失敗 ${origin} ${Date.now() - t0}ms ${err && err.name}: ${err && err.message}`);
     if (isNetworkError(err)) {
       const host = origin.replace(/^https:\/\//, '').replace(/\/\*$/, '');
       if (!(await hasHostPermission(origin))) {

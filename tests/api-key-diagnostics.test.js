@@ -31,12 +31,14 @@ const BG_DECLS = [
   'normalizeApiKey', 'findInvalidKeyChar', 'apiError', 'errorResponse',
   'hasHostPermission', 'fetchApi', 'isNetworkError',
   'getDeepLEndpoint', 'getDeepLOrigin', 'deepLHttpError', 'isGeminiKeyInvalid', 'testApiKey',
+  'bgDebugLog',
 ];
 
 // 抽出した宣言を fetch / chrome を引数に取る関数として同一 realm で評価する
 // （同一 realm にしておくと TypeError の instanceof 判定がテストと一致する）
 const bgFactory = vm.runInThisContext(
-  '(function (fetch, chrome) {\n' + BG_DECLS.map(extractDecl).join('\n\n') +
+  // bgDebugLog が参照するフラグ（Issue #271 のデバッグログ。テストでは常に無効）
+  '(function (fetch, chrome) {\nlet bgDebugEnabled = false;\n' + BG_DECLS.map(extractDecl).join('\n\n') +
   '\nreturn { normalizeApiKey, findInvalidKeyChar, errorResponse, fetchApi, testApiKey };\n})',
   { filename: 'background.js (extracted)' }
 );

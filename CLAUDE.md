@@ -207,6 +207,29 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 **既知の制約**: `display:none` の要素（タブ UI の裏側など）は交差しないため、表示されるまで翻訳されない。
 
+### ページ全体翻訳の自動ルール（Issue #271）
+
+- `translatePage` / `translatePageAndSummarize` は手動操作用の**トグル**（翻訳中に呼ぶと解除）。自動翻訳ルール（`checkAutoRules`）は SPA の URL 変更のたびに再評価されるため、トグルではなく `DVT_PAGE.ensurePageTranslate(tl, mode)` を使う
+  - 同じモード・翻訳先で翻訳中なら解除せず、ページ監視を再開（動いていれば何もしない）して未翻訳の新規要素だけ翻訳する。モードか翻訳先が違えば解除してから翻訳し直す
+  - 翻訳先の比較は開始時に記録した `pageTranslateLang` で行う。`DVT.state.targetLang` はポップアップの言語変更（`setLang`）で先に書き換わるため比較に使えない
+- 拡張の再注入後は、前の content script が付けた処理中マーク（`data-dvt-id="dvt-pending"`）が残り、翻訳対象から外れたままになる。`releaseStalePending()` が、自分が付けたマーク（`ownPending` の WeakSet）以外を外して翻訳対象に戻す（`translatePage` / `translatePageAndSummarize` の開始時と `ensurePageTranslate` の継続時）。翻訳済み要素（実 ID 付き）は保持する
+- 非同期処理の世代管理: `checkAutoRules` は `storage` 取得後・要素待ち後・初回翻訳の完了時に、世代番号（`checkGeneration`）と開始時の URL を確認し、古いチェックなら翻訳・監視の停止や張り直しをせずに終える（初期化時の呼び出し元が翻訳バーを出さないよう `true` を返す）。ページ全体翻訳は解除（`undoPageTranslate`）で `translationEpoch` を進め、解除前に始まった処理はページ監視の開始・要約・残りキューの翻訳をしない。`translateOneElement` は応答待ちの前後で `data-dvt-id` を照合し、翻訳し直しで ID が変わっていたら古い応答を反映しない。`runConcurrentTranslation` は最初の await（設定取得）より前に世代を保存し、取得後に不一致なら終える。中止時は、その呼び出しが付けた処理中マーク（`pendingOwner` のトークンで区別）だけを外す（DOM から外れた要素は `undoPageTranslate` の復元対象に入らないため）。遅延翻訳は `lazyState.reserved` に予約を記録し、停止時に未処理分を外す。自動ルールの初回翻訳後は `findStillAdoptedRule` で保存済みルールを確かめてから監視を張る（翻訳中にポップアップで削除・無効化されると `stopAutoRuleObserver` が空振りするため）
+- 翻訳＆要約を対象 0 件で開始した場合は `summaryPending` を立て、本文が現れて `translateNewElements` が翻訳したときに 1 回だけ要約する。前の content script の要約ブロック（`#dvt-page-summary`）が残っていれば作り直さない
+- 開始時に翻訳対象が 0 件でもページ監視は開始する。0 件になるのは SPA の初期描画前や、拡張の再読み込み・更新で content script が入れ直され前の翻訳済み要素（`data-dvt-id` 付き）だけが残っている場合で、監視なしで終えると「翻訳中」のまま以後の記事が翻訳されなかった
+
+- セレクタ指定のルールで、URL は一致するのに `waitForElement` が 10 秒でタイムアウトした場合は、`startPendingWatch()` で要素の出現待ち（document の MutationObserver をスロットル + `visibilitychange`）を残し、要素が現れた時点で `checkAutoRules()` をやり直す。拡張の更新・再読み込みで content script が入れ直された時点で Web メールがログイン画面だと、ログインしても URL が変わらないため以後翻訳されなかった。`checkAutoRules` の開始時に出現待ちを止め、世代番号（`checkGeneration`）で古いチェックが張り直さないようにしている。複数ルールで後続ルールを待つ間に先のルールの要素が現れていることがあるため、出現待ちの登録直後にも一度確認する
+
+### 調査用デバッグログ（Issue #271）
+
+- `chrome.storage.local` の `debugLog` が `true` のときだけ、`[DVT debug <ISO時刻>]` 接頭辞で `console.log` に出す。既定は無効
+- content script 側: `DVT.debugLog()` / `DVT.isDebugEnabled()` / `DVT.describeEl()`（`content-core.js`）。翻訳メッセージの開始・応答・応答待ちの経過（10/30/60/120 秒）、ページのライフサイクル（`visibilitychange` / `pageshow` / `online` 等）を出す
+- 自動翻訳ルール（`content-bar.js`）: 監視開始・停止、子ノード変更の検知、再翻訳の開始・終了、差し替え再探索、`checkAutoRules` の結果。タブ再表示・`online`・`focus` のたびに `logAutoRuleSnapshot()` で各ルールの監視要素・翻訳中フラグ・セレクタが今指す要素を出す
+- ページ全体翻訳（`content-page.js`）: 開始時の対象件数（0 件で終わりページ監視を開始しなかった場合も記録）、ページ監視の開始・停止、DOM 変更で見つかった新規対象の件数、遅延翻訳の開始・交差・停止、解除。`DVT_PAGE.getDebugState()` で `pageTranslateActive` / ページ監視の有無 / 監視中の body が現在の body と同じか / 遅延翻訳のキュー状況を 1 行にまとめ、`logAutoRuleSnapshot()` が一緒に出す
+- メッセージ受信: content script が受け取った `action` 名（`content-core.js`）
+- background 側: `bgDebugLog()`（`background.js`）。翻訳メッセージの受信・完了、Google / API fetch の所要時間とステータス、起動・`onSuspend`
+- 本文・APIキーはログに出さない（テキストは長さのみ、要素はタグ・id・class のみ）
+- 有効化（Firefox）: `about:debugging` → この Firefox → DualView Translator の「調査」を開き、コンソールで `browser.storage.local.set({ debugLog: true })`。無効化は `false`。ページ側のログはタブの Web コンソール、background 側のログは「調査」のコンソールに出る
+
 ## コーディングルール
 
 - コメントは日本語で書く（コードは英語可）

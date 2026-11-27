@@ -361,7 +361,11 @@ var DVT_PAGE = (function () {
     }
 
     insertDualView(el, idPrefix);
+    const id = el.dataset.dvtId;
     const { text: result, detectedLang } = await DVT.translate(originalText, tl);
+    // 応答待ちの間に解除・翻訳し直しが起きていれば、この結果は古い。
+    // 新しい翻訳は別の ID を振るため、ID が変わっていたら反映しない（新しい訳文の上書き防止）
+    if (el.dataset.dvtId !== id) return false;
     applyTranslation(el, result, detectedLang, tl);
     return true;
   }
@@ -392,6 +396,45 @@ var DVT_PAGE = (function () {
   // options.lazy: true でビューポート優先＋遅延翻訳を有効にする（ページ全体翻訳系のみ）。
   //   要約モードは全訳文を結合して LLM に渡すため全件翻訳が必要で lazy 不可。
   //   領域選択・右クリック翻訳はユーザーが範囲を明示した少数要素なので lazy 不要。
+  // 翻訳の世代。ページ全体翻訳の解除（undoPageTranslate）で進める。
+  // 解除前に始まった翻訳処理（応答待ち中のワーカー・ページ監視の開始・要約）が、
+  // 解除後や翻訳し直し後に古い状態で動かないよう、開始時の値と比べて打ち切る（Issue #271）
+  let translationEpoch = 0;
+
+  // この content script が付けた処理中マーク（dvt-pending）の要素。
+  // 拡張の更新・再読み込みで content script が入れ直されると、前の content script が
+  // 付けた処理中マークだけが残り、その要素は翻訳対象から外れたままになる（Issue #271）。
+  // 自分が付けたマークと区別して、前の content script の分だけ回収するために記録する。
+  let ownPending = new WeakSet();
+
+  // 処理中マークを付けた翻訳処理（runConcurrentTranslation の呼び出しごとのトークン）。
+  // 中止時に「自分の処理が付けたマーク」だけを外し、後から始まった処理のマークは残すために使う
+  const pendingOwner = new WeakMap();
+  let pendingRunSeq = 0;
+
+  // token の処理が付けた処理中マークを外す（中止時）。
+  // DOM から外れた要素は undoPageTranslate の復元対象（接続中の要素のみ）に入らないため、
+  // ここで外さないと再挿入されても翻訳対象に戻らない
+  function releaseOwnedPending(elements, token) {
+    elements.forEach(el => {
+      if (!el || pendingOwner.get(el) !== token) return;
+      pendingOwner.delete(el);
+      ownPending.delete(el);
+      if (el.dataset && el.dataset.dvtId === 'dvt-pending') delete el.dataset.dvtId;
+    });
+  }
+
+  // 前の content script が残した処理中マークを外し、翻訳対象に戻す（Issue #271）
+  function releaseStalePending() {
+    let released = 0;
+    DVT.deepQuerySelectorAll(document, '[data-dvt-id="dvt-pending"]').forEach(el => {
+      if (ownPending.has(el)) return;
+      delete el.dataset.dvtId;
+      released++;
+    });
+    if (released > 0) dlog(`前の content script の処理中マークを回収 ${released} 件`);
+  }
+
   async function runConcurrentTranslation(elements, tl, idPrefix, options = {}) {
     const { lazy = false } = options;
 
@@ -399,12 +442,24 @@ var DVT_PAGE = (function () {
     // filterTranslatableElements / extractRegionElements は data-dvt-id が設定された
     // 要素を除外するため、並走する別の翻訳処理が同じ要素を重複取得しない。
     // insertDualView が後で実際のIDに上書きする。
-    elements.forEach(el => { el.dataset.dvtId = 'dvt-pending'; });
+    const token = ++pendingRunSeq;
+    elements.forEach(el => {
+      el.dataset.dvtId = 'dvt-pending';
+      ownPending.add(el);
+      pendingOwner.set(el, token);
+    });
+    // 解除の世代は最初の await より前に保存する（設定取得中の解除を検知するため）
+    const epoch = translationEpoch;
 
     // DeepL選択時にAPIキー未設定ならトーストで通知して中断（最終防衛ライン）
     const engineConfig = await new Promise(resolve => {
       chrome.storage.local.get(['translateEngine', 'deeplApiKey'], resolve);
     });
+    // 設定取得の間に解除・翻訳し直しが起きていれば、旧翻訳先の翻訳や遅延翻訳の登録をしない
+    if (epoch !== translationEpoch) {
+      releaseOwnedPending(elements, token);
+      return;
+    }
     if (engineConfig.translateEngine === 'deepl' && !engineConfig.deeplApiKey) {
       DVT.showToast(t('deeplApiKeyMissing'), false, 4000);
       // 予約した処理中マークを解放し、APIキー設定後の再翻訳を可能にする
@@ -420,7 +475,7 @@ var DVT_PAGE = (function () {
     // スクロールのたびに進捗トーストが出て煩わしいため。
     if (lazy && supportsIntersectionObserver()
       && (elements.length >= LAZY_MIN_ELEMENTS || isLazyActiveFor(tl, idPrefix))) {
-      scheduleLazyTranslation(elements, tl, idPrefix);
+      scheduleLazyTranslation(elements, tl, idPrefix, token);
       return;
     }
 
@@ -436,7 +491,8 @@ var DVT_PAGE = (function () {
     let translated = 0;
 
     async function worker() {
-      while (queue.length > 0) {
+      // 解除された後は残りのキューを処理しない（翻訳し直しのキューと二重に翻訳しないため）
+      while (queue.length > 0 && epoch === translationEpoch) {
         const el = queue.shift();
         if (!el) break;
 
@@ -449,6 +505,9 @@ var DVT_PAGE = (function () {
 
     const workers = Array.from({ length: CONCURRENCY }, () => worker());
     await Promise.all(workers);
+
+    // 解除で打ち切った場合は、キューに残った要素の処理中マークを外す
+    if (epoch !== translationEpoch) releaseOwnedPending(queue.splice(0), token);
 
     DVT.updateToast(toast, t('toastDone', { count: translated }));
     setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
@@ -465,14 +524,20 @@ var DVT_PAGE = (function () {
 
   // 遅延翻訳の対象要素を登録する。既存の遅延翻訳が同条件で動いていれば
   // （MutationObserver 由来の新規要素など）そこへ追加する。
-  function scheduleLazyTranslation(elements, tl, idPrefix) {
+  // token: 処理中マークを付けた runConcurrentTranslation のトークン（停止時の解放用）
+  function scheduleLazyTranslation(elements, tl, idPrefix, token) {
     if (isLazyActiveFor(tl, idPrefix)) {
+      dlog(`遅延翻訳に追加 ${elements.length} 件`);
       lazyState.total += elements.length;
-      elements.forEach(el => lazyState.observer.observe(el));
+      elements.forEach(el => {
+        lazyState.reserved.push({ el, token });
+        lazyState.observer.observe(el);
+      });
       return;
     }
 
     stopLazyTranslation();
+    dlog(`遅延翻訳 開始 ${elements.length} 件`);
 
     const vh = window.innerHeight || document.documentElement.clientHeight || 0;
     const rootMargin = Math.max(1, Math.round(vh * LAZY_ROOT_MARGIN_RATIO));
@@ -493,6 +558,8 @@ var DVT_PAGE = (function () {
       toast: DVT.showToast(t('toastTranslating', { done: 0, total: elements.length }), true),
       toastClosed: false,
     };
+    // 処理中マークを付けた要素と、そのトークン（停止時に未処理分のマークを外すため）
+    state.reserved = elements.map(el => ({ el, token }));
     lazyState = state;
 
     state.observer = new IntersectionObserver((entries) => {
@@ -500,6 +567,7 @@ var DVT_PAGE = (function () {
       if (lazyState !== state || !DVT.state.pageTranslateActive) return;
       const hits = entries.filter(e => e.isIntersecting);
       if (hits.length === 0) return;
+      dlog(`遅延翻訳 交差 ${hits.length} 件 → キュー投入（待機 ${state.queue.length + hits.length} / 実行中 ${state.workers}）`);
       // 同一コールバック内の要素はビューポートに近い順に翻訳する
       hits.sort((a, b) => viewportDistance(a.boundingClientRect) - viewportDistance(b.boundingClientRect));
       hits.forEach(e => {
@@ -570,8 +638,11 @@ var DVT_PAGE = (function () {
   // 遅延翻訳を停止して Observer と待機キューを破棄する
   function stopLazyTranslation() {
     if (!lazyState) return;
+    dlog('遅延翻訳 停止');
     if (lazyState.observer) lazyState.observer.disconnect();
     lazyState.queue.length = 0;
+    // まだ翻訳していない要素の処理中マークを外す（DOM から外れた要素も含む）
+    (lazyState.reserved || []).forEach(({ el, token }) => releaseOwnedPending([el], token));
     if (!lazyState.toastClosed) {
       lazyState.toastClosed = true;
       lazyState.toast.remove();
@@ -579,8 +650,20 @@ var DVT_PAGE = (function () {
     lazyState = null;
   }
 
+  // ─── 調査用デバッグログ（Issue #271） ────────────────────────────────
+  function dlog(...args) {
+    if (DVT.debugLog) DVT.debugLog('[page]', ...args);
+  }
+
   // ─── 動的コンテンツ監視（MutationObserver） ────────────────────────
   let pageObserver = null;
+  // ページ全体翻訳を開始したときの翻訳先。DVT.state.targetLang はポップアップの言語変更
+  // （setLang）で先に書き換わるため、翻訳先が変わったかの判定には使えない（Issue #271）
+  let pageTranslateLang = null;
+  // 翻訳＆要約モードを対象 0 件で開始し、要約を後回しにしているか（Issue #271）
+  let summaryPending = false;
+  // pageObserver が監視している body（SPA が body ごと差し替えたかの判定に使う。調査用）
+  let observedBody = null;
   let observerDebounceTimer = null;
   // 監視済み shadow root を記録し、同一 root の二重 observe を避ける
   let observedShadowRoots = new WeakSet();
@@ -599,6 +682,7 @@ var DVT_PAGE = (function () {
 
   function startPageObserver(tl) {
     if (pageObserver) return;
+    dlog('ページ監視 開始');
     pageObserver = new MutationObserver(() => {
       // デバウンス: 短時間に大量のDOM変更があっても1回だけ処理
       if (observerDebounceTimer) clearTimeout(observerDebounceTimer);
@@ -606,6 +690,7 @@ var DVT_PAGE = (function () {
         translateNewElements(tl);
       }, OBSERVER_DEBOUNCE_MS);
     });
+    observedBody = document.body;
     pageObserver.observe(document.body, {
       childList: true,
       subtree: true,
@@ -616,9 +701,11 @@ var DVT_PAGE = (function () {
 
   function stopPageObserver() {
     if (pageObserver) {
+      dlog('ページ監視 停止');
       pageObserver.disconnect();
       pageObserver = null;
     }
+    observedBody = null;
     if (observerDebounceTimer) {
       clearTimeout(observerDebounceTimer);
       observerDebounceTimer = null;
@@ -633,10 +720,21 @@ var DVT_PAGE = (function () {
     // 後から出現した shadow root（遅延ロードのコメント等）も監視対象に追加
     observeShadowRoots();
     const elements = filterTranslatableElements(document);
+    dlog(`DOM 変更 → 新規の翻訳対象 ${elements.length} 件`);
     if (elements.length === 0) return;
     // 要約モードでは全訳文を結合して LLM に渡すため遅延翻訳は使えない
     const lazy = DVT.state.pageTranslateMode !== 'summarize';
+    // 翻訳＆要約を対象 0 件で開始していた場合は、最初に本文が現れたときに要約も行う。
+    // 要約は 1 回だけにするため、await の前にフラグを下ろす
+    const summarizeNow = summaryPending && DVT.state.pageTranslateMode === 'summarize';
+    if (summarizeNow) summaryPending = false;
+    const epoch = translationEpoch;
     await runConcurrentTranslation(elements, tl, 'dvt-', { lazy });
+    // 翻訳中に解除・翻訳し直しが起きていれば、古い処理なので要約しない（要約の重複防止）
+    if (summarizeNow && epoch === translationEpoch) {
+      dlog(`後回しにしていた要約を実行 ${elements.length} 件`);
+      await runSummarize(elements, document.body, true);
+    }
   }
 
   // ─── ページ全体翻訳 ────────────────────────────────────────────────
@@ -649,13 +747,28 @@ var DVT_PAGE = (function () {
     DVT.state.pageTranslateActive = true;
     DVT.state.pageTranslateMode = 'translate';
     DVT.state.targetLang = tl;
+    pageTranslateLang = tl;
+    // 前の content script が残した処理中マークを回収し、翻訳対象に戻す
+    releaseStalePending();
 
     const elements = filterTranslatableElements(document);
-    if (elements.length === 0) return;
+    dlog(`ページ全体翻訳 開始 tl=${tl} 対象 ${elements.length} 件`);
+    if (elements.length === 0) {
+      // 対象が 0 件でもページ監視は開始する（Issue #271）。
+      // 監視なしで終えると「翻訳中」の状態だけが残り、後から追加された記事が二度と翻訳されない。
+      // 0 件になるのは、SPA の中身がまだ描画されていない場合や、拡張の再読み込み・更新で
+      // content script が入れ直され、前の content script が翻訳した要素だけが残っている場合
+      dlog('ページ全体翻訳: 対象 0 件のためページ監視のみ開始');
+      startPageObserver(tl);
+      return;
+    }
 
     // ビューポート優先＋遅延翻訳: 見えている箇所から訳文を埋め、
     // 画面外はスクロールで近づいたときに翻訳する（Issue #256）
+    const epoch = translationEpoch;
     await runConcurrentTranslation(elements, tl, 'dvt-', { lazy: true });
+    // 翻訳中に解除・翻訳し直しが起きていれば、旧翻訳先のページ監視を始めない
+    if (epoch !== translationEpoch) return;
 
     // 翻訳開始後、動的コンテンツの監視を開始
     startPageObserver(tl);
@@ -671,22 +784,68 @@ var DVT_PAGE = (function () {
     DVT.state.pageTranslateActive = true;
     DVT.state.pageTranslateMode = 'summarize';
     DVT.state.targetLang = tl;
+    pageTranslateLang = tl;
+    releaseStalePending();
 
     const elements = filterTranslatableElements(document);
-    if (elements.length === 0) return;
+    dlog(`ページ全体翻訳＆要約 開始 tl=${tl} 対象 ${elements.length} 件`);
+    if (elements.length === 0) {
+      // translatePage と同じく、0 件でもページ監視は開始する（Issue #271）。
+      // 要約は本文が現れて翻訳したときに 1 回だけ行う。ただし前の content script の
+      // 要約ブロックが残っている（拡張の再読み込み後など）なら作り直さない
+      summaryPending = !document.getElementById('dvt-page-summary');
+      dlog(`ページ全体翻訳＆要約: 対象 0 件のためページ監視のみ開始（要約を後回し=${summaryPending}）`);
+      startPageObserver(tl);
+      return;
+    }
 
     // ステップ1: 各文のデュアルビュー翻訳
+    const epoch = translationEpoch;
     await runConcurrentTranslation(elements, tl, 'dvt-');
+    // 翻訳中に解除・翻訳し直しが起きていれば、要約も監視の開始もしない
+    if (epoch !== translationEpoch) return;
 
     // ステップ2: 全翻訳テキストを結合してLLMで要約
     await runSummarize(elements, document.body, true);
+    if (epoch !== translationEpoch) return;
 
     // 翻訳＆要約完了後、動的コンテンツの監視を開始
     startPageObserver(tl);
   }
 
+  // ─── 自動翻訳ルールからのページ全体翻訳（Issue #271） ──────────────
+  // translatePage / translatePageAndSummarize は手動操作用のトグルで、翻訳中に呼ぶと解除する。
+  // 自動翻訳ルールは SPA の URL 変更のたびに再評価されるため、トグルを使うと
+  // URL が変わるたびに翻訳が ON/OFF を繰り返してしまう。
+  // ここでは「指定モード・翻訳先で翻訳されている状態」にそろえるだけで、解除はしない。
+  async function ensurePageTranslate(tl, mode) {
+    const wantMode = mode === 'summarize' ? 'summarize' : 'translate';
+    if (DVT.state.pageTranslateActive) {
+      if (DVT.state.pageTranslateMode === wantMode && pageTranslateLang === tl) {
+        dlog(`ensurePageTranslate: 翻訳中のため継続 mode=${wantMode}`);
+        // 監視が止まっていれば再開し（動いていれば何もしない）、未翻訳の新規要素だけ翻訳する
+        releaseStalePending();
+        startPageObserver(tl);
+        await translateNewElements(tl);
+        return;
+      }
+      // モードや翻訳先が変わった場合は、いったん解除してから指定の状態でやり直す
+      dlog(`ensurePageTranslate: モード・翻訳先の変更 ${DVT.state.pageTranslateMode}/${pageTranslateLang} → ${wantMode}/${tl}`);
+      undoPageTranslate();
+    }
+    if (wantMode === 'summarize') {
+      await translatePageAndSummarize(tl);
+    } else {
+      await translatePage(tl);
+    }
+  }
+
   function undoPageTranslate() {
+    dlog('ページ全体翻訳 解除');
+    translationEpoch++;
     DVT.state.pageTranslateActive = false;
+    pageTranslateLang = null;
+    summaryPending = false;
     DVT.state.pageTranslateMode = null;
     // 動的コンテンツ監視を停止
     stopPageObserver();
@@ -1118,5 +1277,15 @@ var DVT_PAGE = (function () {
     window.addEventListener('keydown', onKeyDown, true);
   }
 
-  return { translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
+  // 調査用: ページ全体翻訳の状態を 1 行にまとめる（Issue #271）
+  function getDebugState() {
+    const lz = lazyState
+      ? `lazy(total=${lazyState.total} processed=${lazyState.processed} queue=${lazyState.queue.length} workers=${lazyState.workers})`
+      : 'lazy=なし';
+    return `pageTranslateActive=${!!DVT.state.pageTranslateActive} mode=${DVT.state.pageTranslateMode}`
+      + ` ページ監視=${!!pageObserver} 監視中body=現在のbody:${observedBody ? observedBody === document.body : '-'}`
+      + ` 翻訳済み要素=${document.querySelectorAll('[data-dvt-id]').length} ${lz}`;
+  }
+
+  return { getDebugState, ensurePageTranslate, translatePage, translatePageAndSummarize, undoPageTranslate, enterRegionMode, exitRegionMode: exitRegionModeExternal, translateElement, translateAndSummarizeElement, translateClickedElement, translateAndSummarizeClickedElement, enterSelectorPickMode, _overrideAncestorClamp: overrideAncestorClamp, _restoreAncestorClamp: restoreAncestorClamp, _isClampedElement: isClampedElement, _viewportDistance: viewportDistance, _sortByViewportDistance: sortByViewportDistance, _stopLazyTranslation: stopLazyTranslation };
 })();

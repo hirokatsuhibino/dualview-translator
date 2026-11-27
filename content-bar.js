@@ -10,6 +10,15 @@ var DVT_BAR = (function () {
   const RETRANSLATE_DEBOUNCE_MS = 500;     // コンテンツ変更後の再翻訳デバウンス(ms)
   const SPA_RECHECK_DELAY_MS = 300;        // SPA遷移後のルール再チェック遅延(ms)
 
+  // ─── 調査用デバッグログ（Issue #271） ────────────────────────────────
+  // DVT.debugLog は storage の debugLog が true のときだけ出力する
+  function dlog(...args) {
+    if (typeof DVT !== 'undefined' && DVT.debugLog) DVT.debugLog('[autoRule]', ...args);
+  }
+  function desc(el) {
+    return (typeof DVT !== 'undefined' && DVT.describeEl) ? DVT.describeEl(el) : '';
+  }
+
   // ─── ページ言語検出 ────────────────────────────────────────────────
   async function detectPageLanguage() {
     // <html lang> がゴミ値（"null" / "und" / "unknown" 等）の場合は「無い」扱いにして
@@ -209,7 +218,8 @@ var DVT_BAR = (function () {
 
     let retranslateTimer = null;
     let recheckTimer = null;
-    const entry = { observer: null, watcher: null, cleanup: null };
+    const entry = { observer: null, watcher: null, cleanup: null, el, rule, translating: false };
+    dlog(`監視開始 rule=${rule.id} selector=${rule.selector} mode=${rule.mode} translateNow=${!!options.translateNow} el=${desc(el)}`);
 
     // このエントリがまだ有効か（ルール削除・無効化・要素差し替えで無効になる）
     function isActive() {
@@ -219,6 +229,9 @@ var DVT_BAR = (function () {
     async function retranslate() {
       // 翻訳中はObserverを停止して自分の変更を無視
       observer.disconnect();
+      entry.translating = true;
+      const t0 = Date.now();
+      dlog(`再翻訳 開始 rule=${rule.id} el=${desc(el)}（子ノード監視を一時停止）`);
       try {
         if (rule.mode === 'summarize') {
           await DVT_PAGE.translateAndSummarizeClickedElement(el);
@@ -227,16 +240,21 @@ var DVT_BAR = (function () {
         }
       } catch (e) {
         // 再翻訳失敗は無視
+        dlog(`再翻訳 例外 rule=${rule.id}: ${e && e.message}`);
       } finally {
+        entry.translating = false;
         // ルールが削除・無効化されていなければ監視を再開
-        if (isActive() && el.isConnected) {
+        const reobserve = isActive() && el.isConnected;
+        if (reobserve) {
           observer.observe(el, { childList: true });
         }
+        dlog(`再翻訳 終了 rule=${rule.id} ${Date.now() - t0}ms active=${isActive()} el=${desc(el)} 子ノード監視再開=${reobserve}`);
       }
     }
 
     // 直接の子ノード変更を監視（subtree不要: 中身全体の入れ替えを検出すれば十分）
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((records) => {
+      dlog(`子ノード変更を検知 rule=${rule.id} records=${records.length} → ${RETRANSLATE_DEBOUNCE_MS}ms 後に再翻訳`);
       clearTimeout(retranslateTimer);
       retranslateTimer = setTimeout(retranslate, RETRANSLATE_DEBOUNCE_MS);
     });
@@ -244,8 +262,9 @@ var DVT_BAR = (function () {
     // ── 対象要素の差し替え検知 ──
     // 古い要素が DOM から外れていて、セレクタで別の要素が見つかれば張り直す。
     // まだ見つからない（再描画の途中）ならそのまま監視を続ける。
-    async function recheckTarget() {
+    async function recheckTarget(reason) {
       if (!isActive() || el.isConnected || !rule.selector) return;
+      dlog(`差し替え再探索 rule=${rule.id} reason=${reason || 'mutation'} 旧el=${desc(el)}`);
       // 現在の URL でこのルールがまだ採用されるかを、保存済みルールから再評価する。
       // SPA 遷移で URL 条件から外れた／より優先度の高いルールに切り替わった／
       // ルールが削除・無効化された場合は、別ページや別モードで翻訳しないよう監視ごと停止する
@@ -253,6 +272,7 @@ var DVT_BAR = (function () {
       // 待機中に別の再探索が張り直した・停止した場合はここで終了（二重翻訳防止）
       if (!isActive() || el.isConnected) return;
       if (!latest) {
+        dlog(`差し替え再探索: ルールが採用されなくなったため監視停止 rule=${rule.id} url=${location.href}`);
         stopAutoRuleObserver(rule.id);
         return;
       }
@@ -268,7 +288,10 @@ var DVT_BAR = (function () {
       } catch (e) {
         return; // 不正なセレクタ
       }
-      if (!next || next === el) return;
+      if (!next || next === el) {
+        dlog(`差し替え再探索: 新しい要素なし rule=${rule.id} found=${!!next}（監視継続）`);
+        return;
+      }
       // 本文がまだ空なら翻訳はせず監視だけ張る（中身が入った時点で子ノード監視が再翻訳する）
       const hasText = (next.textContent || '').trim().length > 0;
       // モード変更などに追従するため、保存済みの最新ルールで張り直す
@@ -283,13 +306,31 @@ var DVT_BAR = (function () {
       if (el.isConnected || recheckTimer) return;
       recheckTimer = setTimeout(() => {
         recheckTimer = null;
-        recheckTarget();
+        recheckTarget('mutation');
       }, RETRANSLATE_DEBOUNCE_MS);
     });
 
     // タブが再表示されたときにも差し替えをチェック（スリープ復帰直後など）
     function onVisibilityChange() {
-      if (!document.hidden) recheckTarget();
+      if (!document.hidden) recheckTarget('visibilitychange');
+    }
+
+    // 調査用: 対象要素の深い階層の変更も数える（デバッグ時のみ）。
+    // メールを開いても「子ノード変更を検知」が出ないとき、変更が直下でなく深い階層で起きているかを判別する
+    let deepObserver = null;
+    let deepCount = 0;
+    let deepTimer = null;
+    if (typeof DVT !== 'undefined' && DVT.isDebugEnabled && DVT.isDebugEnabled() && el.isConnected) {
+      deepObserver = new MutationObserver((records) => {
+        deepCount += records.length;
+        if (deepTimer) return;
+        deepTimer = setTimeout(() => {
+          dlog(`(参考) 対象要素内の変更 rule=${rule.id} records=${deepCount} translating=${entry.translating}`);
+          deepCount = 0;
+          deepTimer = null;
+        }, 1000);
+      });
+      deepObserver.observe(el, { childList: true, subtree: true, characterData: true });
     }
 
     entry.observer = observer;
@@ -297,6 +338,8 @@ var DVT_BAR = (function () {
     entry.cleanup = () => {
       clearTimeout(retranslateTimer);
       clearTimeout(recheckTimer);
+      clearTimeout(deepTimer);
+      if (deepObserver) deepObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
     activeRuleObservers.set(rule.id, entry);
@@ -315,7 +358,7 @@ var DVT_BAR = (function () {
 
     // 翻訳処理中に対象要素が作り直されていた場合、以後 DOM 更新がないと検知できないため
     // 監視開始の時点で一度だけ差し替えを確認する
-    if (rule.selector && !el.isConnected) recheckTarget();
+    if (rule.selector && !el.isConnected) recheckTarget('start');
   }
 
   // ─── 採用ルールの再評価 ──────────────────────────────────────────────
@@ -352,6 +395,7 @@ var DVT_BAR = (function () {
   function stopAutoRuleObserver(ruleId) {
     const entry = activeRuleObservers.get(ruleId);
     if (entry) {
+      dlog(`監視停止 rule=${ruleId}`);
       entry.observer.disconnect();
       entry.watcher.disconnect();
       entry.cleanup();
@@ -359,13 +403,95 @@ var DVT_BAR = (function () {
     }
   }
 
+  // ─── 対象要素の出現待ち（Issue #271） ────────────────────────────
+  // URL はルールに一致するのに、セレクタの要素が waitForElement のタイムアウト内に
+  // 見つからなかった場合に使う軽量な待機監視。
+  // 例: 拡張の更新・再読み込みで content script が入れ直された時点で、Web メールが
+  // ログイン画面だった場合。ログイン後に本文要素が現れても URL は変わらないため、
+  // これがないと checkAutoRules が二度と実行されず、リロードするまで翻訳されない。
+  // 要素が現れた時点で checkAutoRules をやり直す（採用ルールの判定は checkAutoRules に任せる）。
+  let pendingWatch = null;
+
+  function stopPendingWatch() {
+    if (!pendingWatch) return;
+    pendingWatch.observer.disconnect();
+    clearTimeout(pendingWatch.timer);
+    document.removeEventListener('visibilitychange', pendingWatch.onVisibilityChange);
+    pendingWatch = null;
+  }
+
+  function startPendingWatch(selectors) {
+    stopPendingWatch();
+    dlog(`要素の出現待ちを開始 selectors=${selectors.join(' , ')}`);
+    const watch = { observer: null, timer: null, onVisibilityChange: null };
+
+    function anyFound() {
+      return selectors.some(sel => {
+        try {
+          return !!document.querySelector(sel);
+        } catch (e) {
+          return false; // 不正なセレクタ
+        }
+      });
+    }
+
+    function check(reason) {
+      if (pendingWatch !== watch) return;
+      if (!anyFound()) return;
+      dlog(`要素の出現を検知（${reason}）→ checkAutoRules をやり直す`);
+      stopPendingWatch();
+      checkAutoRules();
+    }
+
+    // 対象要素の差し替え検知と同じく、デバウンスではなくスロットルにする
+    // （無関係な DOM 更新が続くページでも、最初の変更から一定時間後に必ず確認する）
+    watch.observer = new MutationObserver(() => {
+      if (watch.timer) return;
+      watch.timer = setTimeout(() => {
+        watch.timer = null;
+        check('mutation');
+      }, RETRANSLATE_DEBOUNCE_MS);
+    });
+    watch.onVisibilityChange = () => {
+      if (!document.hidden) check('visibilitychange');
+    };
+    pendingWatch = watch;
+    // body ごと差し替えられても拾えるよう document を監視する
+    watch.observer.observe(document, { childList: true, subtree: true });
+    document.addEventListener('visibilitychange', watch.onVisibilityChange);
+    // 複数ルールがあると、先のルールのタイムアウト後に後続ルールを待っている間に
+    // 先のルールの要素が現れていることがある。監視の登録前に現れた要素は通知されないため、
+    // 登録直後にも一度確認する
+    check('start');
+  }
+
   // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────
+  // checkAutoRules の世代番号。要素待ちの間に新しい checkAutoRules が始まった場合、
+  // 古い方は出現待ちを張らない（新しい方の結果を上書きしないため）
+  let checkGeneration = 0;
+
   async function checkAutoRules() {
+    const generation = ++checkGeneration;
+    // 前回の出現待ちは、このチェックの結果で必要なら張り直す
+    stopPendingWatch();
+    const startUrl = location.href;
+    // await の間に新しいチェック（SPA 遷移・ルール更新・出現待ち）が始まった、または URL が
+    // 変わった場合、このチェックは古い。旧ルールでの翻訳や、最新の監視の停止・張り直しをしない
+    const isStale = () => generation !== checkGeneration || location.href !== startUrl;
     const data = await new Promise(resolve =>
       chrome.storage.local.get('autoRules', resolve)
     );
+    // 古いチェックは新しいチェックに処理を任せる。true を返すのは、初期化時の呼び出し元が
+    // 「ルールなし」と判断して翻訳バーを出さないようにするため
+    if (isStale()) {
+      dlog('checkAutoRules: 新しいチェックが始まったため中止（ルール取得後）');
+      return true;
+    }
     const rules = (data.autoRules || []).filter(r => r.enabled);
     const url = location.href;
+    dlog(`checkAutoRules 開始 有効ルール=${rules.length} url=${url}`);
+    // URL は一致したが要素が見つからなかったルールのセレクタ
+    const missingSelectors = [];
 
     for (const rule of rules) {
       if (!matchesUrlPattern(url, rule.urlPattern)) continue;
@@ -373,7 +499,16 @@ var DVT_BAR = (function () {
       if (rule.selector) {
         // 要素セレクタ指定: 即座に存在しない場合はDOMに追加されるまで待機
         const el = await waitForElement(rule.selector);
-        if (!el) continue; // タイムアウト後も見つからなければスキップ
+        if (isStale()) {
+          dlog(`checkAutoRules: 新しいチェックが始まったため中止（要素待ち後） rule=${rule.id}`);
+          return true;
+        }
+        if (!el) {
+          dlog(`checkAutoRules: 要素待ちタイムアウト rule=${rule.id} selector=${rule.selector}`);
+          missingSelectors.push(rule.selector);
+          continue; // タイムアウト後も見つからなければスキップ
+        }
+        dlog(`checkAutoRules: ルール採用 rule=${rule.id} el=${desc(el)}`);
 
         // これから翻訳する前に既存の監視をすべて停止する。
         // 別ルールの監視が残ると競合し、同じルールの監視が残ると差し替え検知が同じ要素を
@@ -385,22 +520,46 @@ var DVT_BAR = (function () {
         const fn = rule.mode === 'summarize'
           ? DVT_PAGE.translateAndSummarizeClickedElement
           : DVT_PAGE.translateClickedElement;
+        const t0 = Date.now();
         Promise.resolve(fn(el))
-          .then(() => startAutoRuleObserver(el, rule))
-          .catch(() => {});
+          .then(() => {
+            dlog(`checkAutoRules: 初回翻訳 終了 rule=${rule.id} ${Date.now() - t0}ms el=${desc(el)}`);
+            // 翻訳中に新しいチェックが始まっていれば、旧ルールの監視は張らない（新しいチェックが張る）
+            if (isStale()) {
+              dlog(`checkAutoRules: 新しいチェックが始まったため監視を張らない rule=${rule.id}`);
+              return;
+            }
+            // 翻訳中にポップアップでルールが削除・無効化されると、stopAutoRuleObserver は
+            // まだ監視が無いため空振りし、世代も URL も変わらない。監視を張る前に、
+            // 保存済みルールでこのルールがまだ採用されるかを確かめる
+            return findStillAdoptedRule(rule.id).then(latest => {
+              if (isStale()) return;
+              if (!latest || !latest.selector) {
+                dlog(`checkAutoRules: ルールが削除・無効化されたため監視を張らない rule=${rule.id}`);
+                return;
+              }
+              startAutoRuleObserver(el, latest);
+            });
+          })
+          .catch((e) => { dlog(`checkAutoRules: 初回翻訳 例外 rule=${rule.id}: ${e && e.message}`); });
       } else {
+        dlog(`checkAutoRules: ページ全体翻訳ルール採用 rule=${rule.id} mode=${rule.mode} pageTranslateActive=${!!DVT.state.pageTranslateActive}`);
         stopAllAutoRuleObservers();
-        // セレクタなしはページ全体翻訳
-        if (rule.mode === 'summarize') {
-          DVT_PAGE.translatePageAndSummarize(DVT.state.targetLang);
-        } else {
-          DVT_PAGE.translatePage(DVT.state.targetLang);
-        }
+        // セレクタなしはページ全体翻訳。
+        // translatePage はトグル（翻訳中なら解除）なので、SPA の URL 変更で再評価されるたびに
+        // 翻訳が解除されないよう、状態をそろえるだけの ensurePageTranslate を使う（Issue #271）
+        DVT_PAGE.ensurePageTranslate(DVT.state.targetLang, rule.mode);
       }
       return true; // マッチしたルールで処理済み
     }
     // どのルールも採用されない（SPA 遷移で URL が外れた等）なら旧ルールの監視をすべて停止する
+    dlog('checkAutoRules: 採用ルールなし');
     stopAllAutoRuleObservers();
+    // URL は一致するのに要素がまだ無いルールがあれば、要素が現れるまで待機監視を残す。
+    // 待機中に別の checkAutoRules（SPA 遷移・ルール更新）が始まっていれば、そちらに任せる
+    if (missingSelectors.length > 0 && generation === checkGeneration && url === location.href) {
+      startPendingWatch(missingSelectors);
+    }
     return false; // マッチするルールなし
   }
 
@@ -412,6 +571,7 @@ var DVT_BAR = (function () {
     function onUrlChange() {
       const newUrl = location.href;
       if (newUrl === lastUrl) return;
+      dlog(`SPA URL 変更 ${lastUrl} → ${newUrl}`);
       lastUrl = newUrl;
       // URL変更後に少し待ってからルールをチェック（DOMの更新を待つ）
       setTimeout(() => checkAutoRules(), SPA_RECHECK_DELAY_MS);
@@ -434,5 +594,35 @@ var DVT_BAR = (function () {
     window.addEventListener('popstate', onUrlChange);
   })();
 
-  return { detectPageLanguage, checkAutoRules, matchesUrlPattern, waitForElement, startAutoRuleObserver, stopAutoRuleObserver };
+  // ─── 監視状態のスナップショット（Issue #271 調査用） ─────────────────
+  // スリープ復帰（タブ再表示・オンライン復帰・フォーカス）のたびに、各ルールの監視が
+  // どの要素に張られているか・翻訳中のまま止まっていないか・セレクタが今どの要素を指すかを出す
+  function logAutoRuleSnapshot(trigger) {
+    if (typeof DVT === 'undefined' || !DVT.isDebugEnabled || !DVT.isDebugEnabled()) return;
+    // ページ全体翻訳（セレクタなしのルール・翻訳バー・手動）の状態
+    if (typeof DVT_PAGE !== 'undefined' && DVT_PAGE.getDebugState) {
+      DVT.debugLog('[page]', `snapshot(${trigger}): ${DVT_PAGE.getDebugState()}`);
+    }
+    if (activeRuleObservers.size === 0) {
+      dlog(`snapshot(${trigger}): 有効な監視なし 要素の出現待ち=${!!pendingWatch}`);
+      return;
+    }
+    for (const [id, entry] of activeRuleObservers) {
+      let current = null;
+      try {
+        current = entry.rule.selector ? document.querySelector(entry.rule.selector) : null;
+      } catch (e) {
+        // 不正なセレクタは null 扱い
+      }
+      dlog(`snapshot(${trigger}): rule=${id} translating=${entry.translating}`
+        + ` 監視中el=${desc(entry.el)} セレクタの現在の要素=${desc(current)} 同一=${current === entry.el}`);
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) logAutoRuleSnapshot('visibilitychange');
+  });
+  window.addEventListener('online', () => logAutoRuleSnapshot('online'));
+  window.addEventListener('focus', () => logAutoRuleSnapshot('focus'));
+
+  return { detectPageLanguage, checkAutoRules, logAutoRuleSnapshot, matchesUrlPattern, waitForElement, startAutoRuleObserver, stopAutoRuleObserver };
 })();
