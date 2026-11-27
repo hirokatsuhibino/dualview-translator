@@ -403,14 +403,81 @@ var DVT_BAR = (function () {
     }
   }
 
+  // ─── 対象要素の出現待ち（Issue #271） ────────────────────────────
+  // URL はルールに一致するのに、セレクタの要素が waitForElement のタイムアウト内に
+  // 見つからなかった場合に使う軽量な待機監視。
+  // 例: 拡張の更新・再読み込みで content script が入れ直された時点で、Web メールが
+  // ログイン画面だった場合。ログイン後に本文要素が現れても URL は変わらないため、
+  // これがないと checkAutoRules が二度と実行されず、リロードするまで翻訳されない。
+  // 要素が現れた時点で checkAutoRules をやり直す（採用ルールの判定は checkAutoRules に任せる）。
+  let pendingWatch = null;
+
+  function stopPendingWatch() {
+    if (!pendingWatch) return;
+    pendingWatch.observer.disconnect();
+    clearTimeout(pendingWatch.timer);
+    document.removeEventListener('visibilitychange', pendingWatch.onVisibilityChange);
+    pendingWatch = null;
+  }
+
+  function startPendingWatch(selectors) {
+    stopPendingWatch();
+    dlog(`要素の出現待ちを開始 selectors=${selectors.join(' , ')}`);
+    const watch = { observer: null, timer: null, onVisibilityChange: null };
+
+    function anyFound() {
+      return selectors.some(sel => {
+        try {
+          return !!document.querySelector(sel);
+        } catch (e) {
+          return false; // 不正なセレクタ
+        }
+      });
+    }
+
+    function check(reason) {
+      if (pendingWatch !== watch) return;
+      if (!anyFound()) return;
+      dlog(`要素の出現を検知（${reason}）→ checkAutoRules をやり直す`);
+      stopPendingWatch();
+      checkAutoRules();
+    }
+
+    // 対象要素の差し替え検知と同じく、デバウンスではなくスロットルにする
+    // （無関係な DOM 更新が続くページでも、最初の変更から一定時間後に必ず確認する）
+    watch.observer = new MutationObserver(() => {
+      if (watch.timer) return;
+      watch.timer = setTimeout(() => {
+        watch.timer = null;
+        check('mutation');
+      }, RETRANSLATE_DEBOUNCE_MS);
+    });
+    watch.onVisibilityChange = () => {
+      if (!document.hidden) check('visibilitychange');
+    };
+    pendingWatch = watch;
+    // body ごと差し替えられても拾えるよう document を監視する
+    watch.observer.observe(document, { childList: true, subtree: true });
+    document.addEventListener('visibilitychange', watch.onVisibilityChange);
+  }
+
   // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────
+  // checkAutoRules の世代番号。要素待ちの間に新しい checkAutoRules が始まった場合、
+  // 古い方は出現待ちを張らない（新しい方の結果を上書きしないため）
+  let checkGeneration = 0;
+
   async function checkAutoRules() {
+    const generation = ++checkGeneration;
+    // 前回の出現待ちは、このチェックの結果で必要なら張り直す
+    stopPendingWatch();
     const data = await new Promise(resolve =>
       chrome.storage.local.get('autoRules', resolve)
     );
     const rules = (data.autoRules || []).filter(r => r.enabled);
     const url = location.href;
     dlog(`checkAutoRules 開始 有効ルール=${rules.length} url=${url}`);
+    // URL は一致したが要素が見つからなかったルールのセレクタ
+    const missingSelectors = [];
 
     for (const rule of rules) {
       if (!matchesUrlPattern(url, rule.urlPattern)) continue;
@@ -420,6 +487,7 @@ var DVT_BAR = (function () {
         const el = await waitForElement(rule.selector);
         if (!el) {
           dlog(`checkAutoRules: 要素待ちタイムアウト rule=${rule.id} selector=${rule.selector}`);
+          missingSelectors.push(rule.selector);
           continue; // タイムアウト後も見つからなければスキップ
         }
         dlog(`checkAutoRules: ルール採用 rule=${rule.id} el=${desc(el)}`);
@@ -454,6 +522,11 @@ var DVT_BAR = (function () {
     // どのルールも採用されない（SPA 遷移で URL が外れた等）なら旧ルールの監視をすべて停止する
     dlog('checkAutoRules: 採用ルールなし');
     stopAllAutoRuleObservers();
+    // URL は一致するのに要素がまだ無いルールがあれば、要素が現れるまで待機監視を残す。
+    // 待機中に別の checkAutoRules（SPA 遷移・ルール更新）が始まっていれば、そちらに任せる
+    if (missingSelectors.length > 0 && generation === checkGeneration && url === location.href) {
+      startPendingWatch(missingSelectors);
+    }
     return false; // マッチするルールなし
   }
 
@@ -498,7 +571,7 @@ var DVT_BAR = (function () {
       DVT.debugLog('[page]', `snapshot(${trigger}): ${DVT_PAGE.getDebugState()}`);
     }
     if (activeRuleObservers.size === 0) {
-      dlog(`snapshot(${trigger}): 有効な監視なし`);
+      dlog(`snapshot(${trigger}): 有効な監視なし 要素の出現待ち=${!!pendingWatch}`);
       return;
     }
     for (const [id, entry] of activeRuleObservers) {

@@ -213,6 +213,8 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
   - 同じモード・翻訳先で翻訳中なら解除せず、ページ監視を再開（動いていれば何もしない）して未翻訳の新規要素だけ翻訳する。モードか翻訳先が違えば解除してから翻訳し直す
 - 開始時に翻訳対象が 0 件でもページ監視は開始する。0 件になるのは SPA の初期描画前や、拡張の再読み込み・更新で content script が入れ直され前の翻訳済み要素（`data-dvt-id` 付き）だけが残っている場合で、監視なしで終えると「翻訳中」のまま以後の記事が翻訳されなかった
 
+- セレクタ指定のルールで、URL は一致するのに `waitForElement` が 10 秒でタイムアウトした場合は、`startPendingWatch()` で要素の出現待ち（document の MutationObserver をスロットル + `visibilitychange`）を残し、要素が現れた時点で `checkAutoRules()` をやり直す。拡張の更新・再読み込みで content script が入れ直された時点で Web メールがログイン画面だと、ログインしても URL が変わらないため以後翻訳されなかった。`checkAutoRules` の開始時に出現待ちを止め、世代番号（`checkGeneration`）で古いチェックが張り直さないようにしている
+
 ### 調査用デバッグログ（Issue #271）
 
 - `chrome.storage.local` の `debugLog` が `true` のときだけ、`[DVT debug <ISO時刻>]` 接頭辞で `console.log` に出す。既定は無効
