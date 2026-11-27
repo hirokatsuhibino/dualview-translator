@@ -459,6 +459,10 @@ var DVT_BAR = (function () {
     // body ごと差し替えられても拾えるよう document を監視する
     watch.observer.observe(document, { childList: true, subtree: true });
     document.addEventListener('visibilitychange', watch.onVisibilityChange);
+    // 複数ルールがあると、先のルールのタイムアウト後に後続ルールを待っている間に
+    // 先のルールの要素が現れていることがある。監視の登録前に現れた要素は通知されないため、
+    // 登録直後にも一度確認する
+    check('start');
   }
 
   // ─── 自動翻訳ルールのチェックと実行 ────────────────────────────────

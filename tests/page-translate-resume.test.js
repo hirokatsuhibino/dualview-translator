@@ -150,4 +150,98 @@ describe('ページ全体翻訳の継続（Issue #271）', () => {
       expect(document.querySelectorAll('.dvt-trans').length).toBe(0);
     });
   });
+  describe('PR #272 レビュー対応', () => {
+    // 要約メッセージへの応答を返す（他のメッセージは setup.js の既定応答）
+    function mockSummarizeResponse() {
+      const calls = [];
+      chrome.runtime.sendMessage.mockImplementation((msg, cb) => {
+        if (msg.action === 'summarize') {
+          calls.push(msg);
+          const res = { ok: true, summary: 'まとめ' };
+          if (cb) cb(res);
+          return Promise.resolve(res);
+        }
+        const res = { ok: true, result: { text: 'mock', detectedLang: 'fr' } };
+        if (cb) cb(res);
+        return Promise.resolve(res);
+      });
+      return calls;
+    }
+
+    it('ポップアップで翻訳先を変えた後の再評価では、新しい翻訳先で翻訳し直す', async () => {
+      const p = addParagraph('Hello from the page');
+      await DVT_PAGE.ensurePageTranslate('ja', 'translate');
+      DVT.translate.mockClear();
+
+      // ポップアップの言語変更（setLang）は DVT.state.targetLang を先に書き換える
+      DVT.state.targetLang = 'en';
+      // 自動ルールの再評価（checkAutoRules は DVT.state.targetLang を渡す）
+      await DVT_PAGE.ensurePageTranslate(DVT.state.targetLang, 'translate');
+
+      expect(DVT.translate).toHaveBeenCalledWith('Hello from the page', 'en');
+      expect(p.querySelectorAll('.dvt-trans').length).toBe(1);
+    });
+
+    it('前の content script が残した処理中マークを回収して翻訳する（拡張の再注入後）', async () => {
+      // 前の content script の遅延翻訳で予約されたまま、IntersectionObserver を失った要素
+      const stale = addParagraph('Reserved by the previous content script');
+      stale.dataset.dvtId = 'dvt-pending';
+      // 前の content script が翻訳済みの要素は保持する
+      const done = addParagraph('Already translated before reload');
+      done.dataset.dvtId = 'dvt-old';
+
+      await DVT_PAGE.ensurePageTranslate('ja', 'translate');
+
+      expect(DVT.translate).toHaveBeenCalledWith('Reserved by the previous content script', 'ja');
+      expect(DVT.translate).not.toHaveBeenCalledWith('Already translated before reload', 'ja');
+      expect(stale.querySelector('.dvt-trans')).toBeTruthy();
+      expect(done.dataset.dvtId).toBe('dvt-old');
+    });
+
+    it('自分が翻訳中の要素の処理中マークは回収しない', async () => {
+      // 翻訳が終わらない状態で、同じ要素を別の経路から翻訳しようとしても二重翻訳しない
+      let release;
+      DVT.translate.mockImplementation(() => new Promise(r => { release = r; }));
+      const p = addParagraph('Translating right now');
+      const region = DVT_PAGE.translateClickedElement(p);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(p.dataset.dvtId).toMatch(/^dvt-/);
+
+      await DVT_PAGE.translatePage('ja');
+      expect(DVT.translate).toHaveBeenCalledTimes(1);
+      release({ text: '訳', detectedLang: 'fr' });
+      await region;
+    });
+
+    it('翻訳＆要約を対象 0 件で始めたら、本文が現れたときに要約を 1 回だけ作る', async () => {
+      chrome.storage.local.set({ claudeApiKey: 'test-key' });
+      const calls = mockSummarizeResponse();
+      await DVT_PAGE.translatePageAndSummarize('ja');
+      expect(calls.length).toBe(0);
+
+      addParagraph('Article rendered later by the SPA');
+      await vi.advanceTimersByTimeAsync(600);
+      expect(calls.length).toBe(1);
+      expect(document.getElementById('dvt-page-summary')).toBeTruthy();
+
+      // 以降の追加では要約を作り直さない
+      addParagraph('Another article loaded later');
+      await vi.advanceTimersByTimeAsync(600);
+      expect(calls.length).toBe(1);
+    });
+
+    it('前の content script の要約ブロックが残っていれば、要約を作り直さない', async () => {
+      chrome.storage.local.set({ claudeApiKey: 'test-key' });
+      const calls = mockSummarizeResponse();
+      const old = document.createElement('div');
+      old.id = 'dvt-page-summary';
+      old.setAttribute('data-dvt', 'true');
+      document.body.appendChild(old);
+
+      await DVT_PAGE.translatePageAndSummarize('ja');
+      addParagraph('Article rendered later by the SPA');
+      await vi.advanceTimersByTimeAsync(600);
+      expect(calls.length).toBe(0);
+    });
+  });
 });

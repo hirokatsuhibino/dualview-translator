@@ -148,4 +148,18 @@ describe('DVT_BAR.checkAutoRules — 要素の出現待ち（Issue #271）', () 
     expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
     expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(body);
   });
+  it('複数ルールで、後続ルールを待っている間に先のルールの要素が現れても翻訳する', async () => {
+    const second = { id: 'r271b', urlPattern: '*://mail.example.com/*', mode: 'translate', selector: '#other', enabled: true };
+    storedRules = [rule, second];
+    DVT_BAR.checkAutoRules();
+    // 先のルール（#msgtext）がタイムアウト
+    await vi.advanceTimersByTimeAsync(10000);
+    // 後続ルール（#other）を待っている間に #msgtext が現れる
+    const body = showMailBody();
+    await vi.advanceTimersByTimeAsync(10000);
+    // 監視の登録後は DOM 変更もタブ再表示も起きない
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(body);
+  });
 });

@@ -211,9 +211,12 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
 
 - `translatePage` / `translatePageAndSummarize` は手動操作用の**トグル**（翻訳中に呼ぶと解除）。自動翻訳ルール（`checkAutoRules`）は SPA の URL 変更のたびに再評価されるため、トグルではなく `DVT_PAGE.ensurePageTranslate(tl, mode)` を使う
   - 同じモード・翻訳先で翻訳中なら解除せず、ページ監視を再開（動いていれば何もしない）して未翻訳の新規要素だけ翻訳する。モードか翻訳先が違えば解除してから翻訳し直す
+  - 翻訳先の比較は開始時に記録した `pageTranslateLang` で行う。`DVT.state.targetLang` はポップアップの言語変更（`setLang`）で先に書き換わるため比較に使えない
+- 拡張の再注入後は、前の content script が付けた処理中マーク（`data-dvt-id="dvt-pending"`）が残り、翻訳対象から外れたままになる。`releaseStalePending()` が、自分が付けたマーク（`ownPending` の WeakSet）以外を外して翻訳対象に戻す（`translatePage` / `translatePageAndSummarize` の開始時と `ensurePageTranslate` の継続時）。翻訳済み要素（実 ID 付き）は保持する
+- 翻訳＆要約を対象 0 件で開始した場合は `summaryPending` を立て、本文が現れて `translateNewElements` が翻訳したときに 1 回だけ要約する。前の content script の要約ブロック（`#dvt-page-summary`）が残っていれば作り直さない
 - 開始時に翻訳対象が 0 件でもページ監視は開始する。0 件になるのは SPA の初期描画前や、拡張の再読み込み・更新で content script が入れ直され前の翻訳済み要素（`data-dvt-id` 付き）だけが残っている場合で、監視なしで終えると「翻訳中」のまま以後の記事が翻訳されなかった
 
-- セレクタ指定のルールで、URL は一致するのに `waitForElement` が 10 秒でタイムアウトした場合は、`startPendingWatch()` で要素の出現待ち（document の MutationObserver をスロットル + `visibilitychange`）を残し、要素が現れた時点で `checkAutoRules()` をやり直す。拡張の更新・再読み込みで content script が入れ直された時点で Web メールがログイン画面だと、ログインしても URL が変わらないため以後翻訳されなかった。`checkAutoRules` の開始時に出現待ちを止め、世代番号（`checkGeneration`）で古いチェックが張り直さないようにしている
+- セレクタ指定のルールで、URL は一致するのに `waitForElement` が 10 秒でタイムアウトした場合は、`startPendingWatch()` で要素の出現待ち（document の MutationObserver をスロットル + `visibilitychange`）を残し、要素が現れた時点で `checkAutoRules()` をやり直す。拡張の更新・再読み込みで content script が入れ直された時点で Web メールがログイン画面だと、ログインしても URL が変わらないため以後翻訳されなかった。`checkAutoRules` の開始時に出現待ちを止め、世代番号（`checkGeneration`）で古いチェックが張り直さないようにしている。複数ルールで後続ルールを待つ間に先のルールの要素が現れていることがあるため、出現待ちの登録直後にも一度確認する
 
 ### 調査用デバッグログ（Issue #271）
 
