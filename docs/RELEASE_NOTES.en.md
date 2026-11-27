@@ -10,17 +10,23 @@ permalink: /RELEASE_NOTES.en.html
 
 ## Unreleased
 
+---
+
+## v1.9.1 (2026-11-27)
+
 ### Changes
 
 - **The macOS (Safari) version now needs macOS 12.0 or later** (#267)
   - The latest Xcode can't build for anything older than macOS 12.0, so we've bumped it up from macOS 10.14.
   - On macOS 10.14–11 you won't get new updates, but the version you've already got keeps working.
   - Nothing changes for iOS (15.0+) or for Chrome / Firefox.
+  - App Store users already got this in 1.9.0 (build 12).
 
 ### Bug Fixes
 
 - Fixed Safari opening a broken tab for a welcome page (welcome.html) that isn't bundled, the first time you installed the extension (#265).
   - That page walks you through pinning in Chrome / Firefox, so Safari just skips it now. Chrome and Firefox work the same as before.
+  - App Store users already got this in 1.9.0 (build 12).
 - Fixed whole-page auto-translation rules stopping or switching themselves off (#271).
   - On SPAs like feedly, every in-page navigation that changed the URL flipped translation off and back on. Auto rules now keep translation running and just translate what's new.
   - If nothing translatable was on the page when it opened, articles that showed up later never got translated. That could happen on pages that render their content late, or after the extension updated or reloaded. Now it keeps watching the page and translates new content as it appears.
@@ -28,6 +34,12 @@ permalink: /RELEASE_NOTES.en.html
 - Fixed selector-based auto-translation rules not kicking in after you logged back in to webmail following an extension update (#271).
   - When the extension updates (say, while your Mac is asleep), it gets re-injected into your open tabs. If your webmail (xgate, etc.) was on its login screen at that moment, the mail body didn't show up within 10 seconds, and since logging in doesn't change the URL, nothing got translated until you reloaded.
   - Now, if the URL matches a rule but the element isn't there yet, it keeps waiting and translates as soon as the element shows up.
+
+### Other
+
+- Added debug logging for tracking down bugs (#271).
+  - It only logs to the console when you set `debugLog` to `true` in the extension's storage. It's off by default.
+  - It never logs page text or API keys.
 
 ---
 
