@@ -213,6 +213,7 @@ content-*.js → chrome.runtime.sendMessage → background.js → Google Transla
   - 同じモード・翻訳先で翻訳中なら解除せず、ページ監視を再開（動いていれば何もしない）して未翻訳の新規要素だけ翻訳する。モードか翻訳先が違えば解除してから翻訳し直す
   - 翻訳先の比較は開始時に記録した `pageTranslateLang` で行う。`DVT.state.targetLang` はポップアップの言語変更（`setLang`）で先に書き換わるため比較に使えない
 - 拡張の再注入後は、前の content script が付けた処理中マーク（`data-dvt-id="dvt-pending"`）が残り、翻訳対象から外れたままになる。`releaseStalePending()` が、自分が付けたマーク（`ownPending` の WeakSet）以外を外して翻訳対象に戻す（`translatePage` / `translatePageAndSummarize` の開始時と `ensurePageTranslate` の継続時）。翻訳済み要素（実 ID 付き）は保持する
+- 非同期処理の世代管理: `checkAutoRules` は `storage` 取得後・要素待ち後・初回翻訳の完了時に、世代番号（`checkGeneration`）と開始時の URL を確認し、古いチェックなら翻訳・監視の停止や張り直しをせずに終える（初期化時の呼び出し元が翻訳バーを出さないよう `true` を返す）。ページ全体翻訳は解除（`undoPageTranslate`）で `translationEpoch` を進め、解除前に始まった処理はページ監視の開始・要約・残りキューの翻訳をしない。`translateOneElement` は応答待ちの前後で `data-dvt-id` を照合し、翻訳し直しで ID が変わっていたら古い応答を反映しない
 - 翻訳＆要約を対象 0 件で開始した場合は `summaryPending` を立て、本文が現れて `translateNewElements` が翻訳したときに 1 回だけ要約する。前の content script の要約ブロック（`#dvt-page-summary`）が残っていれば作り直さない
 - 開始時に翻訳対象が 0 件でもページ監視は開始する。0 件になるのは SPA の初期描画前や、拡張の再読み込み・更新で content script が入れ直され前の翻訳済み要素（`data-dvt-id` 付き）だけが残っている場合で、監視なしで終えると「翻訳中」のまま以後の記事が翻訳されなかった
 

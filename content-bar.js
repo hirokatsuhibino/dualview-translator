@@ -474,9 +474,19 @@ var DVT_BAR = (function () {
     const generation = ++checkGeneration;
     // 前回の出現待ちは、このチェックの結果で必要なら張り直す
     stopPendingWatch();
+    const startUrl = location.href;
+    // await の間に新しいチェック（SPA 遷移・ルール更新・出現待ち）が始まった、または URL が
+    // 変わった場合、このチェックは古い。旧ルールでの翻訳や、最新の監視の停止・張り直しをしない
+    const isStale = () => generation !== checkGeneration || location.href !== startUrl;
     const data = await new Promise(resolve =>
       chrome.storage.local.get('autoRules', resolve)
     );
+    // 古いチェックは新しいチェックに処理を任せる。true を返すのは、初期化時の呼び出し元が
+    // 「ルールなし」と判断して翻訳バーを出さないようにするため
+    if (isStale()) {
+      dlog('checkAutoRules: 新しいチェックが始まったため中止（ルール取得後）');
+      return true;
+    }
     const rules = (data.autoRules || []).filter(r => r.enabled);
     const url = location.href;
     dlog(`checkAutoRules 開始 有効ルール=${rules.length} url=${url}`);
@@ -489,6 +499,10 @@ var DVT_BAR = (function () {
       if (rule.selector) {
         // 要素セレクタ指定: 即座に存在しない場合はDOMに追加されるまで待機
         const el = await waitForElement(rule.selector);
+        if (isStale()) {
+          dlog(`checkAutoRules: 新しいチェックが始まったため中止（要素待ち後） rule=${rule.id}`);
+          return true;
+        }
         if (!el) {
           dlog(`checkAutoRules: 要素待ちタイムアウト rule=${rule.id} selector=${rule.selector}`);
           missingSelectors.push(rule.selector);
@@ -510,6 +524,11 @@ var DVT_BAR = (function () {
         Promise.resolve(fn(el))
           .then(() => {
             dlog(`checkAutoRules: 初回翻訳 終了 rule=${rule.id} ${Date.now() - t0}ms el=${desc(el)}`);
+            // 翻訳中に新しいチェックが始まっていれば、旧ルールの監視は張らない（新しいチェックが張る）
+            if (isStale()) {
+              dlog(`checkAutoRules: 新しいチェックが始まったため監視を張らない rule=${rule.id}`);
+              return;
+            }
             startAutoRuleObserver(el, rule);
           })
           .catch((e) => { dlog(`checkAutoRules: 初回翻訳 例外 rule=${rule.id}: ${e && e.message}`); });

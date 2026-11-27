@@ -162,4 +162,49 @@ describe('DVT_BAR.checkAutoRules — 要素の出現待ち（Issue #271）', () 
 
     expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledWith(body);
   });
+  describe('古いチェックの中止（PR #272 レビュー対応）', () => {
+    it('要素待ちの間にルールが削除されたら、要素が現れても旧ルールで翻訳しない', async () => {
+      DVT_BAR.checkAutoRules();
+      await vi.advanceTimersByTimeAsync(1000);
+      // ルール削除 → popup の reapplyAutoRule 相当で新しいチェックが走る
+      storedRules = [];
+      await DVT_BAR.checkAutoRules();
+      // 古いチェックの waitForElement が要素を見つける
+      showMailBody();
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(DVT_PAGE.translateClickedElement).not.toHaveBeenCalled();
+    });
+
+    it('初回翻訳の間に新しいチェックが始まったら、旧チェックは監視を張らない', async () => {
+      const body = showMailBody();
+      let finish;
+      DVT_PAGE.translateClickedElement.mockImplementationOnce(() => new Promise(r => { finish = r; }));
+      DVT_BAR.checkAutoRules();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
+
+      // 翻訳中にルールが削除され、新しいチェックが走る
+      storedRules = [];
+      await DVT_BAR.checkAutoRules();
+      finish();
+      await vi.advanceTimersByTimeAsync(0);
+
+      // 旧チェックが監視を張っていれば、本文の書き換えで再翻訳される
+      const p = document.createElement('p');
+      p.textContent = 'Another mail';
+      body.replaceChildren(p);
+      await vi.advanceTimersByTimeAsync(600);
+      expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
+    });
+
+    it('URL が変わった後に要素待ちが終わった古いチェックは翻訳しない', async () => {
+      DVT_BAR.checkAutoRules();
+      await vi.advanceTimersByTimeAsync(1000);
+      location.href = 'https://other.example.com/';
+      showMailBody();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(DVT_PAGE.translateClickedElement).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -361,7 +361,11 @@ var DVT_PAGE = (function () {
     }
 
     insertDualView(el, idPrefix);
+    const id = el.dataset.dvtId;
     const { text: result, detectedLang } = await DVT.translate(originalText, tl);
+    // 応答待ちの間に解除・翻訳し直しが起きていれば、この結果は古い。
+    // 新しい翻訳は別の ID を振るため、ID が変わっていたら反映しない（新しい訳文の上書き防止）
+    if (el.dataset.dvtId !== id) return false;
     applyTranslation(el, result, detectedLang, tl);
     return true;
   }
@@ -392,6 +396,11 @@ var DVT_PAGE = (function () {
   // options.lazy: true でビューポート優先＋遅延翻訳を有効にする（ページ全体翻訳系のみ）。
   //   要約モードは全訳文を結合して LLM に渡すため全件翻訳が必要で lazy 不可。
   //   領域選択・右クリック翻訳はユーザーが範囲を明示した少数要素なので lazy 不要。
+  // 翻訳の世代。ページ全体翻訳の解除（undoPageTranslate）で進める。
+  // 解除前に始まった翻訳処理（応答待ち中のワーカー・ページ監視の開始・要約）が、
+  // 解除後や翻訳し直し後に古い状態で動かないよう、開始時の値と比べて打ち切る（Issue #271）
+  let translationEpoch = 0;
+
   // この content script が付けた処理中マーク（dvt-pending）の要素。
   // 拡張の更新・再読み込みで content script が入れ直されると、前の content script が
   // 付けた処理中マークだけが残り、その要素は翻訳対象から外れたままになる（Issue #271）。
@@ -455,8 +464,10 @@ var DVT_PAGE = (function () {
     let processed = 0;
     let translated = 0;
 
+    const epoch = translationEpoch;
     async function worker() {
-      while (queue.length > 0) {
+      // 解除された後は残りのキューを処理しない（翻訳し直しのキューと二重に翻訳しないため）
+      while (queue.length > 0 && epoch === translationEpoch) {
         const el = queue.shift();
         if (!el) break;
 
@@ -681,8 +692,10 @@ var DVT_PAGE = (function () {
     // 要約は 1 回だけにするため、await の前にフラグを下ろす
     const summarizeNow = summaryPending && DVT.state.pageTranslateMode === 'summarize';
     if (summarizeNow) summaryPending = false;
+    const epoch = translationEpoch;
     await runConcurrentTranslation(elements, tl, 'dvt-', { lazy });
-    if (summarizeNow && DVT.state.pageTranslateActive && DVT.state.pageTranslateMode === 'summarize') {
+    // 翻訳中に解除・翻訳し直しが起きていれば、古い処理なので要約しない（要約の重複防止）
+    if (summarizeNow && epoch === translationEpoch) {
       dlog(`後回しにしていた要約を実行 ${elements.length} 件`);
       await runSummarize(elements, document.body, true);
     }
@@ -716,7 +729,10 @@ var DVT_PAGE = (function () {
 
     // ビューポート優先＋遅延翻訳: 見えている箇所から訳文を埋め、
     // 画面外はスクロールで近づいたときに翻訳する（Issue #256）
+    const epoch = translationEpoch;
     await runConcurrentTranslation(elements, tl, 'dvt-', { lazy: true });
+    // 翻訳中に解除・翻訳し直しが起きていれば、旧翻訳先のページ監視を始めない
+    if (epoch !== translationEpoch) return;
 
     // 翻訳開始後、動的コンテンツの監視を開始
     startPageObserver(tl);
@@ -748,10 +764,14 @@ var DVT_PAGE = (function () {
     }
 
     // ステップ1: 各文のデュアルビュー翻訳
+    const epoch = translationEpoch;
     await runConcurrentTranslation(elements, tl, 'dvt-');
+    // 翻訳中に解除・翻訳し直しが起きていれば、要約も監視の開始もしない
+    if (epoch !== translationEpoch) return;
 
     // ステップ2: 全翻訳テキストを結合してLLMで要約
     await runSummarize(elements, document.body, true);
+    if (epoch !== translationEpoch) return;
 
     // 翻訳＆要約完了後、動的コンテンツの監視を開始
     startPageObserver(tl);
@@ -786,6 +806,7 @@ var DVT_PAGE = (function () {
 
   function undoPageTranslate() {
     dlog('ページ全体翻訳 解除');
+    translationEpoch++;
     DVT.state.pageTranslateActive = false;
     pageTranslateLang = null;
     summaryPending = false;

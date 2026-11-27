@@ -244,4 +244,71 @@ describe('ページ全体翻訳の継続（Issue #271）', () => {
       expect(calls.length).toBe(0);
     });
   });
+  describe('解除の世代管理（PR #272 レビュー対応）', () => {
+    // 翻訳先ごとに応答を制御できる DVT.translate
+    function deferredTranslate() {
+      const pending = [];
+      DVT.translate.mockImplementation((text, tl) => new Promise(resolve => {
+        pending.push({ text, tl, resolve });
+      }));
+      return pending;
+    }
+
+    it('応答待ちの間に翻訳先を変えても、旧言語の応答で新しい訳文を上書きしない', async () => {
+      const p = addParagraph('Hello from the page');
+      const pending = deferredTranslate();
+      const first = DVT_PAGE.ensurePageTranslate('ja', 'translate');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(pending.map(x => x.tl)).toEqual(['ja']);
+
+      // 応答待ちの間に翻訳先を en に変えて再評価
+      DVT.state.targetLang = 'en';
+      const second = DVT_PAGE.ensurePageTranslate('en', 'translate');
+      await vi.advanceTimersByTimeAsync(0);
+      pending.find(x => x.tl === 'en').resolve({ text: 'EN訳', detectedLang: 'fr' });
+      await second;
+      // 旧言語の応答が後から届く
+      pending.find(x => x.tl === 'ja').resolve({ text: 'JA訳', detectedLang: 'fr' });
+      await first;
+
+      const trans = p.querySelectorAll('.dvt-trans');
+      expect(trans.length).toBe(1);
+      expect(trans[0].textContent).toContain('EN訳');
+      expect(trans[0].textContent).not.toContain('JA訳');
+    });
+
+    it('翻訳中に解除したら、旧処理がページ監視を始めない', async () => {
+      addParagraph('Hello from the page');
+      const pending = deferredTranslate();
+      const run = DVT_PAGE.translatePage('ja');
+      await vi.advanceTimersByTimeAsync(0);
+      DVT_PAGE.undoPageTranslate();
+      pending.forEach(x => x.resolve({ text: '訳', detectedLang: 'fr' }));
+      await run;
+
+      expect(DVT_PAGE.getDebugState()).toMatch(/pageTranslateActive=false .*ページ監視=false/);
+      expect(document.querySelectorAll('.dvt-trans').length).toBe(0);
+    });
+
+    it('翻訳＆要約の翻訳中に解除したら、旧処理は要約しない', async () => {
+      chrome.storage.local.set({ claudeApiKey: 'test-key' });
+      addParagraph('Hello from the page');
+      const pending = deferredTranslate();
+      const summarizeCalls = [];
+      chrome.runtime.sendMessage.mockImplementation((msg, cb) => {
+        if (msg.action === 'summarize') summarizeCalls.push(msg);
+        const res = { ok: true, summary: 'まとめ' };
+        if (cb) cb(res);
+        return Promise.resolve(res);
+      });
+      const run = DVT_PAGE.translatePageAndSummarize('ja');
+      await vi.advanceTimersByTimeAsync(0);
+      DVT_PAGE.undoPageTranslate();
+      pending.forEach(x => x.resolve({ text: '訳', detectedLang: 'fr' }));
+      await run;
+
+      expect(summarizeCalls.length).toBe(0);
+      expect(document.getElementById('dvt-page-summary')).toBeNull();
+    });
+  });
 });
