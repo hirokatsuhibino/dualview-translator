@@ -207,4 +207,23 @@ describe('DVT_BAR.checkAutoRules — 要素の出現待ち（Issue #271）', () 
       expect(DVT_PAGE.translateClickedElement).not.toHaveBeenCalled();
     });
   });
+  it('初回翻訳中にポップアップでルールが削除されたら、翻訳後に監視を張らない', async () => {
+    const body = showMailBody();
+    let finish;
+    DVT_PAGE.translateClickedElement.mockImplementationOnce(() => new Promise(r => { finish = r; }));
+    DVT_BAR.checkAutoRules();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // popup はルールを削除して stopAutoRuleObserver だけを送る（世代も URL も変わらない）
+    storedRules = [];
+    DVT_BAR.stopAutoRuleObserver(rule.id);
+    finish();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const p = document.createElement('p');
+    p.textContent = 'Another mail';
+    body.replaceChildren(p);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(DVT_PAGE.translateClickedElement).toHaveBeenCalledTimes(1);
+  });
 });

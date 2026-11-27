@@ -529,7 +529,17 @@ var DVT_BAR = (function () {
               dlog(`checkAutoRules: 新しいチェックが始まったため監視を張らない rule=${rule.id}`);
               return;
             }
-            startAutoRuleObserver(el, rule);
+            // 翻訳中にポップアップでルールが削除・無効化されると、stopAutoRuleObserver は
+            // まだ監視が無いため空振りし、世代も URL も変わらない。監視を張る前に、
+            // 保存済みルールでこのルールがまだ採用されるかを確かめる
+            return findStillAdoptedRule(rule.id).then(latest => {
+              if (isStale()) return;
+              if (!latest || !latest.selector) {
+                dlog(`checkAutoRules: ルールが削除・無効化されたため監視を張らない rule=${rule.id}`);
+                return;
+              }
+              startAutoRuleObserver(el, latest);
+            });
           })
           .catch((e) => { dlog(`checkAutoRules: 初回翻訳 例外 rule=${rule.id}: ${e && e.message}`); });
       } else {

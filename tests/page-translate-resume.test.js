@@ -311,4 +311,79 @@ describe('ページ全体翻訳の継続（Issue #271）', () => {
       expect(document.getElementById('dvt-page-summary')).toBeNull();
     });
   });
+  describe('中止時の処理中マークの解放（PR #272 再々レビュー対応）', () => {
+    function deferredTranslate() {
+      const pending = [];
+      DVT.translate.mockImplementation((text, tl) => new Promise(resolve => {
+        pending.push({ text, tl, resolve });
+      }));
+      return pending;
+    }
+
+    it('即時翻訳のキューに残った要素が DOM から外れた状態で解除しても、再挿入後に翻訳できる', async () => {
+      // 同時実行数（6）を超える 8 件。7・8 件目はキューで待つ
+      const els = Array.from({ length: 8 }, (_, i) => addParagraph(`Paragraph number ${i} for test`));
+      const pending = deferredTranslate();
+      const run = DVT_PAGE.translatePage('ja');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(pending.length).toBe(6);
+
+      // キューで待っている要素を DOM から外して解除
+      const detached = els[7];
+      detached.remove();
+      DVT_PAGE.undoPageTranslate();
+      pending.forEach(x => x.resolve({ text: '訳', detectedLang: 'fr' }));
+      await run;
+
+      // 処理中マークが外れている
+      expect(detached.dataset.dvtId).toBeUndefined();
+      // 再挿入して翻訳し直すと翻訳される
+      document.body.appendChild(detached);
+      DVT.translate.mockImplementation(async (text) => ({ text: `訳:${text}`, detectedLang: 'fr' }));
+      await DVT_PAGE.translatePage('ja');
+      expect(detached.querySelector('.dvt-trans')).toBeTruthy();
+    });
+
+    it('遅延翻訳の待ち要素が DOM から外れた状態で解除しても、処理中マークが残らない', async () => {
+      const els = Array.from({ length: 40 }, (_, i) => addParagraph(`Lazy paragraph number ${i}`));
+      await DVT_PAGE.translatePage('ja');
+      const detached = els[39];
+      expect(detached.dataset.dvtId).toBe('dvt-pending');
+      detached.remove();
+      DVT_PAGE.undoPageTranslate();
+      expect(detached.dataset.dvtId).toBeUndefined();
+    });
+
+    it('設定取得の間に解除・翻訳し直しが起きたら、旧翻訳先で翻訳しない', async () => {
+      addParagraph('Hello from the page');
+      // 設定取得（storage）の await 中に解除と翻訳し直しが起きる
+      const first = DVT_PAGE.translatePage('ja');
+      DVT_PAGE.undoPageTranslate();
+      const second = DVT_PAGE.translatePage('en');
+      await Promise.all([first, second]);
+
+      expect(DVT.translate).not.toHaveBeenCalledWith('Hello from the page', 'ja');
+      expect(DVT.translate).toHaveBeenCalledWith('Hello from the page', 'en');
+      expect(document.querySelectorAll('.dvt-trans').length).toBe(1);
+    });
+
+    it('処理中に別の翻訳処理が予約した要素のマークは、旧処理の中止で外さない', async () => {
+      // 旧処理の中止と同時に新しい処理が同じ要素を予約しているケース
+      addParagraph('Hello from the page');
+      const first = DVT_PAGE.translatePage('ja');
+      DVT_PAGE.undoPageTranslate();
+      let finish;
+      DVT.translate.mockImplementation(() => new Promise(r => { finish = r; }));
+      const second = DVT_PAGE.translatePage('en');
+      await first;
+      await vi.advanceTimersByTimeAsync(0);
+      // 新しい処理が翻訳中（ID が付いたまま）
+      const p = document.querySelector('p');
+      expect(p.dataset.dvtId).toMatch(/^dvt-/);
+      expect(p.dataset.dvtId).not.toBe('dvt-pending');
+      finish({ text: '訳', detectedLang: 'fr' });
+      await second;
+      expect(p.querySelectorAll('.dvt-trans').length).toBe(1);
+    });
+  });
 });

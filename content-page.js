@@ -407,6 +407,23 @@ var DVT_PAGE = (function () {
   // 自分が付けたマークと区別して、前の content script の分だけ回収するために記録する。
   let ownPending = new WeakSet();
 
+  // 処理中マークを付けた翻訳処理（runConcurrentTranslation の呼び出しごとのトークン）。
+  // 中止時に「自分の処理が付けたマーク」だけを外し、後から始まった処理のマークは残すために使う
+  const pendingOwner = new WeakMap();
+  let pendingRunSeq = 0;
+
+  // token の処理が付けた処理中マークを外す（中止時）。
+  // DOM から外れた要素は undoPageTranslate の復元対象（接続中の要素のみ）に入らないため、
+  // ここで外さないと再挿入されても翻訳対象に戻らない
+  function releaseOwnedPending(elements, token) {
+    elements.forEach(el => {
+      if (!el || pendingOwner.get(el) !== token) return;
+      pendingOwner.delete(el);
+      ownPending.delete(el);
+      if (el.dataset && el.dataset.dvtId === 'dvt-pending') delete el.dataset.dvtId;
+    });
+  }
+
   // 前の content script が残した処理中マークを外し、翻訳対象に戻す（Issue #271）
   function releaseStalePending() {
     let released = 0;
@@ -425,15 +442,24 @@ var DVT_PAGE = (function () {
     // filterTranslatableElements / extractRegionElements は data-dvt-id が設定された
     // 要素を除外するため、並走する別の翻訳処理が同じ要素を重複取得しない。
     // insertDualView が後で実際のIDに上書きする。
+    const token = ++pendingRunSeq;
     elements.forEach(el => {
       el.dataset.dvtId = 'dvt-pending';
       ownPending.add(el);
+      pendingOwner.set(el, token);
     });
+    // 解除の世代は最初の await より前に保存する（設定取得中の解除を検知するため）
+    const epoch = translationEpoch;
 
     // DeepL選択時にAPIキー未設定ならトーストで通知して中断（最終防衛ライン）
     const engineConfig = await new Promise(resolve => {
       chrome.storage.local.get(['translateEngine', 'deeplApiKey'], resolve);
     });
+    // 設定取得の間に解除・翻訳し直しが起きていれば、旧翻訳先の翻訳や遅延翻訳の登録をしない
+    if (epoch !== translationEpoch) {
+      releaseOwnedPending(elements, token);
+      return;
+    }
     if (engineConfig.translateEngine === 'deepl' && !engineConfig.deeplApiKey) {
       DVT.showToast(t('deeplApiKeyMissing'), false, 4000);
       // 予約した処理中マークを解放し、APIキー設定後の再翻訳を可能にする
@@ -449,7 +475,7 @@ var DVT_PAGE = (function () {
     // スクロールのたびに進捗トーストが出て煩わしいため。
     if (lazy && supportsIntersectionObserver()
       && (elements.length >= LAZY_MIN_ELEMENTS || isLazyActiveFor(tl, idPrefix))) {
-      scheduleLazyTranslation(elements, tl, idPrefix);
+      scheduleLazyTranslation(elements, tl, idPrefix, token);
       return;
     }
 
@@ -464,7 +490,6 @@ var DVT_PAGE = (function () {
     let processed = 0;
     let translated = 0;
 
-    const epoch = translationEpoch;
     async function worker() {
       // 解除された後は残りのキューを処理しない（翻訳し直しのキューと二重に翻訳しないため）
       while (queue.length > 0 && epoch === translationEpoch) {
@@ -481,6 +506,9 @@ var DVT_PAGE = (function () {
     const workers = Array.from({ length: CONCURRENCY }, () => worker());
     await Promise.all(workers);
 
+    // 解除で打ち切った場合は、キューに残った要素の処理中マークを外す
+    if (epoch !== translationEpoch) releaseOwnedPending(queue.splice(0), token);
+
     DVT.updateToast(toast, t('toastDone', { count: translated }));
     setTimeout(() => toast.remove(), TOAST_DONE_DURATION_MS);
   }
@@ -496,11 +524,15 @@ var DVT_PAGE = (function () {
 
   // 遅延翻訳の対象要素を登録する。既存の遅延翻訳が同条件で動いていれば
   // （MutationObserver 由来の新規要素など）そこへ追加する。
-  function scheduleLazyTranslation(elements, tl, idPrefix) {
+  // token: 処理中マークを付けた runConcurrentTranslation のトークン（停止時の解放用）
+  function scheduleLazyTranslation(elements, tl, idPrefix, token) {
     if (isLazyActiveFor(tl, idPrefix)) {
       dlog(`遅延翻訳に追加 ${elements.length} 件`);
       lazyState.total += elements.length;
-      elements.forEach(el => lazyState.observer.observe(el));
+      elements.forEach(el => {
+        lazyState.reserved.push({ el, token });
+        lazyState.observer.observe(el);
+      });
       return;
     }
 
@@ -526,6 +558,8 @@ var DVT_PAGE = (function () {
       toast: DVT.showToast(t('toastTranslating', { done: 0, total: elements.length }), true),
       toastClosed: false,
     };
+    // 処理中マークを付けた要素と、そのトークン（停止時に未処理分のマークを外すため）
+    state.reserved = elements.map(el => ({ el, token }));
     lazyState = state;
 
     state.observer = new IntersectionObserver((entries) => {
@@ -607,6 +641,8 @@ var DVT_PAGE = (function () {
     dlog('遅延翻訳 停止');
     if (lazyState.observer) lazyState.observer.disconnect();
     lazyState.queue.length = 0;
+    // まだ翻訳していない要素の処理中マークを外す（DOM から外れた要素も含む）
+    (lazyState.reserved || []).forEach(({ el, token }) => releaseOwnedPending([el], token));
     if (!lazyState.toastClosed) {
       lazyState.toastClosed = true;
       lazyState.toast.remove();
